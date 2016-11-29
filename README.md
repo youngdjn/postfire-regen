@@ -2,7 +2,7 @@
 
 Initial inputs  
 Access database  
-Climatic variables 
+Climatic variables   
 DEM   
 
 script lines to set adult and old/young decisions for species data  
