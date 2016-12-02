@@ -2,6 +2,10 @@ setwd("~/UC Davis/Research Projects/Post-fire regen/Dev/postfire-regen")
 
 library(raster)
 library(ncdf4)
+library(sp)
+library(reshape2)
+library(plyr)
+library(rgdal)
 
 source("regen_compile_data_functions.R")
 
@@ -9,7 +13,7 @@ source("regen_compile_data_functions.R")
 #### 0. Operations that apply to all subsequent steps below ####
 
 # Load plot locs
-plot <- read.csv("data_survey/Plot_data.csv")
+plot <- read.csv("../data_survey/Plot_data.csv",stringsAsFactors=FALSE)
 
 plot <- plot[plot$Fire != "ZACA",] # remove Zaca fire
 
@@ -126,22 +130,7 @@ ppt.4km.rast <- unlist(list(ppt.yr.mo))
 ppt.800m.rast <- unlist(list(ppt.normal.mo))
 
 
-#### Extract climate values for points ####
-
-# Load points
-plot <- read.csv("data_survey/Plot_data.csv")
-plot <- plot[!is.na(plot$Northing),]
-plot <- plot[(plot$Easting < 1105000) & (plot$Easting > 150000) & (plot$Northing > 2500000) & (plot$Northing < 6000000),] #Easting 110 used to be 83
-plot.coords <- data.frame(x=plot$Easting,y=plot$Northing)
-utm10 <- CRS("+proj=utm +zone=10 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs")
-plots <- SpatialPointsDataFrame(coords=data.frame(x=plot$Easting,y=plot$Northing),data=plot,proj4string=utm10)
-
-## Optional to write plots as GIS
-# library(sp)
-# library(rgdal)
-# writeOGR(plots,dsn="plots_welch",layer=1,driver="ESRI Shapefile")
-
-
+### Extract climate values for points ###
 ppt.4km <- sapply(X = ppt.4km.rast,FUN = extract.single, plots = plots) # takes ~1 min
 ppt.800m <- sapply(X = ppt.800m.rast,FUN = extract.single, plots = plots)
 temp.800m <- sapply(X = temp.800m.rast,FUN = extract.single, plots = plots) # takes ~10 min
@@ -328,6 +317,168 @@ for(fire in fires) {
   counter <- counter + 1
 }
 
-write.csv(plot.firesev,"data_intermediate_processing/plot_fire_data.csv",row.names=FALSE)
+write.csv(plot.firesev,"../data_intermediate_processing_local/plot_fire_data.csv",row.names=FALSE)
+
+
+
+
+#### 4. Summarize regen and surviving trees by species (and age for regen) for each plot ####
+
+sap <- read.csv("../data_survey/sapling_regen.csv")
+shrub <- read.csv("../data_survey/shrub_regen.csv")
+seedl <- read.csv("../data_survey/tree_regen.csv")
+resprout <- read.csv("../data_survey/Resprouts.csv")
+surviving.trees <- read.csv("../data_survey/surviving_trees.csv",header=TRUE,stringsAsFactors=FALSE)
+
+
+#! may need to specify only non-planted seedlings
+#seedl <- seedl[seedl$seed_veg_plant != "P",]
+
+### check regenerating tree data for duplicates
+seedl.rep <- aggregate(seedl[,10],by=list(species=seedl$Species,Regen_Plot=seedl$Regen_Plot),FUN=length)
+seedl.rep.rows <- seedl.rep[seedl.rep$x>1,]
+if(nrow(seedl.rep.rows)>0) {warning("Multiple seedling entries for some species-plots combinations. Duplicates listed in 'seedl.rep.rows'.")}
+
+sap.rep <- aggregate(sap[,10],by=list(species=sap$Species,Regen_Plot=sap$Regen_Plot),FUN=length)
+sap.rep.rows <- sap.rep[sap.rep$x>1,]
+if(nrow(sap.rep.rows)>0) {warning("Multiple sapling entries for some species-plot combinations. Duplicates listed in 'sap.rep.rows'.")}
+
+### aggregate seedling table by plot and species
+seedl.ag <- aggregate(seedl[,5:16],by=list(species=seedl$Species,Regen_Plot=seedl$Regen_Plot),FUN=sum,na.rm=TRUE)
+count.yrs <- paste("count.",0:11,"yr",sep="")
+names(seedl.ag) <- c("species","Regen_Plot",count.yrs)
+
+### aggregate sapling table by plot and species
+#! need to fix this because some saplings are not assigned an age, just interpret each row as a presence
+sap$tot <- rowSums(sap[,6:14],na.rm=TRUE)
+sap$X10yr[sap$tot == 0] <- 1 #! if the species had a row for the sapling but no age, assume it was 10yr
+sap.ag <- aggregate(sap[,c(6:14,20)],by=list(species=sap$Species,Regen_Plot=sap$Regen_Plot),FUN=sum,na.rm=TRUE)
+count.yrs <- paste("count.",3:11,"yr",sep="")
+names(sap.ag) <- c("species","Regen_Plot",count.yrs,"count.tot")
+sap.ag <- sap.ag[,1:ncol(sap.ag)-1]
+
+### aggregate resprout table by plot and species
+resprout$COUNT.TOTAL <- ifelse(is.na(resprout$COUNT.TOTAL),1,resprout$COUNT.TOTAL) # sometimes it has a count, sometimes it has one record per individual (stem?)
+resprout.ag <- aggregate(resprout$COUNT.TOTAL,by=list(species=resprout$Species,Regen_Plot=resprout$Regen_Plot),FUN=sum,na.rm=TRUE)
+count.yrs <- paste("count.",5,"yr",sep="")
+names(resprout.ag) <- c("species","Regen_Plot",count.yrs)
+
+### merge seedling and sapling tables and resprout table
+regen <- rbind.fill(seedl.ag,sap.ag)
+regen <- rbind.fill(regen,resprout.ag) # add in resprout table (comment out here if desired)
+regen.ag <- aggregate(regen[,3:14],by=list(species=regen$species,Regen_Plot=regen$Regen_Plot),FUN=sum,na.rm=TRUE)
+
+### aggregate surviving tree table by plot and species
+#! optionally add a cutoff so we con't consider small trees
+surviving.trees$ba <- (surviving.trees$DBH/2)^2*3.14
+surviving.trees$count <- 1
+surviving.trees.ag <- aggregate(surviving.trees[,c("count","ba")],by=list(species=surviving.trees$Species,Regen_Plot=surviving.trees$Regen_Plot),FUN=sum)
+names(surviving.trees.ag) <- c("species","Regen_Plot","surviving.trees.count","surviving.trees.ba")
+
+### merge regen and surviving tree DFs
+regen.ag <- merge(regen.ag,surviving.trees.ag,by=c("Regen_Plot","species"),all=TRUE)
+
+
+regen.ag$surviving.trees.count[is.na(regen.ag$surviving.trees.count)] <- 0
+regen.ag$surviving.trees.ba[is.na(regen.ag$surviving.trees.ba)] <- 0
+
+write.csv(regen.surv,"../data_intermediate_processing_local/tree_summarized_sp.csv",row.names=FALSE)
+
+
+
+
+
+#### 5. Integrate all plot and species data ####
+
+### Read in raw data files (direct from DB export)
+fire.years <- read.csv("../data_fire/fire_years.csv",header=TRUE,stringsAsFactors=FALSE)
+
+### Read in the summarized data files
+plot.climate <- read.csv("../data_intermediate_processing_local/plot_climate_water_year.csv",stringsAsFactors=FALSE)
+plot.fire.data <- read.csv("../data_intermediate_processing_local/plot_fire_data.csv",stringsAsFactors=FALSE)
+plot.tree.sp <- read.csv("../data_intermediate_processing_local/tree_summarized_sp.csv",stringsAsFactors=FALSE)
+
+
+## to plot ppt over time at any given plot
+# ppt.cols <- grep("ppt",names(plot.climate))
+# ppt.df <- plot.climate[,ppt.cols]
+# ppt.df <- ppt.df[,15:29]
+# ppt.row <- ppt.df[plot.climate$Regen_Plot == "AMR1300134",]
+# ppt.df.new <- data.frame(plot=names(ppt.row),precip=t(ppt.row)) # start a new climate DF based on the old one
+# plot(ppt.df.new)
+
+## get the survey year (only) out of the survey date
+date.split <- strsplit(plot$Date,"/")
+yearplus <- sapply(date.split, '[[', 3)
+year.split <- strsplit(yearplus," ")
+plot$Year <- as.numeric(sapply(year.split,'[[',1))
+
+## merge the plot-level data into a single DF
+plot.1 <- merge(plot,plot.fire.data,by="Regen_Plot",all.x=TRUE)
+plot.2 <- merge(plot.1,fire.years,by="Fire",all.x=TRUE)
+plot.2$survey.years.post <- plot.2$Year - plot.2$fire.year
+
+### thin to only plots that were surveyed 5 years post-fire
+#survey.years.post.fire <- 5
+#plot.3 <- plot.2[plot.2$survey.years.post == survey.years.post.fire,]
+#plot.3 <- plot.3[!is.na(plot.3$Regen_Plot),]
+
+plot.3 <- plot.2[!is.na(plot.2$Regen_Plot),] # the problem this was addressing no longer exists
+
+
+### get summarized climate data for each plot
+plot.3.clim <- summarize.clim(plot.3,plot.climate,years.clim=1:3) #first three years after fire
+plot.3.clim2 <- summarize.clim(plot.3,plot.climate,years.clim=4:5) # years 4-5 after fire
+names(plot.3.clim2) <- paste(names(plot.3.clim2),".late",sep="")
+
+### get summarized regen data for each plot #! will need to modify this to account for 4-year fires (old seedlings would be 3-4 years for those)
+plot.3.regen.old <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),years.regen=4:5,all.sp=TRUE)
+plot.3.regen.young <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),years.regen=1:3,all.sp=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data)
+names(plot.3.regen.old)[3] <- "regen.count.old"
+names(plot.3.regen.young)[3] <- "regen.count.young"
+
+plot.3.regen <- merge(plot.3.regen.young,plot.3.regen.old)
+plot.3.regen$regen.count.tot <- plot.3.regen$regen.count.young + plot.3.regen$regen.count.old #! will need to fix this if converted to trees per year
+
+
+################## RESUME do not merge species and plot here.
+#########ALSO NEED at the plot level get seed tree dist, also at species level for the species we have it for
+
+
+### merge the plot, climate, and regen data
+plot.4 <- merge(plot.3,plot.3.clim,by="Regen_Plot",all.x=TRUE)
+plot.4.1 <- merge(plot.4,plot.3.clim2,by.x="Regen_Plot",by.y="Regen_Plot.late",all.x=TRUE)
+plot.5 <- merge(plot.4.1,plot.3.regen,by="Regen_Plot",all.x=TRUE)
+
+d <- plot.5
+
+d <- d[d$Regen_Plot != "SHR09000015",]
+
+
+
+#### extract elevation ####
+update.elev <- FALSE
+
+if(update.elev) {
+  dem <- raster("C:/Users/DYoung/Documents/UC Davis/GIS/CA abiotic layers/DEM/Camerged9_SNclip_nd.tif")
+  UTM10N <- CRS("+proj=utm +zone=10 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs")
+  d.unique <- d[d$species=="ALL",]
+  plots.for.calveg <- SpatialPointsDataFrame(cbind(d.unique$Easting,d.unique$Northing),data=d.unique,proj4string=UTM10N)
+  plots.for.calveg$elev.m <- extract(dem,plots.for.calveg,method="bilinear")
+  write.csv(plots.for.calveg,"Data/plots_elev.csv")
+}
+
+plots.elev <- read.csv("Data/plots_elev.csv")
+plots.elev <- plots.elev[,c("Regen_Plot","elev.m")]
+
+d <- merge(d,plots.elev,all.x=TRUE)
+
+
+write.csv(d,"Data/regen_clim_full.csv",row.names=FALSE)
+
+
+
+
+
 
 
