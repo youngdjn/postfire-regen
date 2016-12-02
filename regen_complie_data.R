@@ -392,6 +392,7 @@ write.csv(regen.surv,"../data_intermediate_processing_local/tree_summarized_sp.c
 
 ### Read in raw data files (direct from DB export)
 fire.years <- read.csv("../data_fire/fire_years.csv",header=TRUE,stringsAsFactors=FALSE)
+seed.tree <- read.csv("../data_survey/seed_tree.csv",header=TRUE,stringsAsFactors=FALSE)
 
 ### Read in the summarized data files
 plot.climate <- read.csv("../data_intermediate_processing_local/plot_climate_water_year.csv",stringsAsFactors=FALSE)
@@ -413,18 +414,25 @@ yearplus <- sapply(date.split, '[[', 3)
 year.split <- strsplit(yearplus," ")
 plot$Year <- as.numeric(sapply(year.split,'[[',1))
 
+
+## extract elevation for each plot
+dem <- raster("C:/Users/DYoung/Documents/UC Davis/GIS/CA abiotic layers/DEM/Camerged9_SNclip_nd.tif")
+plots$elev.m <- extract(dem,plots,method="bilinear")
+
+## extract march solar rad for each plot
+rad.march <- stack("C:/Users/DYoung/Documents/UC Davis/GIS/CA abiotic layers/solar rad/rsun nldas adjusted/glob_rad_monthly_dobr1_int.tif")[[3]]
+plots$rad.march <- extract(rad.march,plots,method="bilinear")
+
+#compile DF of geospatial data that was extracted for each plot
+plots.extracted <- plots[,c("Regen_Plot","elev.m","rad.march")]
+
+
 ## merge the plot-level data into a single DF
 plot.1 <- merge(plot,plot.fire.data,by="Regen_Plot",all.x=TRUE)
 plot.2 <- merge(plot.1,fire.years,by="Fire",all.x=TRUE)
 plot.2$survey.years.post <- plot.2$Year - plot.2$fire.year
 
-### thin to only plots that were surveyed 5 years post-fire
-#survey.years.post.fire <- 5
-#plot.3 <- plot.2[plot.2$survey.years.post == survey.years.post.fire,]
-#plot.3 <- plot.3[!is.na(plot.3$Regen_Plot),]
-
-plot.3 <- plot.2[!is.na(plot.2$Regen_Plot),] # the problem this was addressing no longer exists
-
+plot.3 <- merge(plot.2,plots.extracted,all.x=TRUE)
 
 ### get summarized climate data for each plot
 plot.3.clim <- summarize.clim(plot.3,plot.climate,years.clim=1:3) #first three years after fire
@@ -441,44 +449,26 @@ plot.3.regen <- merge(plot.3.regen.young,plot.3.regen.old)
 plot.3.regen$regen.count.tot <- plot.3.regen$regen.count.young + plot.3.regen$regen.count.old #! will need to fix this if converted to trees per year
 
 
-################## RESUME do not merge species and plot here.
-#########ALSO NEED at the plot level get seed tree dist, also at species level for the species we have it for
+### species-level seed tree distance
+## if a species within a plot has multiple seed trees listed, get the shortest distance
+seed.tree.sp <- aggregate(seed.tree$Dist_m,by=list(seed.tree$Regen_Plot,seed.tree$Species),FUN=min)
+names(seed.tree.sp) <- c("Regen_Plot","species","seed.tree.sp")
+plot.3.regen <- merge(plot.3.regen,seed.tree.sp,all.x=TRUE)
+# species table ready for export
 
 
-### merge the plot, climate, and regen data
-plot.4 <- merge(plot.3,plot.3.clim,by="Regen_Plot",all.x=TRUE)
-plot.4.1 <- merge(plot.4,plot.3.clim2,by.x="Regen_Plot",by.y="Regen_Plot.late",all.x=TRUE)
-plot.5 <- merge(plot.4.1,plot.3.regen,by="Regen_Plot",all.x=TRUE)
+### add plot-level seed tree distance (shortest distance among all seed trees recorded for the plot)
+seed.tree.any <- aggregate(seed.tree$Dist_m,by=list(seed.tree$Regen_Plot),FUN=min)
+names(seed.tree.any) <- c("Regen_Plot","seed.tree.any")
 
-d <- plot.5
-
-d <- d[d$Regen_Plot != "SHR09000015",]
-
-
-
-#### extract elevation ####
-update.elev <- FALSE
-
-if(update.elev) {
-  dem <- raster("C:/Users/DYoung/Documents/UC Davis/GIS/CA abiotic layers/DEM/Camerged9_SNclip_nd.tif")
-  UTM10N <- CRS("+proj=utm +zone=10 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs")
-  d.unique <- d[d$species=="ALL",]
-  plots.for.calveg <- SpatialPointsDataFrame(cbind(d.unique$Easting,d.unique$Northing),data=d.unique,proj4string=UTM10N)
-  plots.for.calveg$elev.m <- extract(dem,plots.for.calveg,method="bilinear")
-  write.csv(plots.for.calveg,"Data/plots_elev.csv")
-}
-
-plots.elev <- read.csv("Data/plots_elev.csv")
-plots.elev <- plots.elev[,c("Regen_Plot","elev.m")]
-
-d <- merge(d,plots.elev,all.x=TRUE)
-
-
-write.csv(d,"Data/regen_clim_full.csv",row.names=FALSE)
+### merge the plot, climate, and plot-level seed tree data
+plot.clim <- merge(plot.3,plot.3.clim,by="Regen_Plot",all.x=TRUE)
+plot.clim.seedtree <- merge(plot.clim,seed.tree.any,all.x=TRUE)
 
 
 
 
-
-
+### write plot-level and species-level output files
+write.csv(plot.clim.seedtree,"data_intermediate/plot_level.csv",row.names=FALSE)
+write.csv(plot.3.regen,"data_intermediate/speciesXplot_level.csv",row.names=FALSE)
 
