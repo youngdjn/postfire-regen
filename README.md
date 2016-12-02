@@ -5,8 +5,8 @@ Update regen summarization to (a) specify old-young cutoff age on independent li
 
 
 ## Scripts
-regen_compile_data.R: take survey data and geospatial data (e.g. climate, elevation) to extract relevant data summarized by plot and by plotXspecies (the intermediate products--see below)  
-regen_compile_data_functions.R: functions used by the script above  
+1. regen_compile_data.R: take survey data and geospatial data (e.g. climate, elevation) to extract relevant data summarized by plot and by plotXspecies (the intermediate products--see below)  
+2. regen_compile_data_functions.R: functions used by the script above  
 
 
 ## Initial inputs  
