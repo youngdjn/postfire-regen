@@ -66,7 +66,7 @@ for(fire in fires) {
   d.plot[d.plot$Fire==fire,"precip.category"] <- categories
   
   ## Radiation categories #! note straylor cub do not have radiation yet
-  # determine what the breakpoints should be (here just using median)
+  # determine what the breakpoints should be (here just using median) -- based on high severity plots only
   breaks <- quantile(d.plot[(d.plot$Fire == fire) & (d.plot$FIRE_SEV %in% high.sev),]$rad.march,probs=c(0.5),na.rm=TRUE)
   # categorize plots based on where they fall between the breakpoints  
   categories <- categorize(d.plot[d.plot$Fire==fire,]$rad.march,breaks,name="R")
@@ -83,7 +83,8 @@ d.plot$topoclim.cat <- paste(d.plot$precip.category,d.plot$rad.category,sep="_")
   
 
 ### Plot relevant "topoclimate space" for each fire and see how the categories broke them down
-# note that Cub and straylor do not have radiation (yet)
+## note that Cub and straylor do not have radiation (yet)
+
 # look at high sev only
 ggplot(d.plot[d.plot$FIRE_SEV %in% high.sev,],aes(x=ppt.normal,y=rad.march,col=topoclim.cat)) +
   geom_point() +
@@ -94,30 +95,28 @@ ggplot(d.plot[d.plot$FIRE_SEV %in% control,],aes(x=ppt.normal,y=rad.march,col=to
   geom_point() +
   facet_wrap(~Fire,scales="free")
 
-#! obvious that we need more control plots for some of these topoclim categories
+#! obvious that we need more control plots for some of these topoclim categories (many are coming when we add this summer's data)
 
 
 
 
 
-#### 2. Summarize (average) regen (high-sev plots only) and adults (control plots only) by species in each topoclimatic category in each fire ####
+#### 2. Summarize (compute average) regen values (high-sev plots only) and adults (control plots only) by species across all plots in each topoclimatic category in each fire ####
 
-## assign the trees by species their topoclimatic category and fire name. This also ensures that we only are looking at seedlings for whose plots we are interested
+## assign the trees by species their topoclimatic category and fire name. This also ensures that we only are looking at seedlings for whose plots we are interested (because with this merge operation, seedlings from plots not in d.plot will be dropped)
 d.sp.cat <- merge(d.sp,d.plot[,c("Regen_Plot","topoclim.cat","Fire","FIRE_SEV")])
-
-## compute a total seedlings presence-absence column
 
 ## preparing to aggregate tree data: get highsev and control plots only, each with only the columns relevant to it
 d.sp.cat.highsev <- d.sp.cat[d.sp.cat$FIRE_SEV %in% high.sev,c("Fire","species","topoclim.cat","seed.tree.sp","regen.count.young","regen.count.old","regen.count.tot","regen.presab.young","regen.presab.old","regen.presab.tot")]
 d.sp.cat.control <- d.sp.cat[d.sp.cat$FIRE_SEV %in% high.sev,c("Fire","species","topoclim.cat","adult.count","adult.ba")]
 
-## aggregate tree data by species and topo category #! might want to also calculate SD in a separate aggregate call? (would append the variable names with ".sd")
+## aggregate tree data by species and topo category #! might want to also calculate SD or SE in a separate aggregate call? (would append the variable names with ".sd")
 d.sp.agg.highsev <- aggregate(d.sp.cat.highsev[,c(-1,-2,-3)],by=list(d.sp.cat.highsev$species,d.sp.cat.highsev$topoclim.cat,d.sp.cat.highsev$Fire),FUN=mean)
 names(d.sp.agg.highsev)[1:3] <- c("species","topoclim.cat","Fire")
 d.sp.agg.control <- aggregate(d.sp.cat.control[,c(-1,-2,-3)],by=list(d.sp.cat.control$species,d.sp.cat.control$topoclim.cat,d.sp.cat.control$Fire),FUN=mean)
 names(d.sp.agg.control)[1:3] <- c("species","topoclim.cat","Fire")
 
-## merge the control and highsev tree data
+## merge the control (adults only) and highsev (seedlings only) tree data
 d.sp.agg <- merge(d.sp.agg.highsev,d.sp.agg.control)
 
 ##preparing to aggregate plot data: label plots as highsev or control
@@ -126,7 +125,7 @@ d.plot.c <- remove.vars(d.plot,c("Year.of.Fire","Easting","Northing","aspect","Y
 # label plots as control or high sev
 d.plot.c$type <- ifelse(d.plot.c$FIRE_SEV %in% control,"control",NA)
 d.plot.c$type <- ifelse(d.plot.c$FIRE_SEV %in% high.sev,"highsev",d.plot.c$type)
-# get rid of plots that are neither control or high sev
+# get rid of plots that are neither control nor high sev
 d.plot.c <- d.plot.c[!is.na(d.plot.c$type),]
 
 ## aggregate plots by Fire, topoclim category, and type (control or high sev)
@@ -137,7 +136,7 @@ names(d.plot.agg.tot) <- c("Fire","topoclim.cat","type","count")
 
 ## merge plot averages and counts
 d.plot.agg <- merge(d.plot.agg.mean,d.plot.agg.tot)
-# separate the control and high.sev plots and change the column names
+# separate the control and high.sev plots and change the column names (appending ".control" and ".highsev")
 d.plot.agg.control <- d.plot.agg[d.plot.agg$type == "control",]
 d.plot.agg.highsev <- d.plot.agg[d.plot.agg$type == "highsev",]
 names(d.plot.agg.control)[c(-1,-2,-3)] <- paste(names(d.plot.agg.control)[c(-1,-2,-3)],"control",sep=".")
