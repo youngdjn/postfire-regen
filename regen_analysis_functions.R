@@ -1,4 +1,4 @@
-## Given a variable (vector) and a set of breakpoints, determine between which breakpoints each value of the variable falls
+## Given a variable (vector of values) and a set of breakpoints, determine between which breakpoints each value of the variable falls
 categorize <- function(x,breaks,name) { #name is used as the prefix for all categories output for this variable
   var.bounds <- c(min(x,na.rm=TRUE)-1,breaks,max(x,na.rm=TRUE)+1)
   var.bounds.shift <- c(var.bounds[-1],NA)

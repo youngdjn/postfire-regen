@@ -2,7 +2,6 @@ setwd("~/UC Davis/Research Projects/Post-fire regen/Dev/postfire-regen")
 
 library(ggplot2)
 
-
 source("regen_analysis_functions.R")
 
 #### 0. Read in and clean data, thin to focal plots ####
@@ -74,7 +73,7 @@ for(fire in fires) {
   # store it into the plot data.frame
   d.plot[d.plot$Fire==fire,"rad.category"] <- categories
   
-  #! To-do: break down the categories further for the fires that have enough plots (so may have different number of categories per fire). Goal of ~10 plots per category? Seed tree distance should probably be a category (or else simply exclude plots that are far from seed source)
+  #! To-do: break down the categories further for the fires that have enough plots (may have different number of categories per fire). Goal of ~10 plots per category? Seed tree distance should probably be a category (or else simply exclude plots that are far from seed source)
 
 }
   
@@ -96,6 +95,8 @@ ggplot(d.plot[d.plot$FIRE_SEV %in% control,],aes(x=ppt.normal,y=rad.march,col=to
   facet_wrap(~Fire,scales="free")
 
 #! obvious that we need more control plots for some of these topoclim categories
+
+
 
 
 
