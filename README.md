@@ -9,7 +9,7 @@
 
 - regen_analysis.R: take intermediate data products, compute appropriate summaries (via aggregation) and perform analyses  
   #### To-do:  
-  - Improve topoclimate categorization to (a) allow more topoclimatic categories for fires that have more plots, to achieve a target of ~10(?) plots per fire, (b) make sure there are enough plots in all factorial combinations of categorization variables (e.g., what if there are no high-radiation plots in high-precipitation areas?), and (c) make sure there are enough control plots as well as high-severity plots  
+  - Improve topoclimate categorization to (a) allow more topoclimatic categories for fires that have more plots, to achieve a target of ~10(?) plots per category per fire, (b) make sure there are enough plots in all factorial combinations of categorization variables (e.g., what if there are no high-radiation plots in high-precipitation areas?), and (c) make sure there are enough control plots as well as high-severity plots  
   
 - regen_analysis_functions.R: functions used by the script above  
 
@@ -40,6 +40,11 @@ Returns long topo version for ggplot graphics with regen.(whatever variable) and
 Input: topo-aggregated dataframe, variables to include  
 Output: long topo-aggregated dataframe with just one metric of regen/control presence  
   - Not yet implemented  
+
+## Directories  
+- root: principal scripts for data compilation and analysis  
+- data_intermediate: intermediate data files (see header above)
+- code_old_reference: old scripts from previous iterations of analysis that could be useful for reference
 
 
 ## Final products  
