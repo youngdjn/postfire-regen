@@ -1,5 +1,8 @@
 setwd("~/UC Davis/Research Projects/Post-fire regen/Dev/postfire-regen")
 
+library(ggplot2)
+
+
 source("regen_analysis_functions.R")
 
 #### 0. Read in and clean data, thin to focal plots ####
@@ -32,18 +35,26 @@ d.plot$tmean.normal.sq <- d.plot$tmean.normal^2
 d.sp$regen.presab.young <- ifelse(d.sp$regen.count.young > 0,TRUE,FALSE)
 d.sp$regen.presab.old <- ifelse(d.sp$regen.count.old > 0,TRUE,FALSE)
 
+#! TEMPORARY: if there was no radiation, set it equal to 0
+d.plot$rad.march <- ifelse(is.na(d.plot$rad.march),0,d.plot$rad.march)
+
+
+
 
 #### 1. Assign each plot a topoclimatic category ####
+
+#! NOTE that when breaking down plots by factorial combinations topoclimatic variables,
+# it might be important in the future to consider the interaction of variables.
+# E.g., not all levels of a given variable may be available at all levels of another given variables
+# E.g. at high precipitation, maybe there is only north aspects available. Doesn't seem to be the case here, but could potentially be with other variables.
 
 fires <- unique(d.plot$Fire)
 d.plot$precip.category
 d.plot$rad.category #radiation
 
 for(fire in fires) {
-  
-  print(fire)
-  
-  ### Precipitation categories
+
+  ## Precipitation categories
   # determine what the precipitation breakpoints should be (here just using median)
   breaks <- quantile(d.plot[d.plot$Fire == fire,]$ppt.normal,probs=c(0.5),na.rm=TRUE)
   # categorize plots based on where they fall between the breakpoints  
@@ -51,7 +62,7 @@ for(fire in fires) {
   # store it into the plot data.frame
   d.plot[d.plot$Fire==fire,"precip.category"] <- categories
   
-  ### Radiation categories #! note straylor cub do not have radiation yet
+  ## Radiation categories #! note straylor cub do not have radiation yet
   # determine what the breakpoints should be (here just using median)
   breaks <- quantile(d.plot[d.plot$Fire == fire,]$rad.march,probs=c(0.5),na.rm=TRUE)
   # categorize plots based on where they fall between the breakpoints  
@@ -62,8 +73,26 @@ for(fire in fires) {
 }
   
 
-### One variable reflecting the factorial combination of topoclimatic categories
+## Create one variable reflecting the factorial combination of topoclimatic categories
 d.plot$topoclim.cat <- paste(d.plot$precip.category,d.plot$rad.category,sep="_")
   
-  
+
+### Plot relevant "topoclimate space" for each fire and see how the categories broke them down
+# note that Cub and straylor do not have radiation (yet)
+ggplot(d.plot,aes(x=ppt.normal,y=rad.march,col=topoclim.cat)) +
+  geom_point() +
+  facet_wrap(~Fire,scales="free")
+
+
+
+#### 2. Summarize regen and adults (control plots only) in each topoclimatic category in each fire ####
+
+
+
+
+
+
+
+
+
   
