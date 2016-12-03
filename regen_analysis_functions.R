@@ -12,3 +12,14 @@ categorize <- function(x,breaks,name) { #name is used as the prefix for all cate
   category <- paste(name,category,sep=".")
   return(category)
 }
+
+# remove specified columns from a data frame
+remove.vars <- function(df,vars.remove) {
+  
+  df.names <- names(df)
+  df.names.clean <- df.names[!(df.names %in% vars.remove)]
+  df.clean <- df[,df.names.clean]
+  
+  return(df.clean)
+  
+}
