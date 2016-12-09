@@ -13,15 +13,19 @@ d.sp <- read.csv("data_intermediate/speciesXplot_level.csv",header=T,stringsAsFa
 # only keep the necessary columns
 d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORBE","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any")]
 
-# thin to 5-year post fire plots #! need to allow 4-year fires once we add them and fix climate and regen summarization
+# thin to 5-year post fire plots 
+#! need to allow 4-year fires once we add them and fix climate and regen summarization
 d.plot <- d.plot[d.plot$survey.years.post == 5,]
 
-# only Sierra Nevada fires #! need to add new fires to this list when they're in the dataset
+# only Sierra Nevada fires 
+#! need to add new fires to this list when they're in the dataset
 sierra.fires <- c("STRAYLOR","CUB","RICH","DEEP","MOONLIGHT","ANTELOPE","BTU LIGHTENING","HARDING","BASSETTS","PENDOLA","AMERICAN RIVER","RALSTON","FREDS","SHOWERS","POWER")
 d.plot <- d.plot[d.plot$Fire %in% sierra.fires,]
 
 # fix incorrectly-named variable
 d.plot$FORB <- d.plot$FORBE
+# ? is there a reason we can't fix the name of this variable earlier in the pipeline, or in the CSV files themselves?
+d.plot$FORBE <- NULL  #removes old column to keep it clean
 
 # if no data on seed tree distance (or it was recorded as being at/beyond the limit of the laser) used remote-sensing-based value
 d.plot$seed.tree.any.comb <- ifelse(is.na(d.plot$seed.tree.any) | (d.plot$seed.tree.any >= 150),d.plot$dist.to.low,d.plot$seed.tree.any)
@@ -79,7 +83,8 @@ for(fire in fires) {
   
 
 ## Create one variable reflecting the all-way factorial combination of topoclimatic categories
-d.plot$topoclim.cat <- paste(d.plot$precip.category,d.plot$rad.category,sep="_")
+d.plot$topoclim.cat <- paste("p", d.plot$precip.category, "f", d.plot$rad.category,sep="_") 
+#I added p and f to make it easier to remember which is first, but I don't know if that makes life more complicated later
   
 
 ### Plot relevant "topoclimate space" for each fire and see how the categories broke them down
