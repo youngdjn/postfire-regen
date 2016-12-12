@@ -83,7 +83,7 @@ for(fire in fires) {
   
 
 ## Create one variable reflecting the all-way factorial combination of topoclimatic categories
-d.plot$topoclim.cat <- paste("p", d.plot$precip.category, "f", d.plot$rad.category,sep="_") 
+d.plot$topoclim.cat <- paste(d.plot$precip.category, d.plot$rad.category,sep="_") 
 #I added p and f to make it easier to remember which is first, but I don't know if that makes life more complicated later
   
 
