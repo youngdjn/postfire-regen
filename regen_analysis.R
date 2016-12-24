@@ -23,7 +23,7 @@ d.plot <- d.plot[d.plot$Fire %in% sierra.fires,]
 # fix incorrectly-named variable
 d.plot$FORB <- d.plot$FORBE
 
-# if no data on seed tree distance (or it was recorded as being at/beyond the limit of the laser) used remote-sensing-based value
+# if no data on seed tree distance (or it was recorded as being at/beyond the limit of the laser) use remote-sensing-based value
 d.plot$seed.tree.any.comb <- ifelse(is.na(d.plot$seed.tree.any) | (d.plot$seed.tree.any >= 150),d.plot$dist.to.low,d.plot$seed.tree.any)
 
 # quadratic climate terms
@@ -35,7 +35,7 @@ d.sp$regen.presab.young <- ifelse(d.sp$regen.count.young > 0,TRUE,FALSE)
 d.sp$regen.presab.old <- ifelse(d.sp$regen.count.old > 0,TRUE,FALSE)
 d.sp$regen.presab.tot <- ifelse(d.sp$regen.count.tot > 0,TRUE,FALSE)
 
-#! TEMPORARY: if there was no radiation, set it equal to 0
+#! TEMPORARY: if there was no radiation data, set it equal to 0
 d.plot$rad.march <- ifelse(is.na(d.plot$rad.march),0,d.plot$rad.march)
 
 high.sev <- c(4,5) # which field-assessed severity values are considered high severity
