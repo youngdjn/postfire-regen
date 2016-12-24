@@ -126,7 +126,7 @@ d.plot.c <- remove.vars(d.plot,c("Year.of.Fire","Easting","Northing","aspect","Y
 d.plot.c$type <- ifelse(d.plot.c$FIRE_SEV %in% control,"control",NA)
 d.plot.c$type <- ifelse(d.plot.c$FIRE_SEV %in% high.sev,"highsev",d.plot.c$type)
 # get rid of plots that are neither control nor high sev
-d.plot.c <- d.plot.c[!is.na(d.plot.c$type),]
+d.plot.c <- d.plot.c[!is.na(d.plot.c$type),]  
 
 ## aggregate plots by Fire, topoclim category, and type (control or high sev)
 d.plot.agg.mean <- aggregate(remove.vars(d.plot.c,c("Regen_Plot","topoclim.cat","type","fire.abbr","X5yr","Fire")),by=list(d.plot.c$Fire,d.plot.c$topoclim.cat,d.plot.c$type),FUN=mean)
