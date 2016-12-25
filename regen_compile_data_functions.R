@@ -205,5 +205,14 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,years.regen,all.sp=FALSE) {
 }
 
 
-
+# remove specified columns from a data frame
+remove.vars <- function(df,vars.remove) {
+  
+  df.names <- names(df)
+  df.names.clean <- df.names[!(df.names %in% vars.remove)]
+  df.clean <- df[,df.names.clean]
+  
+  return(df.clean)
+  
+}
 

@@ -11,7 +11,7 @@ d.plot <- read.csv("data_intermediate/plot_level.csv",header=T,stringsAsFactors=
 d.sp <- read.csv("data_intermediate/speciesXplot_level.csv",header=T,stringsAsFactors=FALSE)
 
 # only keep the necessary columns
-d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORBE","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any")]
+d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any")]
 
 # thin to 5-year post fire plots #! need to allow 4-year fires once we add them and fix climate and regen summarization
 d.plot <- d.plot[d.plot$survey.years.post == 5,]
@@ -19,9 +19,6 @@ d.plot <- d.plot[d.plot$survey.years.post == 5,]
 # only Sierra Nevada fires #! need to add new fires to this list when they're in the dataset
 sierra.fires <- c("STRAYLOR","CUB","RICH","DEEP","MOONLIGHT","ANTELOPE","BTU LIGHTENING","HARDING","BASSETTS","PENDOLA","AMERICAN RIVER","RALSTON","FREDS","SHOWERS","POWER")
 d.plot <- d.plot[d.plot$Fire %in% sierra.fires,]
-
-# fix incorrectly-named variable
-d.plot$FORB <- d.plot$FORBE
 
 # if no data on seed tree distance (or it was recorded as being at/beyond the limit of the laser) use remote-sensing-based value
 d.plot$seed.tree.any.comb <- ifelse(is.na(d.plot$seed.tree.any) | (d.plot$seed.tree.any >= 150),d.plot$dist.to.low,d.plot$seed.tree.any)

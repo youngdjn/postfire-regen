@@ -344,14 +344,14 @@ sap.rep.rows <- sap.rep[sap.rep$x>1,]
 if(nrow(sap.rep.rows)>0) {warning("Multiple sapling entries for some species-plot combinations. Duplicates listed in 'sap.rep.rows'.")}
 
 ### aggregate seedling table by plot and species
+#! add unknown age here
 seedl.ag <- aggregate(seedl[,5:16],by=list(species=seedl$Species,Regen_Plot=seedl$Regen_Plot),FUN=sum,na.rm=TRUE)
 count.yrs <- paste("count.",0:11,"yr",sep="")
 names(seedl.ag) <- c("species","Regen_Plot",count.yrs)
 
 ### aggregate sapling table by plot and species
-#! need to fix this because some saplings are not assigned an age, just interpret each row as a presence
 sap$tot <- rowSums(sap[,6:14],na.rm=TRUE)
-sap$X10yr[sap$tot == 0] <- 1 #! if the species had a row for the sapling but no age, assume it was 10yr
+sap$X10yr[sap$tot == 0 | (is.na(sap$tot))] <- 1 #! if the species had a row for the sapling but no age, assume it was 10yr; some saplings are not assigned an age, just interpret each row as a presence
 sap.ag <- aggregate(sap[,c(6:14,20)],by=list(species=sap$Species,Regen_Plot=sap$Regen_Plot),FUN=sum,na.rm=TRUE)
 count.yrs <- paste("count.",3:11,"yr",sep="")
 names(sap.ag) <- c("species","Regen_Plot",count.yrs,"count.tot")
@@ -382,7 +382,7 @@ regen.ag <- merge(regen.ag,surviving.trees.ag,by=c("Regen_Plot","species"),all=T
 regen.ag$surviving.trees.count[is.na(regen.ag$surviving.trees.count)] <- 0
 regen.ag$surviving.trees.ba[is.na(regen.ag$surviving.trees.ba)] <- 0
 
-write.csv(regen.surv,"../data_intermediate_processing_local/tree_summarized_sp.csv",row.names=FALSE)
+write.csv(regen.ag,"../data_intermediate_processing_local/tree_summarized_sp.csv",row.names=FALSE)
 
 
 
@@ -465,7 +465,8 @@ names(seed.tree.any) <- c("Regen_Plot","seed.tree.any")
 plot.clim <- merge(plot.3,plot.3.clim,by="Regen_Plot",all.x=TRUE)
 plot.clim.seedtree <- merge(plot.clim,seed.tree.any,all.x=TRUE)
 
-
+plot.clim.seedtree$FORB <- plot.clim.seedtree$FORBE
+plot.clim.seedtree <- remove.vars(plot.clim.seedtree,"FORBE")
 
 
 ### write plot-level and species-level output files
