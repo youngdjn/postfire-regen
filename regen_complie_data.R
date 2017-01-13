@@ -399,6 +399,12 @@ plot.climate <- read.csv("../data_intermediate_processing_local/plot_climate_wat
 plot.fire.data <- read.csv("../data_intermediate_processing_local/plot_fire_data.csv",stringsAsFactors=FALSE)
 plot.tree.sp <- read.csv("../data_intermediate_processing_local/tree_summarized_sp.csv",stringsAsFactors=FALSE)
 
+# if there is no 12yr column, add it to prevent bugs in summing tree ages
+if(!("count.12yr" %in% names(plot.tree.sp))) {
+  plot.tree.sp$count.12yr <- 0
+}
+
+
 
 ## to plot ppt over time at any given plot
 # ppt.cols <- grep("ppt",names(plot.climate))
@@ -435,18 +441,23 @@ plot.2$survey.years.post <- plot.2$Year - plot.2$fire.year
 plot.3 <- merge(plot.2,plots.extracted,all.x=TRUE)
 
 ### get summarized climate data for each plot
+##!!! need to make this relative to number of years post-fire
 plot.3.clim <- summarize.clim(plot.3,plot.climate,years.clim=1:3) #first three years after fire
 plot.3.clim2 <- summarize.clim(plot.3,plot.climate,years.clim=4:5) # years 4-5 after fire
 names(plot.3.clim2) <- paste(names(plot.3.clim2),".late",sep="")
 
 ### get summarized regen data for each plot #! will need to modify this to account for 4-year fires (old seedlings would be 3-4 years for those)
-plot.3.regen.old <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),years.regen=4:5,all.sp=TRUE)
-plot.3.regen.young <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),years.regen=1:3,all.sp=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data)
+###!!!! resume here (actually in the function code)
+plot.3.regen.old <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="old",all.sp=TRUE)
+plot.3.regen.young <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="young",all.sp=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call, the previous line)
+plot.3.regen.all <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="all",all.sp=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call)
 names(plot.3.regen.old)[3] <- "regen.count.old"
 names(plot.3.regen.young)[3] <- "regen.count.young"
+names(plot.3.regen.all)[3] <- "regen.count.all"
 
-plot.3.regen <- merge(plot.3.regen.young,plot.3.regen.old)
-plot.3.regen$regen.count.tot <- plot.3.regen$regen.count.young + plot.3.regen$regen.count.old #! will need to fix this if converted to trees per year
+
+plot.3.regen.pre <- merge(plot.3.regen.young,plot.3.regen.old)
+plot.3.regen <- merge(plot.3.regen.pre,plot.3.regen.all)
 
 
 ### species-level seed tree distance
