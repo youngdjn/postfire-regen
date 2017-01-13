@@ -13,8 +13,8 @@ d.sp <- read.csv("data_intermediate/speciesXplot_level.csv",header=T,stringsAsFa
 # only keep the necessary columns
 d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any")]
 
-# thin to 5-year post fire plots #! need to allow 4-year fires once we add them and fix climate and regen summarization
-d.plot <- d.plot[d.plot$survey.years.post == 5,]
+# thin to 5-year post fire plots
+d.plot <- d.plot[d.plot$survey.years.post %in% c(4,5),]
 
 # only Sierra Nevada fires #! need to add new fires to this list when they're in the dataset
 sierra.fires <- c("STRAYLOR","CUB","RICH","DEEP","MOONLIGHT","ANTELOPE","BTU LIGHTENING","HARDING","BASSETTS","PENDOLA","AMERICAN RIVER","RALSTON","FREDS","SHOWERS","POWER")
@@ -30,7 +30,7 @@ d.plot$tmean.normal.sq <- d.plot$tmean.normal^2
 # variable for regen presence/absence
 d.sp$regen.presab.young <- ifelse(d.sp$regen.count.young > 0,TRUE,FALSE)
 d.sp$regen.presab.old <- ifelse(d.sp$regen.count.old > 0,TRUE,FALSE)
-d.sp$regen.presab.tot <- ifelse(d.sp$regen.count.tot > 0,TRUE,FALSE)
+d.sp$regen.presab.all <- ifelse(d.sp$regen.count.all > 0,TRUE,FALSE)
 
 #! TEMPORARY: if there was no radiation data, set it equal to 0
 d.plot$rad.march <- ifelse(is.na(d.plot$rad.march),0,d.plot$rad.march)
@@ -104,7 +104,7 @@ ggplot(d.plot[d.plot$FIRE_SEV %in% control,],aes(x=ppt.normal,y=rad.march,col=to
 d.sp.cat <- merge(d.sp,d.plot[,c("Regen_Plot","topoclim.cat","Fire","FIRE_SEV")])
 
 ## preparing to aggregate tree data: get highsev and control plots only, each with only the columns relevant to it
-d.sp.cat.highsev <- d.sp.cat[d.sp.cat$FIRE_SEV %in% high.sev,c("Fire","species","topoclim.cat","seed.tree.sp","regen.count.young","regen.count.old","regen.count.tot","regen.presab.young","regen.presab.old","regen.presab.tot")]
+d.sp.cat.highsev <- d.sp.cat[d.sp.cat$FIRE_SEV %in% high.sev,c("Fire","species","topoclim.cat","seed.tree.sp","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")]
 d.sp.cat.control <- d.sp.cat[d.sp.cat$FIRE_SEV %in% high.sev,c("Fire","species","topoclim.cat","adult.count","adult.ba")]
 
 ## aggregate tree data by species and topo category #! might want to also calculate SD or SE in a separate aggregate call? (would append the variable names with ".sd")

@@ -310,7 +310,7 @@ for(fire in fires) {
   dist.to.low <- extract(dist.to.low.rast,plots.fire,method="bilinear")
   regen.plot <- plots.fire$Regen_Plot
   
-  fire.vals <- data.frame(Regen_Plot=regen.plot,firesev=firesev,dist.to.low=dist.to.low) #! notes that value of 5 here means increased greenness
+  fire.vals <- data.frame(Regen_Plot=regen.plot,firesev=firesev,dist.to.low=dist.to.low) #! note that value of 5 here means increased greenness
   plot.firesev <- rbind(plot.firesev,fire.vals)
   
   cat("Finished severity analysis of fire ",fire," (",counter," of ",length(fires),")\n",sep="")
@@ -331,8 +331,8 @@ resprout <- read.csv("../data_survey/Resprouts.csv")
 surviving.trees <- read.csv("../data_survey/surviving_trees.csv",header=TRUE,stringsAsFactors=FALSE)
 
 
-#! may need to specify only non-planted seedlings
-#seedl <- seedl[seedl$seed_veg_plant != "P",]
+# specify only non-planted seedlings (assuming that if it's blank, it means it's seeded)
+seedl <- seedl[which((seedl$seed_veg_plant != "P") | is.na(seedl$seed_veg_plant)),]
 
 ### check regenerating tree data for duplicates
 seedl.rep <- aggregate(seedl[,10],by=list(species=seedl$Species,Regen_Plot=seedl$Regen_Plot),FUN=length)
@@ -344,14 +344,16 @@ sap.rep.rows <- sap.rep[sap.rep$x>1,]
 if(nrow(sap.rep.rows)>0) {warning("Multiple sapling entries for some species-plot combinations. Duplicates listed in 'sap.rep.rows'.")}
 
 ### aggregate seedling table by plot and species
-#! add unknown age here
+#!!!! need to include unknown age here. This is once we add 2016 data which include that column
+#! Can do that by making it a separate column that is only counted when computing TOTAL seedlings
+#! Also, make all counts for CADE and all hardwoods fall in the unknown column.
 seedl.ag <- aggregate(seedl[,5:16],by=list(species=seedl$Species,Regen_Plot=seedl$Regen_Plot),FUN=sum,na.rm=TRUE)
 count.yrs <- paste("count.",0:11,"yr",sep="")
 names(seedl.ag) <- c("species","Regen_Plot",count.yrs)
 
 ### aggregate sapling table by plot and species
 sap$tot <- rowSums(sap[,6:14],na.rm=TRUE)
-sap$X10yr[sap$tot == 0 | (is.na(sap$tot))] <- 1 #! if the species had a row for the sapling but no age, assume it was 10yr; some saplings are not assigned an age, just interpret each row as a presence
+sap$X10yr[sap$tot == 0 | (is.na(sap$tot))] <- 1 # if the species had a row for the sapling but no age, assume it was 10yr; some saplings are not assigned an age; just interpret each row as a presence
 sap.ag <- aggregate(sap[,c(6:14,20)],by=list(species=sap$Species,Regen_Plot=sap$Regen_Plot),FUN=sum,na.rm=TRUE)
 count.yrs <- paste("count.",3:11,"yr",sep="")
 names(sap.ag) <- c("species","Regen_Plot",count.yrs,"count.tot")
@@ -369,7 +371,7 @@ regen <- rbind.fill(regen,resprout.ag) # add in resprout table (comment out here
 regen.ag <- aggregate(regen[,3:14],by=list(species=regen$species,Regen_Plot=regen$Regen_Plot),FUN=sum,na.rm=TRUE)
 
 ### aggregate surviving tree table by plot and species
-#! optionally add a cutoff so we con't consider small trees
+#! optionally add a cutoff here so we con't consider small trees
 surviving.trees$ba <- (surviving.trees$DBH/2)^2*3.14
 surviving.trees$count <- 1
 surviving.trees.ag <- aggregate(surviving.trees[,c("count","ba")],by=list(species=surviving.trees$Species,Regen_Plot=surviving.trees$Regen_Plot),FUN=sum)
@@ -441,13 +443,13 @@ plot.2$survey.years.post <- plot.2$Year - plot.2$fire.year
 plot.3 <- merge(plot.2,plots.extracted,all.x=TRUE)
 
 ### get summarized climate data for each plot
-##!!! need to make this relative to number of years post-fire
+##!! If want to look at weather beyond 4 years post-fire (for those fires that had more than 4 years), will need to make this relative to number of years post-fire
 plot.3.clim <- summarize.clim(plot.3,plot.climate,years.clim=1:3) #first three years after fire
-plot.3.clim2 <- summarize.clim(plot.3,plot.climate,years.clim=4:5) # years 4-5 after fire
+plot.3.clim2 <- summarize.clim(plot.3,plot.climate,years.clim=3:4) # years 3-4 after fire
 names(plot.3.clim2) <- paste(names(plot.3.clim2),".late",sep="")
 
-### get summarized regen data for each plot #! will need to modify this to account for 4-year fires (old seedlings would be 3-4 years for those)
-###!!!! resume here (actually in the function code)
+### get summarized regen data for each plot
+###!!! Need to account for unknown age here (will be a new column, created above; only add it to the "all" regen totals, not to young or old)
 plot.3.regen.old <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="old",all.sp=TRUE)
 plot.3.regen.young <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="young",all.sp=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call, the previous line)
 plot.3.regen.all <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="all",all.sp=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call)
