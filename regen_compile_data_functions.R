@@ -125,16 +125,59 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
 
 
 #### summarize regen counts for given ages, with all specified species as separate rows ####
-summarize.regen.ind <- function(plot.df,regen.df,sp,years.regen,all.sp=FALSE) {
+summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE) {
   
   plot.ids <- unique(plot.df$Regen_Plot)
-  
+
   if(all.sp) sp <- unique(regen.df$species) # if specified, override the species list provided; use all species that were observed at least once
   regen.sp <- regen.df[regen.df$species %in% sp,]
   
-  regen.cols <- paste("count.",years.regen,"yr",sep="")
-  regen.sp$regen.count <- apply(regen.sp[,regen.cols],1,sum,na.rm=TRUE)
-  regen.sp <- regen.sp[,c("Regen_Plot","species","regen.count","surviving.trees.count","surviving.trees.ba")]
+  
+  ## function to determine which years of regen to use, based on plot age (number of years post-fire it was surveyed)
+  ## then take the regen ages required for each plot and sum the counts of those ages in each plot
+
+  get.regen.years <- function(plot.survey.years.post) {
+    
+    if(regen.ages == "young") {
+      years.regen <- 0:2
+    } else if(regen.ages == "old") {
+      years.regen <- plot.survey.years.post - 1:0 # the second-to-last and last year of the plot before it was surveyed
+    } else if(regen.ages == "all") {
+      years.regen <- 1:plot.survey.years.post
+    }
+
+  }
+  
+  years.regen <- lapply(plot.df$survey.years.post,get.regen.years)
+  nyears.regen <- lapply(years.regen,length)
+  
+  plot.df$years.regen <- years.regen
+  
+  regen.cols <- lapply(years.regen,function(x) paste("count.",x,"yr",sep=""))
+  names(regen.cols) <- plot.df$Regen_Plot
+  
+  #for each row of regen.sp (plot-species combination), sum the counts of seedlings of the specified ages, and return the average number of seedlings per year
+  regen.peryr.sp <- rep(NA,nrow(regen.sp))
+  for(i in 1:nrow(regen.sp)) {
+    
+    regen.sp.row <- regen.sp[i,]
+    
+    regen.plot <- regen.sp.row["Regen_Plot"]
+    
+    # if there are no counts available for the plot, skip the plot-species combination
+    if(!(regen.plot %in% names(regen.cols))) {
+      cat("No regen counts found for plot",regen.plot[[1]]," species", regen.sp.row$species)
+      next()
+    }
+    regen.row.cols <- eval(parse(text=paste0("regen.cols$",regen.plot))) # get the names of the regen columns of the correct age seedlings for the current regen plot-species combination
+    regen.tot.sp <- sum(regen.sp.row[,regen.row.cols],na.rm=TRUE)
+    regen.peryr.sp[i] <- regen.tot.sp / length(regen.row.cols)
+    
+  }
+  
+  regen.sp$regen.count <- regen.peryr.sp
+  regen.sp <- regen.sp[,c("Regen_Plot","species","regen.count","surviving.trees.count","surviving.trees.ba")] 
+  
   
   regen.all <- merge(plot.ids,sp,by=NULL) # list of all species for all plots
   names(regen.all) <- c("Regen_Plot","species")
@@ -205,5 +248,14 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,years.regen,all.sp=FALSE) {
 }
 
 
-
+# remove specified columns from a data frame
+remove.vars <- function(df,vars.remove) {
+  
+  df.names <- names(df)
+  df.names.clean <- df.names[!(df.names %in% vars.remove)]
+  df.clean <- df[,df.names.clean]
+  
+  return(df.clean)
+  
+}
 

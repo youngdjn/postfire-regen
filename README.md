@@ -2,17 +2,19 @@
 
 ## Scripts  
 - regen_compile_data.R: take survey data and geospatial data (e.g. climate, elevation) to extract relevant data summarized by plot and by plotXspecies (the intermediate products--see below)  
-  #### To-do:  
-  - Update regen summarization to (a) specify old-young cutoff age on independent line, (b) have flexibility to deal with fires that are 4 years old.  
-  - Seedlings counts should be counts per year  
-  - Set change FORBE to FORB here rather than in regen_compile_data  
-  
+  #### To-do:
+    - make sure seedlings of unknown age are counted (in total but not as a particular age); to do this need to add another column for "unknown age"
+    - should we keep saplings listed in high-severity plots? why are there saplings found there? check how many
+
 - regen_compile_data_functions.R: functions used by the script above  
 
 - regen_analysis.R: take intermediate data products, compute appropriate summaries (via aggregation) and perform analyses  
   #### To-do:  
   - Improve topoclimate categorization to (a) allow more topoclimatic categories for fires that have more plots, to achieve a target of ~10(?) plots per category per fire, (b) make sure there are enough plots in all factorial combinations of categorization variables (e.g., what if there are no high-radiation plots in high-precipitation areas?), and (c) make sure there are enough control plots as well as high-severity plots  
   - Minimum of 5 highsev and 5 control plots in a topoclimatic category in order to include it in analysis
+    - Update regen summarization to (a) specify old-young cutoff age on independent line, (b) have flexibility to deal with fires that are 4 years old.  
+  - Seedlings counts should be counts per year  
+
 
   
 - regen_analysis_functions.R: functions used by the script above  
