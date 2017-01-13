@@ -3,7 +3,7 @@
 ## Scripts  
 - regen_compile_data.R: take survey data and geospatial data (e.g. climate, elevation) to extract relevant data summarized by plot and by plotXspecies (the intermediate products--see below)  
   #### To-do:
-    - make sure seedlings of unknown age are counted (in total but not as a particular age, not even "early" and "young"); to do this need to add another column for "unknown age"; set all tallied CADES and all hardwoods to this age
+    - make sure seedlings of unknown age are counted (in total but not as a particular age, not even "old" and "young"); to do this need to add another column for "unknown age"; set all tallied CADEs and all hardwoods to this age
     - should we keep saplings listed in high-severity plots? why are there saplings found there? check how many
 
 - regen_compile_data_functions.R: functions used by the script above  
