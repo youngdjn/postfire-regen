@@ -11,7 +11,7 @@ d.plot <- read.csv("data_intermediate/plot_level.csv",header=T,stringsAsFactors=
 d.sp <- read.csv("data_intermediate/speciesXplot_level.csv",header=T,stringsAsFactors=FALSE)
 
 # only keep the necessary columns
-d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any")]
+d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z")]
 
 # thin to 5-year post fire plots
 d.plot <- d.plot[d.plot$survey.years.post %in% c(4,5),]
@@ -148,3 +148,133 @@ d.sp.2 <- d.sp.agg
 ### The two objects above contain all the relevant data summarized by topoclimatic category within each fire
 ## NOTE that since we aggregated by computing the average, the presence-absence columns represent "% of plots with presence"
 ## also adult data only come from the control plots, and seedling data only from the highsev plots
+
+
+#### 3. Steps required prior to any analysis ####
+
+# Remove the topoclimatic categories with too few plots in either burned or control
+d.plot.3 <- d.plot.2[which((d.plot.2$count.control > 5) & (d.plot.2$count.highsev > 5)),]
+
+
+
+#### 4. Exploration of pairwise correlations between response variables and predictor variables ####
+
+# Analysis for a single focal species (or species group, such as CONIFER)
+focalsp <- "PIPO"
+d.sp.2.singlesp <- d.sp.2[d.sp.2$species==focalsp,]
+d.mod <- merge(d.plot.3,d.sp.2.singlesp,all.x=TRUE) # data frame for modeling. Has regen-specific and plot-specific data for the species (or species group) specified above
+
+
+# List interesting variables and make pairs plots
+response <- "regen.presab.old"
+preds <- c("SHRUB.highsev", "rad.march.highsev", "ppt.normal.highsev", "ppt.post.highsev", "ppt.post.min.highsev", "diff.norm.ppt.z.highsev", "diff.norm.ppt.min.z.highsev", "seed.tree.any.comb.highsev", "adult.ba", "adult.count")
+#pairs(d.mod[,c(response,preds)])
+
+# Get the pearson correlation of each predictor with the response (individually)
+corr <- NULL
+for(i in 1:length(preds)) {
+  corr[preds[i]] <- cor(d.mod[,response],d.mod[,preds[i]])
+}
+corr
+
+
+### Make a heatmap of pairwise correlations for different predictors and responses
+
+# Define the interesting set of responses
+sps <- c("CONIFER","PIPO","ABCO","HARDWOOD")
+responses <- c("regen.presab.old","regen.presab.all","SHRUB.highsev")
+
+opts <- expand.grid(responses,sps,stringsAsFactors=FALSE)
+names(opts) <- c("response.opt","sp.opt")
+opts <- opts[c(-6,-9,-12),]
+
+opts.names <- paste(opts$sp.opt,opts$response.opt,sep="-")
+
+#interesting predictors
+preds <- c("SHRUB.highsev", "rad.march.highsev", "ppt.normal.highsev", "ppt.post.highsev", "ppt.post.min.highsev", "diff.norm.ppt.z.highsev", "diff.norm.ppt.min.z.highsev", "seed.tree.any.comb.highsev", "adult.ba", "adult.count","regen.presab.old","regen.presab.all")
+
+# data frame to store correlation values
+corr.df <- data.frame(opt=NA,pred=NA,cor=NA,pval=NA)
+
+for(i in 1:nrow(opts)) {
+  
+  opt <- opts[i,]
+  
+  # Analysis for a single focal species (or species group, such as CONIFER)
+  focalsp <- opt$sp.opt
+  d.sp.2.singlesp <- d.sp.2[d.sp.2$species==focalsp,]
+  d.mod <- merge(d.plot.3,d.sp.2.singlesp,all.x=TRUE) # data frame for modeling. Has regen-specific and plot-specific data for the species (or species group) specified above
+  
+  
+  # List interesting variables and make pairs plots
+  response <- opt$response.opt
+
+  
+
+  for(j in 1:length(preds)) {
+    corr <- cor(d.mod[,response],d.mod[,preds[j]])
+    
+    mod.df <- data.frame(y=d.mod[,response],pred=d.mod[,preds[j]])
+    
+    #if the response is all the same number (e.g. all plots had no hardwoods), can't fit model; skip
+    if(length(unique(mod.df$pred)) < 2) {
+      next()
+    }
+
+    m <- lm(y~pred,data=mod.df)
+    p <- summary(m)$coefficients["pred","Pr(>|t|)"]
+
+    corr.df <- rbind(corr.df,data.frame(opt=opts.names[i],pred=preds[j],cor=corr,pval=p))
+    
+    
+  }
+}
+
+
+## Plot heatmap
+library(ggplot2)
+
+
+corr.df$cor.sig <- ifelse(corr.df$pval < 0.05, corr.df$cor,NA) #sed non-sig correlations to NA
+corr.df$sig <- ifelse(corr.df$pval < 0.05,"*",NA)
+
+ggplot(corr.df,aes(x=opt,y=pred)) +
+  geom_tile(aes(fill=cor)) +
+  scale_fill_gradientn(colours=c("red","white","blue"),limits=c(1,-1)) +
+  geom_text(aes(label=sig)) +
+  labs(x="response",y="predictor") +
+  theme_bw(15) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  
+
+
+
+
+
+
+
+# Summary of correlation results: patterns we would expect, and pretty strong! Comparing regen count and regen pres/ab, all of the site factors are more correlated with regen presab, EXCEPT seed tree and adult ba/count
+# Shrubs are not important for old seedlings, but they're important for all seedlings. So shrubs become more important later!
+# When looking at all seedlings instead of just old seedlings, all predictors are even stronger (weird!) even post-fire weather anomaly. Is it because shrubs do poorly when seedlings initially do well? Hard to tease that apart with this dataset; maybe with a multiple regression Exception to this is adult BA and count better explain old regen than all regen.
+# Patterns even stronger when looking at "CONIFER" (especially radiation--weird!), generally even stronger with using all seedlings instead of just old seedlings
+# Post precip is a better predictor than normal precip
+
+
+# Picking the more interesting variables for a multiple regression
+# 
+
+resp <- "regen.presab.all"
+preds <- c("ppt.normal.highsev","rad.march.highsev","diff.norm.ppt.z.highsev","adult.ba")
+# look for autocorrelation among predictors
+pairs(d.mod[,preds])
+# not bad
+
+m <- lm(regen.presab.all~.,data=d.mod[,c(resp,preds)])
+summary(m)
+
+
+
+
+
+
+
