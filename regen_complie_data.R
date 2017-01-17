@@ -10,7 +10,99 @@ library(rgdal)
 source("regen_compile_data_functions.R")
 
 
-#### 0. Operations that apply to all subsequent steps below ####
+#### -1. Read in and merge the various databases and excel sheets with plot data ####
+
+db.dirs <- c("../data_survey/Cameron/","../data_survey/Jared/","../data_survey/John/","../data_survey/Michelle/")
+
+
+
+for(i in 1:length(db.dirs)) {
+  
+  db.dir <- db.dirs[i]
+  
+  table.file <- "Plot_data.txt"
+  table.loc <- paste0(db.dir,table.file)
+  plot <- read.csv(table.loc,header=TRUE,stringsAsFactors=FALSE)
+
+  table.file <- "surviving_trees.txt"
+  table.loc <- paste0(db.dir,table.file)
+  surviving.trees <- read.csv(table.loc,header=TRUE,stringsAsFactors=FALSE)
+  
+  if(i != 4) { # from Michelle we don't need these because hers were all control plots
+    table.file <- "Resprouts.txt"
+    table.loc <- paste0(db.dir,table.file)
+    resprout <- read.csv(table.loc,header=TRUE,stringsAsFactors=FALSE)
+    
+    table.file <- "sapling_regen.txt"
+    table.loc <- paste0(db.dir,table.file)
+    sap <- read.csv(table.loc,header=TRUE,stringsAsFactors=FALSE)
+    
+    table.file <- "tree_regen.txt"
+    table.loc <- paste0(db.dir,table.file)
+    seedl <- read.csv(table.loc,header=TRUE,stringsAsFactors=FALSE)
+  }
+
+  if(i == 1) {
+    
+    plot.comb <- plot
+    resprout.comb <- resprout
+    sap.comb <- sap
+    seedl.comb <- seedl
+    surviving.trees.comb <- surviving.trees
+
+  } else {
+    
+    plot.comb <- rbind.fill(plot.comb,plot)
+    resprout.comb <- rbind.fill(resprout.comb,resprout)
+    sap.comb <- rbind.fill(sap.comb,sap)
+    seedl.comb <- rbind.fill(seedl.comb,seedl)
+    surviving.trees.comb <- rbind.fill(surviving.trees.comb,surviving.trees)
+
+  }
+  
+}
+
+
+plot.comb$seed_tree_distance_general <- min(c(plot.comb$seed_tree_distance_conifer, plot.comb$seed_tree_distance_hardwood, plot.comb$seed.tree.distance.general), na.rm=TRUE)
+
+# Find when only one quadrant was surveyed for seedlings, and multiply counts by 4 when true
+seedl.count.columns <- grep("yr$",names(seedl.comb))
+all.quadrants <- (seedl.comb$quadrants %in% c("ALL","4",""," ")) | is.na(seedl.comb$quadrants) # all quadrants were surveyed (T/F)
+seedl.comb[!all.quadrants,seedl.count.columns] <- 4*seedl.comb[!all.quadrants,seedl.count.columns]
+
+
+#populate seedling unk_yr column with values for CADE and all hardwoods
+hardwoods <- c("QUKE","QUCH2","ARME","LIDE3","CHCH","QUGA4","ACMA","CEMO2","CONU4","POTR5","QUBE5","QUJO3","QUWI","UMCA")
+not.ageable <- c("CADE27",hardwoods)
+seedl.comb$Count_total <- rowSums(seedl.comb[,seedl.count.columns])
+seedl.comb[seedl.comb$Species %in% not.ageable,"unk_yr"] <- (seedl.comb$unk_yr + seedl.comb$Count_total)[seedl.comb$Species %in% not.ageable]
+
+
+
+
+
+#! when a 2016 plot had a shrub that was actually a hardwood, fake it so it counts as a hardwood (make fake hardwood column that is counted when calculating hardwood presence but not count)
+#! exclude 2016 plots from hardwood count: not 0 but NA, not part of analysis
+
+
+#! Resume here: compare tables with Welch, then open Welch tables and merge in
+
+
+
+
+
+
+#! fix species names to have numbers: once tables merged, sort by species name to identify where.
+
+
+
+
+
+
+
+#### 0.5 Operations that apply to all eteps below #####
+
+
 
 # Load plot locs
 plot <- read.csv("../data_survey/Plot_data.csv",stringsAsFactors=FALSE)
