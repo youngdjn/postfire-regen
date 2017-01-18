@@ -194,6 +194,7 @@ seed.tree <- seed.tree.welch
 from <- c("JU","AB","CADE","CONU","LIDE","QUCH")
 to <- c("JUNIPERUS","ABIES","CADE27","CONU4","LIDE3","QUCH2")
 
+
 surviving.trees$Species <- mapvalues(surviving.trees$Species,from=from,to=to)
 sapling$Species <- mapvalues(sapling$Species,from=from,to=to)
 seedl$Species <- mapvalues(seedl$Species,from=from,to=to)
@@ -210,6 +211,9 @@ hardwoods <- c("QUKE","QUCH2","ARME","LIDE3","CHCH","QUGA4","ACMA","CEMO2","CONU
 not.ageable <- c("CADE27",hardwoods)
 seedl$Count_total <- rowSums(seedl[,seedl.count.columns],na.rm=TRUE) #this includes unk_yr (incase some of the seedlings were considered ageable and others not)
 seedl[seedl$Species %in% not.ageable,"unk_yr"] <- seedl$Count_total[seedl$Species %in% not.ageable]
+seedl.known.age.count.cols <- seedl.count.columns[1:(length(seedl.count.columns)-1)]
+#for non-ageable seedlings, where ages were just put into unk_yr, set their known age columns to 0
+seedl[seedl$Species %in% not.ageable,seedl.known.age.count.cols] <- 0
 
 
 
@@ -717,4 +721,3 @@ plot.clim.seedtree <- remove.vars(plot.clim.seedtree,"FORBE")
 ### write plot-level and species-level output files
 write.csv(plot.clim.seedtree,"data_intermediate/plot_level.csv",row.names=FALSE)
 write.csv(plot.3.regen,"data_intermediate/speciesXplot_level.csv",row.names=FALSE)
-
