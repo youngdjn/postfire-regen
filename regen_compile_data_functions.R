@@ -213,7 +213,7 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl
   
   
   ## compute total for all conifers
-  regen.tot.focal <- regen.tot[regen.tot$species %in% c("ABCO","PIPO","PSME","CADE27","PIJE","QUKE","PILA","PIAT","ABIES","PICO","PINUS","PSMA","TAXUS","TOCA","ABMA"),]
+  regen.tot.focal <- regen.tot[regen.tot$species %in% c("ABCO","PIPO","PSME","CADE27","PIJE","PILA","PIAT","ABIES","PICO","PINUS","PSMA","TAXUS","TOCA","ABMA","JUNIPERUS","JUOC","JUCA7","PISA"),]
   regen.allsp.tot <- aggregate(regen.tot.focal$regen.count,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
 
   names(regen.allsp.tot) <- c("Regen_Plot","regen.count")
@@ -229,7 +229,7 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl
   
   
   ## compute total for all hardwoods
-  regen.tot.focal <- regen.tot[regen.tot$species %in% c("QUKE","QUCH2","ARME","LIDE3","CHCH","QUGA4","ACMA","CEMO2","CONU4","POTR5","QUBE5","QUJO3","QUWI","UMCA"),] #! need to add some such as ALNUS
+  regen.tot.focal <- regen.tot[regen.tot$species %in% c("ALNUS","QUKE","QUCH2","ARME","LIDE3","CHCH","QUGA4","ACMA","ACME","CEMO2","CONU4","POTR5","QUBE5","QUJO3","QUWI","UMCA","ALRH"),] #! need to add some such as ALNUS
   regen.allsp.tot <- aggregate(regen.tot.focal$regen.count,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
   
   names(regen.allsp.tot) <- c("Regen_Plot","regen.count")

@@ -10,10 +10,6 @@ source("regen_analysis_functions.R")
 d.plot <- read.csv("data_intermediate/plot_level.csv",header=T,stringsAsFactors=FALSE)
 d.sp <- read.csv("data_intermediate/speciesXplot_level.csv",header=T,stringsAsFactors=FALSE)
 
-# remove weird column
-weirdcolnum <- grep("ID..Regen_Plot...Fire...Date...",names(d.plot))
-d.plot <- d.plot[,-weirdcolnum]
-
 
 # only keep the necessary columns
 d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general")]
@@ -191,12 +187,12 @@ corr
 ### Make a heatmap of pairwise correlations for different predictors and responses
 
 # Define the interesting set of responses
-sps <- c("CONIFER","PIPO","ABCO","HARDWOOD")
+sps <- c("CONIFER","PIPO","ABCO","HARDWOOD","PSME","PILA","QUKE")
 responses <- c("regen.presab.old","regen.presab.all","SHRUB.highsev")
 
 opts <- expand.grid(responses,sps,stringsAsFactors=FALSE)
 names(opts) <- c("response.opt","sp.opt")
-opts <- opts[c(-6,-9,-12),]
+opts <- opts[c(-6,-9,-12,-15,-18,-21),]
 
 opts.names <- paste(opts$sp.opt,opts$response.opt,sep="-")
 
@@ -216,7 +212,7 @@ for(i in 1:nrow(opts)) {
   
   newfires <- c("BAGLEY","PEAK","CHIPS")
   #! test removing new fires
-  d.mod <- d.mod[!(d.mod$Fire %in% newfires),]
+  #d.mod <- d.mod[!(d.mod$Fire %in% newfires),]
   
   
   # List interesting variables and make pairs plots
@@ -273,24 +269,25 @@ ggplot(corr.df,aes(x=opt,y=pred)) +
 # Picking the more interesting variables for a multiple regression
 # 
 
-focalsp <- "CONIFER"
+focalsp <- "QUKE"
 d.sp.2.singlesp <- d.sp.2[d.sp.2$species==focalsp,]
 d.mod <- merge(d.plot.3,d.sp.2.singlesp,all.x=TRUE) # data frame for modeling. Has regen-specific and plot-specific data for the species (or species group) specified above
 
 newfires <- c("BAGLEY","PEAK","CHIPS")
 #! test removing new fires
-d.mod <- d.mod[!(d.mod$Fire %in% newfires),]
+#d.mod <- d.mod[!(d.mod$Fire %in% newfires),]
 
 
 resp <- "regen.presab.all"
 preds <- c("ppt.normal.highsev","rad.march.highsev","diff.norm.ppt.z.highsev","adult.ba")
 preds <- c("adult.ba")
 preds <- c("rad.march.highsev","diff.norm.ppt.z.highsev","adult.ba")
+preds <- c("ppt.normal.highsev","diff.norm.ppt.z.highsev")
 # look for autocorrelation among predictors
 pairs(d.mod[,preds])
 # not bad
 
-m <- lm(regen.presab.all~.,data=d.mod[,c(resp,preds)])
+m <- lm(regen.presab.all~ppt.normal.highsev*diff.norm.ppt.z.highsev,data=d.mod[,c(resp,preds)])
 summary(m)
 
 
