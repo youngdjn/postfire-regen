@@ -242,7 +242,7 @@ utm10 <- CRS("+proj=utm +zone=10 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +n
 plots <- SpatialPointsDataFrame(coords=data.frame(x=plot$Easting,y=plot$Northing),data=plot,proj4string=utm10)
 
 #write plots to shapefile
-writeOGR(plots, getwd(),"plots_shapefile",driver="ESRI Shapefile",overwrite=TRUE)
+#writeOGR(plots, getwd(),"plots_shapefile",driver="ESRI Shapefile",overwrite=TRUE)
 
 
 #### 1. Extract monthly climate data for each plot ####
@@ -671,17 +671,17 @@ plot.3 <- merge(plot.2,plots.extracted,all.x=TRUE)
 ### get summarized climate data for each plot
 ##!! If want to look at weather beyond 4 years post-fire (for those fires that had more than 4 years), will need to make this relative to number of years post-fire
 plot.3.clim <- summarize.clim(plot.3,plot.climate,years.clim=1:3) #first three years after fire
-plot.3.clim2 <- summarize.clim(plot.3,plot.climate,years.clim=2:3) # for 3-4 years will need 2016 weather data
+plot.3.clim2 <- summarize.clim(plot.3,plot.climate,years.clim=2:3) # for more than 3 years out, will need 2016 weather data
 names(plot.3.clim2) <- paste(names(plot.3.clim2),".late",sep="")
 
 
 ####!!!! RESUME HERE
 
-### get summarized regen data for each plot
-###!!! Need to account for unknown age here (will be a new column, created above; only add it to the "all" regen totals, not to young or old)
+### get summarized regen data for each plot (also summarizes adults)
+##!! NOTE that as written here, the code includes un-ageable species when tallying regen for ALL ages, but not for specific age classes
 plot.3.regen.old <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="old",all.sp=TRUE)
 plot.3.regen.young <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="young",all.sp=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call, the previous line)
-plot.3.regen.all <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="all",all.sp=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call)
+plot.3.regen.all <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="all",all.sp=TRUE,incl.unk.age.for.all=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call)
 names(plot.3.regen.old)[3] <- "regen.count.old"
 names(plot.3.regen.young)[3] <- "regen.count.young"
 names(plot.3.regen.all)[3] <- "regen.count.all"
@@ -707,6 +707,9 @@ names(seed.tree.any) <- c("Regen_Plot","seed.tree.any")
 plot.clim <- merge(plot.3,plot.3.clim,by="Regen_Plot",all.x=TRUE)
 plot.clim.seedtree <- merge(plot.clim,seed.tree.any,all.x=TRUE)
 
+##!! Where does the giant column named with the names of all the columns (but empty) come from?
+
+## Correct misspelled FORBE
 plot.clim.seedtree$FORB <- plot.clim.seedtree$FORBE
 plot.clim.seedtree <- remove.vars(plot.clim.seedtree,"FORBE")
 

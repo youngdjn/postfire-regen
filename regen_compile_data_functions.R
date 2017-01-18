@@ -125,7 +125,7 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
 
 
 #### summarize regen counts for given ages, with all specified species as separate rows ####
-summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE) {
+summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl.unk.age.for.all=FALSE) {
   
   plot.ids <- unique(plot.df$Regen_Plot)
 
@@ -166,10 +166,16 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE) {
     
     # if there are no counts available for the plot, skip the plot-species combination
     if(!(regen.plot %in% names(regen.cols))) {
-      cat("No regen counts found for plot",regen.plot[[1]]," species", regen.sp.row$species)
+      #cat("No regen counts found for plot",regen.plot[[1]]," species", regen.sp.row$species)
       next()
     }
     regen.row.cols <- eval(parse(text=paste0("regen.cols$",regen.plot))) # get the names of the regen columns of the correct age seedlings for the current regen plot-species combination
+    
+    #include unknown age if examining all-aged trees
+    if((regen.ages == "all")&(incl.unk.age.for.all==TRUE)) {
+      regen.row.cols <- c(regen.row.cols,"unk_yr") 
+    }
+    
     regen.tot.sp <- sum(regen.sp.row[,regen.row.cols],na.rm=TRUE)
     regen.peryr.sp[i] <- regen.tot.sp / length(regen.row.cols)
     
@@ -186,7 +192,7 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE) {
   regen.tot$surviving.trees.count[is.na(regen.tot$surviving.trees.count)] <- 0
   regen.tot$surviving.trees.ba[is.na(regen.tot$surviving.trees.ba)] <- 0
   
-  ##create data frame of surviving counts per species per plot
+  ##create data frame of surviving counts per species per plot (with all species--so 0 of none, rather than having now row)
   species.all <- regen.all #just a list of all species crossed with all plots
   surviving.df <- data.frame(Regen_Plot=regen.sp$Regen_Plot,species=regen.sp$species,adult.count=regen.sp$surviving.trees.count,adult.ba=regen.sp$surviving.trees.ba)
   surviving.df2 <- merge(species.all,surviving.df,by=c("Regen_Plot","species"),all.x=TRUE)
