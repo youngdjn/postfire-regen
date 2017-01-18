@@ -6,14 +6,232 @@ library(sp)
 library(reshape2)
 library(plyr)
 library(rgdal)
+library(sp)
 
 source("regen_compile_data_functions.R")
 
 
-#### 0. Operations that apply to all subsequent steps below ####
+
+#### -2. Prepare Michelle (Power revisit) spreadsheet so it has same format as the DB export spreadsheets ####
+
+## Merge in Michelle BA and percent cover to the Michelle plot sheet
+plot.michelle.partial <- read.csv("../data_survey/Michelle/Plot_data_partial.txt",header=TRUE, stringsAsFactors=FALSE)
+#lifeform.michelle <- read.csv("../data_survey/Michelle/lifeform.txt",header=TRUE, stringsAsFactors=FALSE)
+input.michelle <- read.csv("../data_survey/Michelle/input.txt",header=TRUE, stringsAsFactors=FALSE)
+
+## simplify input to one line per plot
+input.min <- aggregate(input.michelle[,c("BAF","seed_tree_distance_conifer","seed_tree_distance_hardwood")],by=list(input.michelle$Regen_Plot),FUN=min,na.rm=TRUE)
+input.min[input.min==Inf] <- NA # when there was no seed tree observed
+input.sum <- aggregate(input.michelle[,c("BA_live_count","BA_dead_count")],by=list(input.michelle$Regen_Plot),FUN=sum)
+
+names(input.sum)[1] <- names(input.min)[1] <- "Regen_Plot"
+
+input.comp <- merge(input.min,input.sum,by="Regen_Plot")
+
+## merge input and lifeform into main Michelle plot table
+#plot.michelle.pre <- merge(plot.michelle.partial,lifeform.michelle,by="Regen_Plot",all.x=TRUE)
+plot.michelle <- merge(plot.michelle.partial,input.comp,by="Regen_Plot",all.x=TRUE)
+
+write.csv(plot.michelle,"../data_survey/Michelle/Plot_data.txt",row.names=FALSE)
+
+
+#### -1. Read in and merge the various databases and excel sheets with plot data ####
+
+
+db.dirs <- c("../data_survey/Cameron/","../data_survey/Jared/","../data_survey/John/","../data_survey/Michelle/")
+
+
+
+for(i in 1:length(db.dirs)) {
+  
+  db.dir <- db.dirs[i]
+  
+  table.file <- "Plot_data.txt"
+  table.loc <- paste0(db.dir,table.file)
+  plot <- read.csv(table.loc,header=TRUE,stringsAsFactors=FALSE)
+
+  table.file <- "surviving_trees.txt"
+  table.loc <- paste0(db.dir,table.file)
+  surviving.trees <- read.csv(table.loc,header=TRUE,stringsAsFactors=FALSE)
+  
+  if(i != 4) { # from Michelle we don't need these because hers were all control plots
+    table.file <- "Resprouts.txt"
+    table.loc <- paste0(db.dir,table.file)
+    resprout <- read.csv(table.loc,header=TRUE,stringsAsFactors=FALSE)
+    
+    table.file <- "sapling_regen.txt"
+    table.loc <- paste0(db.dir,table.file)
+    sap <- read.csv(table.loc,header=TRUE,stringsAsFactors=FALSE)
+    
+    table.file <- "tree_regen.txt"
+    table.loc <- paste0(db.dir,table.file)
+    seedl <- read.csv(table.loc,header=TRUE,stringsAsFactors=FALSE)
+  }
+
+  if(i == 1) {
+    
+    plot.comb <- plot
+    resprout.comb <- resprout
+    sap.comb <- sap
+    seedl.comb <- seedl
+    surviving.trees.comb <- surviving.trees
+
+  } else {
+    
+    plot.comb <- rbind.fill(plot.comb,plot)
+    resprout.comb <- rbind.fill(resprout.comb,resprout)
+    sap.comb <- rbind.fill(sap.comb,sap)
+    seedl.comb <- rbind.fill(seedl.comb,seedl)
+    surviving.trees.comb <- rbind.fill(surviving.trees.comb,surviving.trees)
+
+  }
+  
+}
+
+# Different methods for computing seed tree; convert into the value that can be obtained from all methods (closest tree regardless of identity)
+# when seed tree distance is 0, >200, or 200, or NA (all indicating not found), make it 999
+plot.comb$seed_tree_distance_conifer[plot.comb$seed_tree_distance_conifer %in% c("0",">200","200")] <- 999
+plot.comb$seed_tree_distance_hardwood[plot.comb$seed_tree_distance_hardwood %in% c("0",">200","200")] <- 999
+plot.comb$seed_tree_distance_general[plot.comb$seed_tree_distance_general %in% c("0",">200","200")] <- 999
+# plot.comb$seed_tree_distance_conifer[is.na(plot.comb$seed_tree_distance_conifer)] <- 999
+# plot.comb$seed_tree_distance_hardwood[is.na(plot.comb$seed_tree_distance_hardwood)] <- 999
+# plot.comb$seed_tree_distance_general[is.na(plot.comb$seed_tree_distance_general)] <- 999
+
+# make it numeric
+plot.comb$seed_tree_distance_conifer <- as.numeric(plot.comb$seed_tree_distance_conifer)
+plot.comb$seed_tree_distance_hardwood <- as.numeric(plot.comb$seed_tree_distance_hardwood)
+plot.comb$seed_tree_distance_general <- as.numeric(plot.comb$seed_tree_distance_general)
+
+#compute general seed tree distance as the minimum of hardwood and conifer
+plot.comb$seed_tree_distance_general <- pmin(plot.comb$seed_tree_distance_conifer, plot.comb$seed_tree_distance_hardwood, plot.comb$seed_tree_distance_general, na.rm=TRUE)
+
+# set survey year
+plot.comb$Date <- "8/10/2016 0:00:00" # it's all 2016; the day doesn't matter
+
+
+# Find when only one quadrant was surveyed for seedlings, and multiply counts by 4 when true
+seedl.count.columns <- grep("yr$",names(seedl.comb))
+all.quadrants <- (seedl.comb$quadrants %in% c("ALL","4",""," ")) | is.na(seedl.comb$quadrants) # all quadrants were surveyed (T/F)
+seedl.comb[!all.quadrants,seedl.count.columns] <- 4*seedl.comb[!all.quadrants,seedl.count.columns]
+
+
+# compute Fire column and Year.of.Fire based on first three plot letters
+plot.comb$fire.prefix <- sapply(plot.comb$Regen_Plot,substr,start=1,stop=3)
+
+fire.years <- data.frame(
+  fire.prefix = c("BAG","PEA","PIT","STR","CHI","CUB","POW"),
+  Year.of.Fire = c(2012,2012,2008,2004,2012,2008,2004),
+  Fire = c("BAGLEY","PEAK","BTU LIGHTENING","STRAYLOR","CHIPS","CUB","POWER")
+  )
+
+#remove the fire name and year columns
+plot.comb <- plot.comb[,! (names(plot.comb) %in% c("Year.of.Fire","Fire"))]
+#merge in the fire name and year
+plot.comb <- merge(plot.comb,fire.years,all.x=TRUE)
+
+#! there are a few plots with no coordinates--need to add
+
+
+## Change lat/long to easting/northing (for all but power)
+plot.comb.lat <- plot.comb[which(plot.comb$Latitude < 1000),]
+plot.comb.utm <- plot.comb[which(plot.comb$Latitude >= 1000),]
+
+geo <- CRS("+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs")
+utm <- CRS("+proj=utm +zone=10 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs")
+
+plot.comb.lat$Longitude <- -plot.comb.lat$Longitude
+
+plot.comb.lat.geo <- SpatialPoints(plot.comb.lat[,c("Longitude","Latitude")], proj4string=geo)
+plot.comb.lat.utm <- spTransform(plot.comb.lat.geo,utm)
+plot.comb.lat[,c("Easting","Northing")] <- coordinates(plot.comb.lat.utm)
+
+plot.comb.utm[,c("Northing","Easting")] <- plot.comb.utm[,c("Latitude","Longitude")]
+
+plot.comb <- rbind.fill(plot.comb.lat,plot.comb.utm)
+
+#remove lat/long
+plot.comb <- plot.comb[,!(names(plot.comb) %in% c("Latitude","Longitude"))]
+
+
+#! when a 2016 plot had a shrub that was actually a hardwood, fake it so it counts as a hardwood (make fake hardwood column that is counted when calculating hardwood presence but not count)
+#! exclude 2016 plots from hardwood count: not 0 but NA, not part of analysis
+
+
+plot.welch <- read.csv("../data_survey/Welch/Plot_data.txt",stringsAsFactors=FALSE)
+sap.welch <- read.csv("../data_survey/Welch/sapling_regen.txt",stringsAsFactors=FALSE)
+seedl.welch <- read.csv("../data_survey/Welch/tree_regen.txt",stringsAsFactors=FALSE)
+resprout.welch <- read.csv("../data_survey/Welch/Resprouts.txt",stringsAsFactors=FALSE)
+surviving.trees.welch <- read.csv("../data_survey/Welch/surviving_trees.txt",stringsAsFactors=FALSE)
+seed.tree.welch <- read.csv("../data_survey/Welch/seed_tree.txt",stringsAsFactors=FALSE)
+
+
+
+## Make seed tree column for welch
+# take the nearest seed tree per plot
+seed.tree.welch.nearest <- aggregate(seed.tree.welch$Dist_m,by=list(seed.tree.welch$Regen_Plot),FUN=min, na.rm=TRUE)
+names(seed.tree.welch.nearest) <- c("Regen_Plot","seed_tree_distance_general")
+seed.tree.welch.nearest[seed.tree.welch.nearest == Inf] <- NA
+# merge into the welch plot table
+plot.welch <- merge(plot.welch,seed.tree.welch.nearest,all.x=TRUE)
+
+
+
+
+#! need to remove managed plots
+
+
+## Merge Welch plots with 2016 plots
+
+plot <- rbind.fill(plot.welch,plot.comb)
+sapling <- rbind.fill(sap.welch,sap.comb)
+seedl <- rbind.fill(seedl.welch,seedl.comb)
+resprout <- rbind.fill(resprout.welch,resprout.comb)
+surviving.trees <- rbind.fill(surviving.trees.welch,surviving.trees.comb)
+seed.tree <- seed.tree.welch
+
+
+# Fix species names to have numbers: once tables merged, sort by species name to identify where.
+from <- c("JU","AB","CADE","CONU","LIDE","QUCH")
+to <- c("JUNIPERUS","ABIES","CADE27","CONU4","LIDE3","QUCH2")
+
+surviving.trees$Species <- mapvalues(surviving.trees$Species,from=from,to=to)
+sapling$Species <- mapvalues(sapling$Species,from=from,to=to)
+seedl$Species <- mapvalues(seedl$Species,from=from,to=to)
+resprout$Species <- mapvalues(resprout$Species,from=from,to=to)
+seed.tree$Species <- mapvalues(seed.tree$Species,from=from,to=to)
+
+# Calculate live BA
+plot$BA.Live1 <- plot$BA_live_count * plot$BAF
+
+
+#populate seedling unk_yr column with values for CADE and all hardwoods
+seedl.count.columns <- grep("yr$",names(seedl))
+hardwoods <- c("QUKE","QUCH2","ARME","LIDE3","CHCH","QUGA4","ACMA","CEMO2","CONU4","POTR5","QUBE5","QUJO3","QUWI","UMCA")
+not.ageable <- c("CADE27",hardwoods)
+seedl$Count_total <- rowSums(seedl[,seedl.count.columns],na.rm=TRUE) #this includes unk_yr (incase some of the seedlings were considered ageable and others not)
+seedl[seedl$Species %in% not.ageable,"unk_yr"] <- seedl$Count_total[seedl$Species %in% not.ageable]
+
+
+
+
+
+# save these data frames
+write.csv(plot,"../data_survey/Compiled/Plot_data.csv",row.names=FALSE)
+write.csv(sapling,"../data_survey/Compiled/sapling_regen.csv",row.names=FALSE)
+write.csv(seedl,"../data_survey/Compiled/tree_regen.csv",row.names=FALSE)
+write.csv(resprout,"../data_survey/Compiled/Resprouts.csv",row.names=FALSE)
+write.csv(surviving.trees,"../data_survey/Compiled/surviving_trees.csv",row.names=FALSE)
+write.csv(seed.tree,"../data_survey/Compiled/seed_tree.csv",row.names=FALSE)
+
+
+
+
+#### 0.5 Operations that apply to all eteps below #####
+
+
 
 # Load plot locs
-plot <- read.csv("../data_survey/Plot_data.csv",stringsAsFactors=FALSE)
+plot <- read.csv("../data_survey/Compiled/Plot_data.csv",stringsAsFactors=FALSE)
 
 plot <- plot[plot$Fire != "ZACA",] # remove Zaca fire
 
@@ -23,12 +241,14 @@ plot.coords <- data.frame(x=plot$Easting,y=plot$Northing)
 utm10 <- CRS("+proj=utm +zone=10 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs")
 plots <- SpatialPointsDataFrame(coords=data.frame(x=plot$Easting,y=plot$Northing),data=plot,proj4string=utm10)
 
+#write plots to shapefile
+#writeOGR(plots, getwd(),"plots_shapefile",driver="ESRI Shapefile",overwrite=TRUE)
 
 
 #### 1. Extract monthly climate data for each plot ####
 
 CPUs <- 3
-years <- 1985:2014
+years <- 1985:2015
 
 topowx.dir <- "~/UC Davis/GIS/CA abiotic layers/TopoWx/"
 tmin.dir <- "tmin_annual/"
@@ -260,7 +480,7 @@ water.year.summary.normal <- cbind(tmin.avg.normal.annual,tmax.avg.normal.annual
 colnames(water.year.summary.normal) <- c("tmin.normal.ann","tmax.normal.ann","tmean.normal.ann","tmean.normal.JJA","tmean.normal.DJF","ppt.normal.ann","snow.normal.ann","rain.normal.ann")
 water.year.summary <- data.frame(Regen_Plot=plots.clim$Regen_Plot,water.year.summary.annual,water.year.summary.normal)
 
-write.csv(water.year.summary,"data_intermediate_processing/plot_climate_water_year.csv",row.names=FALSE)
+write.csv(water.year.summary,"../data_intermediate_processing_local/plot_climate_water_year.csv",row.names=FALSE)
 
 
 
@@ -324,11 +544,11 @@ write.csv(plot.firesev,"../data_intermediate_processing_local/plot_fire_data.csv
 
 #### 4. Summarize regen and surviving trees by species (and age for regen) for each plot ####
 
-sap <- read.csv("../data_survey/sapling_regen.csv")
-shrub <- read.csv("../data_survey/shrub_regen.csv")
-seedl <- read.csv("../data_survey/tree_regen.csv")
-resprout <- read.csv("../data_survey/Resprouts.csv")
-surviving.trees <- read.csv("../data_survey/surviving_trees.csv",header=TRUE,stringsAsFactors=FALSE)
+sap <- read.csv("../data_survey/Compiled/sapling_regen.csv")
+#shrub <- read.csv("../data_survey/shrub_regen.csv")
+seedl <- read.csv("../data_survey/Compiled/tree_regen.csv")
+resprout <- read.csv("../data_survey/Compiled/Resprouts.csv")
+surviving.trees <- read.csv("../data_survey/Compiled/surviving_trees.csv",header=TRUE,stringsAsFactors=FALSE)
 
 
 # specify only non-planted seedlings (assuming that if it's blank, it means it's seeded)
@@ -347,8 +567,14 @@ if(nrow(sap.rep.rows)>0) {warning("Multiple sapling entries for some species-plo
 #!!!! need to include unknown age here. This is once we add 2016 data which include that column
 #! Can do that by making it a separate column that is only counted when computing TOTAL seedlings
 #! Also, make all counts for CADE and all hardwoods fall in the unknown column.
-seedl.ag <- aggregate(seedl[,5:16],by=list(species=seedl$Species,Regen_Plot=seedl$Regen_Plot),FUN=sum,na.rm=TRUE)
-count.yrs <- paste("count.",0:11,"yr",sep="")
+
+#get rid of the extra 11yr column
+seedl$X11.yr <- seedl$X11.yr + seedl$X11yr
+seedl <- seedl[,!(names(seedl) %in% "X11yr")]
+
+seedl.count.columns <- grep("yr$",names(seedl))
+seedl.ag <- aggregate(seedl[,seedl.count.columns],by=list(species=seedl$Species,Regen_Plot=seedl$Regen_Plot),FUN=sum,na.rm=TRUE)
+count.yrs <- c(paste("count.",0:(length(seedl.count.columns)-2),"yr",sep=""),"unk_yr")
 names(seedl.ag) <- c("species","Regen_Plot",count.yrs)
 
 ### aggregate sapling table by plot and species
@@ -368,10 +594,10 @@ names(resprout.ag) <- c("species","Regen_Plot",count.yrs)
 ### merge seedling and sapling tables and resprout table
 regen <- rbind.fill(seedl.ag,sap.ag)
 regen <- rbind.fill(regen,resprout.ag) # add in resprout table (comment out here if desired)
-regen.ag <- aggregate(regen[,3:14],by=list(species=regen$species,Regen_Plot=regen$Regen_Plot),FUN=sum,na.rm=TRUE)
+regen.ag <- aggregate(regen[,3:ncol(regen)],by=list(species=regen$species,Regen_Plot=regen$Regen_Plot),FUN=sum,na.rm=TRUE)
 
 ### aggregate surviving tree table by plot and species
-#! optionally add a cutoff here so we con't consider small trees
+surviving.trees <- surviving.trees[surviving.trees$DBH > 7.5,] # exclude small trees (it seems sometimes crews put smaller trees as saplings instead of surviving trees)
 surviving.trees$ba <- (surviving.trees$DBH/2)^2*3.14
 surviving.trees$count <- 1
 surviving.trees.ag <- aggregate(surviving.trees[,c("count","ba")],by=list(species=surviving.trees$Species,Regen_Plot=surviving.trees$Regen_Plot),FUN=sum)
@@ -394,7 +620,7 @@ write.csv(regen.ag,"../data_intermediate_processing_local/tree_summarized_sp.csv
 
 ### Read in raw data files (direct from DB export)
 fire.years <- read.csv("../data_fire/fire_years.csv",header=TRUE,stringsAsFactors=FALSE)
-seed.tree <- read.csv("../data_survey/seed_tree.csv",header=TRUE,stringsAsFactors=FALSE)
+seed.tree <- read.csv("../data_survey/Compiled/seed_tree.csv",header=TRUE,stringsAsFactors=FALSE)
 
 ### Read in the summarized data files
 plot.climate <- read.csv("../data_intermediate_processing_local/plot_climate_water_year.csv",stringsAsFactors=FALSE)
@@ -445,14 +671,17 @@ plot.3 <- merge(plot.2,plots.extracted,all.x=TRUE)
 ### get summarized climate data for each plot
 ##!! If want to look at weather beyond 4 years post-fire (for those fires that had more than 4 years), will need to make this relative to number of years post-fire
 plot.3.clim <- summarize.clim(plot.3,plot.climate,years.clim=1:3) #first three years after fire
-plot.3.clim2 <- summarize.clim(plot.3,plot.climate,years.clim=3:4) # years 3-4 after fire
+plot.3.clim2 <- summarize.clim(plot.3,plot.climate,years.clim=2:3) # for more than 3 years out, will need 2016 weather data
 names(plot.3.clim2) <- paste(names(plot.3.clim2),".late",sep="")
 
-### get summarized regen data for each plot
-###!!! Need to account for unknown age here (will be a new column, created above; only add it to the "all" regen totals, not to young or old)
+
+####!!!! RESUME HERE
+
+### get summarized regen data for each plot (also summarizes adults)
+##!! NOTE that as written here, the code includes un-ageable species when tallying regen for ALL ages, but not for specific age classes
 plot.3.regen.old <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="old",all.sp=TRUE)
 plot.3.regen.young <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="young",all.sp=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call, the previous line)
-plot.3.regen.all <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="all",all.sp=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call)
+plot.3.regen.all <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="all",all.sp=TRUE,incl.unk.age.for.all=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call)
 names(plot.3.regen.old)[3] <- "regen.count.old"
 names(plot.3.regen.young)[3] <- "regen.count.young"
 names(plot.3.regen.all)[3] <- "regen.count.all"
@@ -478,6 +707,9 @@ names(seed.tree.any) <- c("Regen_Plot","seed.tree.any")
 plot.clim <- merge(plot.3,plot.3.clim,by="Regen_Plot",all.x=TRUE)
 plot.clim.seedtree <- merge(plot.clim,seed.tree.any,all.x=TRUE)
 
+##!! Where does the giant column named with the names of all the columns (but empty) come from?
+
+## Correct misspelled FORBE
 plot.clim.seedtree$FORB <- plot.clim.seedtree$FORBE
 plot.clim.seedtree <- remove.vars(plot.clim.seedtree,"FORBE")
 
