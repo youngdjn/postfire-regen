@@ -10,19 +10,29 @@ source("regen_analysis_functions.R")
 d.plot <- read.csv("data_intermediate/plot_level.csv",header=T,stringsAsFactors=FALSE)
 d.sp <- read.csv("data_intermediate/speciesXplot_level.csv",header=T,stringsAsFactors=FALSE)
 
-
 # only keep the necessary columns
-d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general")]
+d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general","seed_tree_distance_conifer","seed_tree_distance_hardwood","diff.norm.ppt.z","diff.norm.ppt.min.z","tmean.post","ppt.post","ppt.post.min")]
 
-# thin to 5-year post fire plots
-#d.plot <- d.plot[d.plot$survey.years.post %in% c(4,5),] ####!!! Not doing anymore because need older plots as control data
-
-# only Sierra Nevada fires #! need to add new fires to this list when they're in the dataset
-sierra.fires <- c("STRAYLOR","CUB","RICH","DEEP","MOONLIGHT","ANTELOPE","BTU LIGHTENING","HARDING","BASSETTS","PENDOLA","AMERICAN RIVER","RALSTON","FREDS","SHOWERS","POWER","BAGLEY","PEAK","CHIPS")
+# only Sierra Nevada fires #! removed DEEP
+sierra.fires <- c("STRAYLOR","CUB","RICH","MOONLIGHT","ANTELOPE","BTU LIGHTENING","HARDING","BASSETTS","PENDOLA","AMERICAN RIVER","RALSTON","FREDS","SHOWERS","POWER","BAGLEY","PEAK","CHIPS")
 d.plot <- d.plot[d.plot$Fire %in% sierra.fires,]
 
-# if no data on seed tree distance (or it was recorded as being at/beyond the limit of the laser) use remote-sensing-based value
-d.plot$seed.tree.any.comb <- ifelse(is.na(d.plot$seed_tree_distance_general) | (d.plot$seed_tree_distance_general >= 150),d.plot$dist.to.low,d.plot$seed_tree_distance_general)
+d.plot <- d.plot[d.plot$Regen_Plot != "SHR0900015",]
+
+## Remove managed plots, plots in nonforested locations (e.g. exposed bedrock), etc.
+plots.exclude <- read.csv("data_intermediate/plots_exclude.csv",header=T,stringsAsFactors=FALSE)
+plot.ids.exclude <- plots.exclude[plots.exclude$Exclude != "",]$Regen_Plot
+d.plot <- d.plot[!(d.plot$Regen_Plot %in% plot.ids.exclude),]
+
+
+# ## Removed this code: because most of the time NA means seed source not visible, and excluding all plots >50 m from seed source
+# # if no data on seed tree distance (or it was recorded as being at/beyond the limit of the laser) use remote-sensing-based value
+# d.plot$seed.tree.any.comb <- ifelse(is.na(d.plot$seed_tree_distance_general) | (d.plot$seed_tree_distance_general >= 150),d.plot$dist.to.low,d.plot$seed_tree_distance_general)
+
+## Replaced with this:
+# Remove any plots > 50m from seed source
+d.plot <- d.plot[which(d.plot$seed_tree_distance_general < 50),]
+
 
 # quadratic climate terms
 d.plot$ppt.normal.sq <- d.plot$ppt.normal^2
@@ -78,6 +88,14 @@ for(fire in fires) {
 
 ## Create one variable reflecting the all-way factorial combination of topoclimatic categories
 d.plot$topoclim.cat <- paste(d.plot$precip.category,d.plot$rad.category,sep="_")
+
+
+## Make an exception for Harding: only two categories
+d.plot[d.plot$Fire == "HARDING","topoclim.cat"] <- ifelse(d.plot[d.plot$Fire=="HARDING","rad.march"] > 6250,"P.1_R.2","P.1_R.1")
+
+
+
+
   
 
 ### Plot relevant "topoclimate space" for each fire and see how the categories broke them down
@@ -159,7 +177,10 @@ d.sp.2 <- d.sp.agg
 #### 3. Steps required prior to any analysis ####
 
 # Remove the topoclimatic categories with too few plots in either burned or control
-d.plot.3 <- d.plot.2[which((d.plot.2$count.control > 5) & (d.plot.2$count.highsev > 5)),]
+d.plot.3 <- d.plot.2[which((d.plot.2$count.control > 3) & (d.plot.2$count.highsev > 3)),] #! removed restriction on control count
+
+# Compute additional variables
+d.sp.2$proportion.young <- d.sp.2$regen.count.young / d.sp.2$regen.count.all
 
 
 
@@ -170,16 +191,20 @@ focalsp <- "PIPO"
 d.sp.2.singlesp <- d.sp.2[d.sp.2$species==focalsp,]
 d.mod <- merge(d.plot.3,d.sp.2.singlesp,all.x=TRUE) # data frame for modeling. Has regen-specific and plot-specific data for the species (or species group) specified above
 
+is.nan.data.frame <- function(x)
+  do.call(cbind, lapply(x, is.nan))
+d.mod[is.nan(d.mod)] <- NA
 
 # List interesting variables and make pairs plots
 response <- "regen.presab.old"
-preds <- c("SHRUB.highsev", "rad.march.highsev", "ppt.normal.highsev", "ppt.post.highsev", "ppt.post.min.highsev", "diff.norm.ppt.z.highsev", "diff.norm.ppt.min.z.highsev", "seed.tree.any.comb.highsev", "adult.ba", "adult.count")
+preds <- c("SHRUB.highsev", "rad.march.highsev", "ppt.normal.highsev", "ppt.post.highsev", "ppt.post.min.highsev", "diff.norm.ppt.z.highsev", "diff.norm.ppt.min.z.highsev", "seed_tree_distance_general.highsev", "adult.ba", "adult.count","proportion.young")
 #pairs(d.mod[,c(response,preds)])
 
 # Get the pearson correlation of each predictor with the response (individually)
 corr <- NULL
 for(i in 1:length(preds)) {
-  corr[preds[i]] <- cor(d.mod[,response],d.mod[,preds[i]])
+  cat(preds[i])
+  corr[preds[i]] <- cor(d.mod[,response],d.mod[,preds[i]],use="complete.obs")
 }
 corr
 
@@ -187,17 +212,19 @@ corr
 ### Make a heatmap of pairwise correlations for different predictors and responses
 
 # Define the interesting set of responses
-sps <- c("CONIFER","PIPO","ABCO","HARDWOOD","PSME","PILA","QUKE")
-responses <- c("regen.presab.old","regen.presab.all","SHRUB.highsev")
+sps <- c("CONIF.ALLSP","PIPO","ABCO","HDWD.ALLSP","PSME","PILA","QUKE","SHADE.ALLSP","PINUS.ALLSP")
+responses <- c("regen.presab.old","regen.presab.all","regen.count.all","proportion.young")
 
 opts <- expand.grid(responses,sps,stringsAsFactors=FALSE)
 names(opts) <- c("response.opt","sp.opt")
-opts <- opts[c(-6,-9,-12,-15,-18,-21),]
 
 opts.names <- paste(opts$sp.opt,opts$response.opt,sep="-")
 
 #interesting predictors
-preds <- c("SHRUB.highsev", "rad.march.highsev", "ppt.normal.highsev", "ppt.post.highsev", "ppt.post.min.highsev", "diff.norm.ppt.z.highsev", "diff.norm.ppt.min.z.highsev", "seed.tree.any.comb.highsev", "adult.ba", "adult.count","regen.presab.old","regen.presab.all")
+#early climate
+preds <- c("SHRUB.highsev", "rad.march.highsev", "ppt.normal.highsev", "ppt.post.highsev", "ppt.post.min.highsev", "diff.norm.ppt.z.highsev", "diff.norm.ppt.min.z.highsev", "seed_tree_distance_general.highsev", "adult.ba", "adult.count")
+# full climate
+preds <- c("SHRUB.highsev", "rad.march.highsev", "ppt.normal.highsev", "ppt.post.highsev", "ppt.post.min.highsev", "diff.norm.ppt.z.highsev", "diff.norm.ppt.min.z.highsev", "seed_tree_distance_general.highsev", "adult.ba", "adult.count")
 
 # data frame to store correlation values
 corr.df <- data.frame(opt=NA,pred=NA,cor=NA,pval=NA)
@@ -210,6 +237,9 @@ for(i in 1:nrow(opts)) {
   d.sp.2.singlesp <- d.sp.2[d.sp.2$species==focalsp,]
   d.mod <- merge(d.plot.3,d.sp.2.singlesp,all.x=TRUE) # data frame for modeling. Has regen-specific and plot-specific data for the species (or species group) specified above
   
+  d.mod[d.mod==Inf] <- NA
+  d.mod[is.nan(d.mod)] <- NA
+  
   newfires <- c("BAGLEY","PEAK","CHIPS")
   #! test removing new fires
   #d.mod <- d.mod[!(d.mod$Fire %in% newfires),]
@@ -221,7 +251,7 @@ for(i in 1:nrow(opts)) {
   
 
   for(j in 1:length(preds)) {
-    corr <- cor(d.mod[,response],d.mod[,preds[j]])
+    corr <- cor(d.mod[,response],d.mod[,preds[j]],use="complete.obs")
     
     mod.df <- data.frame(y=d.mod[,response],pred=d.mod[,preds[j]])
     
@@ -229,8 +259,11 @@ for(i in 1:nrow(opts)) {
     if(length(unique(mod.df$pred)) < 2) {
       next()
     }
+    
+    mod.df[is.nan(mod.df)] <- NA
+    mod.df[mod.df==Inf] <- NA
 
-    m <- lm(y~pred,data=mod.df)
+    m <- lm(y~pred,data=mod.df,na.action=na.omit)
     p <- summary(m)$coefficients["pred","Pr(>|t|)"]
 
     corr.df <- rbind(corr.df,data.frame(opt=opts.names[i],pred=preds[j],cor=corr,pval=p))
@@ -269,7 +302,7 @@ ggplot(corr.df,aes(x=opt,y=pred)) +
 # Picking the more interesting variables for a multiple regression
 # 
 
-focalsp <- "QUKE"
+focalsp <- "CONIFER"
 d.sp.2.singlesp <- d.sp.2[d.sp.2$species==focalsp,]
 d.mod <- merge(d.plot.3,d.sp.2.singlesp,all.x=TRUE) # data frame for modeling. Has regen-specific and plot-specific data for the species (or species group) specified above
 
@@ -278,16 +311,17 @@ newfires <- c("BAGLEY","PEAK","CHIPS")
 #d.mod <- d.mod[!(d.mod$Fire %in% newfires),]
 
 
-resp <- "regen.presab.all"
+resp <- "SHRUB.highsev"
 preds <- c("ppt.normal.highsev","rad.march.highsev","diff.norm.ppt.z.highsev","adult.ba")
 preds <- c("adult.ba")
 preds <- c("rad.march.highsev","diff.norm.ppt.z.highsev","adult.ba")
 preds <- c("ppt.normal.highsev","diff.norm.ppt.z.highsev")
+preds <- c("ppt.normal.highsev","rad.march.highsev","diff.norm.ppt.z.highsev","adult.ba","diff.norm.ppt.min.z.highsev")
 # look for autocorrelation among predictors
 pairs(d.mod[,preds])
 # not bad
 
-m <- lm(regen.presab.all~ppt.normal.highsev*diff.norm.ppt.z.highsev,data=d.mod[,c(resp,preds)])
+m <- lm(SHRUB.highsev~ppt.normal.highsev*diff.norm.ppt.z.highsev,data=d.mod[,c(resp,preds)])
 summary(m)
 
 

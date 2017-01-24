@@ -97,6 +97,9 @@ plot.comb$seed_tree_distance_general[plot.comb$seed_tree_distance_general %in% c
 # plot.comb$seed_tree_distance_hardwood[is.na(plot.comb$seed_tree_distance_hardwood)] <- 999
 # plot.comb$seed_tree_distance_general[is.na(plot.comb$seed_tree_distance_general)] <- 999
 
+
+#! in fugure, consider computing seed tree distance separately for hardwood and conifer, just note that some of the early 2016 plots don't have separate values.
+
 # make it numeric
 plot.comb$seed_tree_distance_conifer <- as.numeric(plot.comb$seed_tree_distance_conifer)
 plot.comb$seed_tree_distance_hardwood <- as.numeric(plot.comb$seed_tree_distance_hardwood)
@@ -244,6 +247,11 @@ plot <- plot[(plot$Easting < 1105000) & (plot$Easting > 150000) & (plot$Northing
 plot.coords <- data.frame(x=plot$Easting,y=plot$Northing)
 utm10 <- CRS("+proj=utm +zone=10 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs")
 plots <- SpatialPointsDataFrame(coords=data.frame(x=plot$Easting,y=plot$Northing),data=plot,proj4string=utm10)
+
+
+
+##!! exclude this plot because the location is wrong: SHR0900015
+
 
 #write plots to shapefile
 #writeOGR(plots, getwd(),"plots_shapefile",driver="ESRI Shapefile",overwrite=TRUE)
@@ -654,11 +662,11 @@ plot$Year <- as.numeric(sapply(year.split,'[[',1))
 
 
 ## extract elevation for each plot
-dem <- raster("C:/Users/DYoung/Documents/UC Davis/GIS/CA abiotic layers/DEM/Camerged9_SNclip_nd.tif")
+dem <- raster("C:/Users/DYoung/Documents/UC Davis/GIS/CA abiotic layers/DEM/CA/new ncal/CAmerged12_albers2_firesmask_ncal.tif")
 plots$elev.m <- extract(dem,plots,method="bilinear")
 
 ## extract march solar rad for each plot
-rad.march <- stack("C:/Users/DYoung/Documents/UC Davis/GIS/CA abiotic layers/solar rad/rsun nldas adjusted/glob_rad_monthly_dobr1_int.tif")[[3]]
+rad.march <- raster("C:/Users/DYoung/Documents/UC Davis/GIS/CA abiotic layers/solar rad/regen_srad_clear_sky/srad_clear_mar_regen_ncal.tif")
 plots$rad.march <- extract(rad.march,plots,method="bilinear")
 
 #compile DF of geospatial data that was extracted for each plot
@@ -675,11 +683,17 @@ plot.3 <- merge(plot.2,plots.extracted,all.x=TRUE)
 ### get summarized climate data for each plot
 ##!! If want to look at weather beyond 4 years post-fire (for those fires that had more than 4 years), will need to make this relative to number of years post-fire
 plot.3.clim <- summarize.clim(plot.3,plot.climate,years.clim=1:3) #first three years after fire
-plot.3.clim2 <- summarize.clim(plot.3,plot.climate,years.clim=2:3) # for more than 3 years out, will need 2016 weather data
-names(plot.3.clim2) <- paste(names(plot.3.clim2),".late",sep="")
+plot.3.clim2 <- summarize.clim(plot.3,plot.climate,years.clim=1:2) # for more than 3 years out, will need 2016 weather data
+names(plot.3.clim2) <- c(names(plot.3.clim2[1]),paste(names(plot.3.clim2)[2:ncol(plot.3.clim2)],".early",sep=""))
+plot.3.clim.both <- merge(plot.3.clim,plot.3.clim2)
 
 
-####!!!! RESUME HERE
+### Find plots with planted trees and exclude them
+seedl <- read.csv("../data_survey/Compiled/tree_regen.csv")
+seedl.p <- seedl[seedl$seed_veg_plant == "P",]
+plots.planted <- unique(seedl.p$Regen_Plot)
+plot.3 <- plot.3[!(plot.3$Regen_Plot %in% plots.planted),]
+
 
 ### get summarized regen data for each plot (also summarizes adults)
 ##!! NOTE that as written here, the code includes un-ageable species when tallying regen for ALL ages, but not for specific age classes
@@ -708,16 +722,43 @@ seed.tree.any <- aggregate(seed.tree$Dist_m,by=list(seed.tree$Regen_Plot),FUN=mi
 names(seed.tree.any) <- c("Regen_Plot","seed.tree.any")
 
 ### merge the plot, climate, and plot-level seed tree data
-plot.clim <- merge(plot.3,plot.3.clim,by="Regen_Plot",all.x=TRUE)
+plot.clim <- merge(plot.3,plot.3.clim.both,by="Regen_Plot",all.x=TRUE)
 plot.clim.seedtree <- merge(plot.clim,seed.tree.any,all.x=TRUE)
-
-##!! Where does the giant column named with the names of all the columns (but empty) come from?
 
 ## Correct misspelled FORBE
 plot.clim.seedtree$FORB <- plot.clim.seedtree$FORBE
 plot.clim.seedtree <- remove.vars(plot.clim.seedtree,"FORBE")
 
 
+
+##!! check each individual plot for outliers.
+
+
+
 ### write plot-level and species-level output files
 write.csv(plot.clim.seedtree,"data_intermediate/plot_level.csv",row.names=FALSE)
 write.csv(plot.3.regen,"data_intermediate/speciesXplot_level.csv",row.names=FALSE)
+
+plot.3.regen <- read.csv("data_intermediate/speciesXplot_level.csv",header=TRUE,stringsAsFactors=FALSE)
+plot.clim.seedtree <- read.csv("data_intermediate/plot_level.csv",header=TRUE,stringsAsFactors=FALSE)
+
+
+clim.vars <- c("SHRUB","rad.march","ppt.normal","ppt.post","ppt.post.min","diff.norm.ppt.z","diff.norm.ppt.min.z", "seed_tree_distance_general")
+
+pairs(plot.clim.seedtree[,clim.vars])
+
+plot.3.regen.conifer <- plot.3.regen[plot.3.regen$species=="HDWD.ALLSP",]
+
+check.df <- merge(plot.clim.seedtree,plot.3.regen.conifer,by="Regen_Plot",all.x=TRUE)
+
+all.vars <- c("SHRUB", "rad.march", "ppt.normal", "ppt.post", "ppt.post.min", "diff.norm.ppt.z", "diff.norm.ppt.min.z", "seed_tree_distance_general","regen.count.all")
+pairs(check.df[,all.vars])
+
+check.df.abbrev <- check.df[,c("Regen_Plot","seed_tree_distance_general","regen.count.all","SHRUB","diff.norm.ppt.z")]
+
+check.df.abbrev[check.df.abbrev$seed_tree_distance_general>150 & check.df.abbrev$regen.count.all > 80,]
+check.df.abbrev[check.df.abbrev$regen.count.all > 250,]
+
+pairs(check.df.abbrev[,-1])
+
+check.df.abbrev[check.df.abbrev$seed_tree_distance_general > 300 & check.df.abbrev$regen.count.all > 5,]
