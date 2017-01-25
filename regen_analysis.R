@@ -208,6 +208,8 @@ for(i in 1:length(preds)) {
 }
 corr
 
+pairs(d.mod[,preds])
+
 
 ### Make a heatmap of pairwise correlations for different predictors and responses
 
@@ -327,6 +329,92 @@ summary(m)
 
 
 
+#### Climate space of topocimatic categories ####
+
+d.plot.3$fire.topoclim.cat <- paste(d.plot.3$Fire,d.plot.3$topoclim.cat,sep="-")
+
+ggplot(d.plot.3,aes(x=ppt.normal.highsev,y=diff.norm.ppt.z.highsev,color=Fire)) +
+  geom_point(size=3) +
+  labs(x="Normal precip",y="Postfire precip anomaly (3-year average)") +
+  theme_bw(15)
 
 
+
+
+#### Model selection ####
+
+# Define the interesting set of responses
+sps <- c("CONIF.ALLSP","PIPO","ABCO","HDWD.ALLSP","PSME","PILA","QUKE","SHADE.ALLSP","PINUS.ALLSP")
+responses <- c("regen.presab.old","regen.presab.all","regen.count.all","proportion.young")
+
+opts <- expand.grid(responses,sps,stringsAsFactors=FALSE)
+names(opts) <- c("response.opt","sp.opt")
+
+opts.names <- paste(opts$sp.opt,opts$response.opt,sep="-")
+
+preds <- list(
+  c("nullmod"),
+  c("adult.count"),
+  c("seed_tree_distance_general.highsev"),
+  c("rad.march.highsev"),
+  c("ppt.normal.highsev","ppt.normal.sq.highsev"),
+  c("adult.count","rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev"),
+  c("rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev"),
+  c("adult.count","seed_tree_distance_general.highsev"),
+  c("adult.count","seed_tree_distance_general.highsev","rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev"),
+  c("adult.count","ppt.normal.highsev","ppt.normal.sq.highsev"),
+  
+  c("diff.norm.ppt.z.highsev"),
+  c("diff.norm.ppt.z.highsev","adult.count"),
+  c("diff.norm.ppt.z.highsev","seed_tree_distance_general.highsev"),
+  c("diff.norm.ppt.z.highsev","rad.march.highsev"),
+  c("diff.norm.ppt.z.highsev","ppt.normal.highsev","ppt.normal.sq.highsev"),
+  c("diff.norm.ppt.z.highsev","adult.count","rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev"),
+  c("diff.norm.ppt.z.highsev","rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev"),
+  c("diff.norm.ppt.z.highsev","adult.count","seed_tree_distance_general.highsev"),
+  c("diff.norm.ppt.z.highsev","adult.count","seed_tree_distance_general.highsev","rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev"),
+  c("diff.norm.ppt.z.highsev","adult.count","ppt.normal.highsev","ppt.normal.sq.highsev"),
+  
+  c("diff.norm.ppt.min.z.highsev"),
+  c("diff.norm.ppt.min.z.highsev","adult.count"),
+  c("seed_tree_distance_general.highsev"),
+  c("diff.norm.ppt.min.z.highsev","rad.march.highsev"),
+  c("diff.norm.ppt.min.z.highsev","ppt.normal.highsev","ppt.normal.sq.highsev"),
+  c("diff.norm.ppt.min.z.highsev","adult.count","rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev"),
+  c("diff.norm.ppt.min.z.highsev","rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev"),
+  c("diff.norm.ppt.min.z.highsev","adult.count","seed_tree_distance_general.highsev"),
+  c("diff.norm.ppt.min.z.highsev","adult.count","seed_tree_distance_general.highsev","rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev"),
+  c("diff.norm.ppt.min.z.highsev","adult.count","ppt.normal.highsev","ppt.normal.sq.highsev")
+)
+
+
+aic.m <- matrix(nrow=nrow(opts),ncol=length(preds))
+for(j in 1:nrow(opts)) {
+
+  for(i in 1:length(preds)) {
+    
+    opts.row <- opts[j,]
+    
+    focalsp <- opts.row$sp.opt
+    d.sp.2.singlesp <- d.sp.2[d.sp.2$species==focalsp,]
+    d.mod <- merge(d.plot.3,d.sp.2.singlesp,all.x=TRUE) # data frame for modeling. Has regen-specific and plot-specific data for the species (or species group) specified above
+    d.mod$nullmod <- seq(from=0,to=1,length.out=nrow(d.mod))
+    d.mod$y <- d.mod[,opts.row$response.opt]
+    
+    d.mod.curr <- d.mod[,c("y",preds[[i]])]
+    
+    m <- lm(y~.,data=d.mod.curr)
+    aic.m[j,i] <- AIC(m)
+    
+  }
+  
+  aic.min <- min(aic.m[j,])
+  aic.m[j,] <- aic.m[j,] - aic.min
+
+}
+
+rownames(aic.m) <- opts.names
+aic.m <- round(aic.m)
+
+write.csv(aic.m,"data_analysis_output/model_selection.csv",row.names=TRUE)
 
