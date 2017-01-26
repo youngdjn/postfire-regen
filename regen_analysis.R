@@ -418,3 +418,256 @@ aic.m <- round(aic.m)
 
 write.csv(aic.m,"data_analysis_output/model_selection.csv",row.names=TRUE)
 
+
+#### GLMnet ####
+
+response <- c("regen.presab.all")
+predictors <- c("diff.norm.ppt.z.highsev","diff.norm.ppt.min.z.highsev","adult.count","seed_tree_distance_general.highsev","rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev")
+
+#alternative
+predictors <- c("diff.norm.ppt.min.z.highsev","adult.count","seed_tree_distance_general.highsev","rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev")
+
+
+focalsp <- "PIPO"
+d.sp.2.singlesp <- d.sp.2[d.sp.2$species==focalsp,]
+d.mod <- merge(d.plot.3,d.sp.2.singlesp,all.x=TRUE) # data frame for modeling. Has regen-specific and plot-specific data for the species (or species group) specified above
+
+#d.mod$interaction <- d.mod$diff.norm.ppt.min.z.highsev * d.mod$ppt.normal.highsev
+#predictors <- c(predictors,"interaction")
+
+d.mod.glmnet <- d.mod[,c(response,predictors)]
+#d.mod.glmnet <- complete.cases(d.mod.glmnet)
+d.mod.glmnet <- as.matrix(d.mod.glmnet)
+
+
+fit <- glmnet(d.mod.glmnet[,predictors],d.mod.glmnet[,response])
+plot(fit,label=TRUE)
+
+coef(fit,s=0.005)
+
+cvfit <- cv.glmnet(d.mod.glmnet[,predictors],d.mod.glmnet[,response])
+plot(cvfit)
+coef(cvfit,s="lambda.min")
+
+
+#### GLMNET with interactions ####
+
+
+response <- c("regen.presab.all")
+predictors <- c("diff.norm.ppt.z.highsev","diff.norm.ppt.min.z.highsev","adult.count","seed_tree_distance_general.highsev","rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev")
+
+#alternative
+#predictors <- c("diff.norm.ppt.min.z.highsev","adult.count","seed_tree_distance_general.highsev","rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev")
+
+
+focalsp <- "PINUS.ALLSP"
+d.sp.2.singlesp <- d.sp.2[d.sp.2$species==focalsp,]
+d.mod <- merge(d.plot.3,d.sp.2.singlesp,all.x=TRUE) # data frame for modeling. Has regen-specific and plot-specific data for the species (or species group) specified above
+
+#d.mod$interaction <- d.mod$diff.norm.ppt.min.z.highsev * d.mod$ppt.normal.highsev
+#predictors <- c(predictors,"interaction")
+
+d.mod.glmnet <- d.mod[,predictors]
+d.mod.glmnet$y <- d.mod[,response]
+#d.mod.glmnet <- complete.cases(d.mod.glmnet)
+
+
+
+f <- as.formula(y ~ .*.)
+y <- d.mod.glmnet$y
+x <- model.matrix(f,d.mod.glmnet)[,-1]
+
+cvfit <- cv.glmnet(x,y)
+plot(cvfit)
+coef(cvfit,s="lambda.min")
+
+
+
+
+#### Model selection and averaging using MuMIn ####
+
+library(snow)
+library(MuMIn)
+
+
+focalsp <- "PINUS.ALLSP"
+d.sp.2.singlesp <- d.sp.2[d.sp.2$species==focalsp,]
+d.mod <- merge(d.plot.3,d.sp.2.singlesp,all.x=TRUE) # data frame for modeling. Has regen-specific and plot-specific data for the species (or species group) specified above
+
+predictors <- c("diff.norm.ppt.z.highsev","diff.norm.ppt.min.z.highsev","adult.count","seed_tree_distance_general.highsev","rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev")
+
+d.mod <- d.mod[,c("regen.presab.all",predictors)]
+
+d.mod <- d.mod[complete.cases(d.mod),]
+
+m.full <- lm(regen.presab.all ~ (diff.norm.ppt.z.highsev + diff.norm.ppt.min.z.highsev + ppt.normal.highsev) + ppt.normal.sq.highsev + rad.march.highsev + adult.count,data=d.mod,na.action="na.fail")
+
+
+cl <- makeCluster(4, type = "SOCK")
+clusterExport(cl,"d.mod")
+a <- pdredge(m.full,cluster=cl, subset=(!(`diff.norm.ppt.z.highsev` & `diff.norm.ppt.min.z.highsev`)))
+             
+#              , fixed=c("ppt.normal_c","diff.norm.ppt.min.z"),
+#              subset=
+#                #(!(`seedtr.any.comb_c`&`seedtr.comb_c`)) &
+#                #(!(`diff.norm.tmean.z_c` & `diff.norm.tmean.JJA.mean.z_c`)) &
+#                #(!(`diff.norm.tmean.z_c` & `diff.norm.tmean.DJF.mean.z_c`)) &
+#                (!(`ppt.normal.sq_c` & !`ppt.normal_c`))
+#              #!(`tmean.normal.sq_c` & !`tmean.normal_c`))
+# )
+
+
+stopCluster(cl)
+
+imp <- data.frame(var=names(importance(a)),imp=importance(a))
+best.model.num <- as.character(row.names(a[1,]))
+best.model <- get.models(a,best.model.num)[[1]]
+#best.model <- m.full
+# 
+# print(summary(best.model))
+# #best.model.tree <- best.model
+# best.coef <- fixef(best.model)
+# best.coef <- data.frame(var=names(best.coef),coef=best.coef)
+# #imp.coef <- merge(imp,best.coef,by="var",all.x=TRUE)
+# #write.csv(imp.coef,"mumin_out.csv",row.names=FALSE)
+
+
+
+a.avg <- model.avg(a,fit=TRUE)
+
+summary(a.avg)
+
+
+
+
+#   mod.names <-row.names(a)
+#   mod.weights <- a[,"weight"]
+
+N <- 1000 #number of samples to take
+nsims <- N
+coef.sim <- data.frame()
+
+# # get all fit models  (this section for multi-model inference only)
+# models <- list()
+# 
+# for(i in 1:length(mod.names)) {
+#   
+#   mod.name <- mod.names[i]
+#   models[[mod.name]] <- get.models(a,mod.name)[[1]]
+#   
+# }
+#  this section for multi-model averaging
+# for(i in 1:N) {
+#   
+#   mod.name <- sample(mod.names,prob=mod.weights,replace=TRUE,size=1)
+#   mod.name <- mod.names[1] # if using only the best model (otherwise comment out for multi-model averaging)
+#   model <- models[[mod.name]]
+#   coef.sim.row <- fixef(sim(model,n.sims=1)) # change to get just one simulation, store in matrix
+#   coef.sim.row <- as.data.frame(coef.sim.row)
+#   coef.sim <- rbind.fill(coef.sim,coef.sim.row)
+#   
+# }
+
+# simulate coef for best model. this section for using best-model only
+
+### old code for simulating
+
+# coef.sim <- fixef(sim(best.model,n.sims=nsims))
+# coef.sim[is.na(coef.sim)] <- 0
+# 
+# 
+# coef.mean <- apply(coef.sim,2,mean)
+# coef.low <- apply(coef.sim,2,quantile,prob=0.025)
+# coef.high <- apply(coef.sim,2,quantile,prob=0.975)
+# 
+# coef.mean <- signif(coef.mean,3)
+# coef.low <- signif(coef.low,3)
+# coef.high <- signif(coef.high,3)
+# 
+# coef.summary <- rbind(coef.mean,coef.low,coef.high)
+# 
+# coef.bounds <- paste("(",coef.low,",",coef.high,")",sep="")
+# coef.full <- paste(coef.mean,coef.bounds)
+# names(coef.full) <- names(coef.mean)
+# coef.full <- as.data.frame(t(coef.full))
+# coef.full$type <- type
+# coef.df <- rbind.fill(coef.df,coef.full)
+
+
+
+#### Make predictions with averaged models ####
+
+## Variation over normal precip, with two levels of post-fire precip
+
+ppt.norm.seq <- seq(from=500,to=2000,length.out=100)
+
+newdat.pptnorm <- data.frame(
+                    ppt.normal.highsev = rep(ppt.norm.seq,2),
+                    ppt.normal.sq.highsev = rep(ppt.norm.seq^2,2),
+                    diff.norm.ppt.min.z.highsev = c(rep(-1.25,100),rep(-0.25,100)),
+                    diff.norm.level = c(rep("low",100),rep("high",100)),
+                    diff.norm.ppt.z.highsev = 0,
+                    adult.count = 1,
+                    rad.march.highsev = 6000)
+                    
+ppt.norm.pred <- predict(best.model,newdata=newdat.pptnorm,se.fit=TRUE)  ## formerly a.avg
+ppt.norm.pred$low <- ppt.norm.pred$fit + ppt.norm.pred$se.fit * 1.96
+ppt.norm.pred$high <- ppt.norm.pred$fit - ppt.norm.pred$se.fit * 1.96
+
+pptnorm.dat.pred <- cbind(newdat.pptnorm,ppt.norm.pred)
+
+ggplot(pptnorm.dat.pred,aes(x=ppt.normal.highsev,y=fit,color=diff.norm.level)) +
+  geom_line(size=1) +
+  geom_ribbon(aes(ymin=low,ymax=high,fill=diff.norm.level),alpha=0.3,color=NA) +
+  guides(fill=guide_legend(title="Postfire precip anomaly"),color=guide_legend(title="Postfire precip anomaly"))
+  
+  
+## Variation over postfire anomaly, with two levels of normal precip
+
+diff.norm.seq <- seq(from=-1.5,to=0,length.out=100)
+
+newdat.diffnorm <- data.frame(
+  ppt.normal.highsev = c(rep(750,100),rep(1750,100)),
+  ppt.normal.sq.highsev = c(rep(750^2,100),rep(1750^2,100)),
+  ppt.norm.level = c(rep("low",100),rep("high",100)),
+  diff.norm.ppt.min.z.highsev = rep(diff.norm.seq,2),
+  diff.norm.ppt.z.highsev = 0,
+  adult.count = 1,
+  rad.march.highsev = 6000)
+
+diff.norm.pred <- predict(best.model,newdata=newdat.diffnorm,se.fit=TRUE)
+diff.norm.pred$low <- diff.norm.pred$fit + diff.norm.pred$se.fit * 1.96
+diff.norm.pred$high <- diff.norm.pred$fit - diff.norm.pred$se.fit * 1.96
+
+diffnorm.dat.pred <- cbind(newdat.diffnorm,diff.norm.pred)
+
+ggplot(diffnorm.dat.pred,aes(x=diff.norm.ppt.min.z.highsev,y=fit,color=ppt.norm.level)) +
+  geom_line(size=1) +
+  geom_ribbon(aes(ymin=low,ymax=high,fill=ppt.norm.level),alpha=0.3,color=NA) +
+  guides(fill=guide_legend(title="Normal precip"),color=guide_legend(title="Normal precip"))
+
+## predictions from GLMnet ## (not yet working)
+
+
+diff.norm.seq <- seq(from=-1.5,to=0,length.out=100)
+
+newdat.diffnorm <- data.frame(
+    diff.norm.ppt.z.highsev = 0,
+    diff.norm.ppt.min.z.highsev = rep(diff.norm.seq,2),
+    ppt.normal.highsev = c(rep(750,100),rep(1750,100)))
+
+
+diff.norm.pred <- predict(best.model,newdata=newdat.diffnorm,se.fit=TRUE) #a.avg, best.model, cvfit
+pred.mat <- as.matrix(newdat.diffnorm)
+diff.norm.pred <- predict(cvfit,newx=pred.mat,s="lambda.min") # cvfit
+diff.norm.pred$low <- diff.norm.pred$fit + diff.norm.pred$se.fit * 1.96
+diff.norm.pred$high <- diff.norm.pred$fit - diff.norm.pred$se.fit * 1.96
+
+diffnorm.dat.pred <- cbind(newdat.diffnorm,diff.norm.pred)
+
+ggplot(diffnorm.dat.pred,aes(x=diff.norm.ppt.min.z.highsev,y=fit,color=ppt.norm.level)) +
+  geom_line(size=1) +
+  geom_ribbon(aes(ymin=low,ymax=high,fill=ppt.norm.level),alpha=0.3,color=NA) +
+  guides(fill=guide_legend(title="Normal precip"),color=guide_legend(title="Normal precip"))
+
+
