@@ -739,6 +739,11 @@ plot.clim.seedtree <- remove.vars(plot.clim.seedtree,"FORBE")
 write.csv(plot.clim.seedtree,"data_intermediate/plot_level.csv",row.names=FALSE)
 write.csv(plot.3.regen,"data_intermediate/speciesXplot_level.csv",row.names=FALSE)
 
+
+
+
+#### Outlier check ####
+
 plot.3.regen <- read.csv("data_intermediate/speciesXplot_level.csv",header=TRUE,stringsAsFactors=FALSE)
 plot.clim.seedtree <- read.csv("data_intermediate/plot_level.csv",header=TRUE,stringsAsFactors=FALSE)
 

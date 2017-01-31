@@ -11,7 +11,7 @@ d.plot <- read.csv("data_intermediate/plot_level.csv",header=T,stringsAsFactors=
 d.sp <- read.csv("data_intermediate/speciesXplot_level.csv",header=T,stringsAsFactors=FALSE)
 
 # only keep the necessary columns
-d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general","seed_tree_distance_conifer","seed_tree_distance_hardwood","diff.norm.ppt.z","diff.norm.ppt.min.z","tmean.post","ppt.post","ppt.post.min")]
+d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general","seed_tree_distance_conifer","seed_tree_distance_hardwood","diff.norm.ppt.z","diff.norm.ppt.min.z","tmean.post","ppt.post","ppt.post.min","perc.norm.ppt","perc.norm.ppt.min")]
 
 # only Sierra Nevada fires #! removed DEEP
 sierra.fires <- c("STRAYLOR","CUB","RICH","MOONLIGHT","ANTELOPE","BTU LIGHTENING","HARDING","BASSETTS","PENDOLA","AMERICAN RIVER","RALSTON","FREDS","SHOWERS","POWER","BAGLEY","PEAK","CHIPS")
@@ -421,16 +421,21 @@ write.csv(aic.m,"data_analysis_output/model_selection.csv",row.names=TRUE)
 
 #### GLMnet ####
 
-response <- c("regen.presab.all")
+library(glmnet)
+
+response <- c("regen.abcount.all","regen.prescount.all")
 predictors <- c("diff.norm.ppt.z.highsev","diff.norm.ppt.min.z.highsev","adult.count","seed_tree_distance_general.highsev","rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev")
 
 #alternative
-predictors <- c("diff.norm.ppt.min.z.highsev","adult.count","seed_tree_distance_general.highsev","rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev")
+#predictors <- c("diff.norm.ppt.min.z.highsev","adult.count","seed_tree_distance_general.highsev","rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev")
 
 
-focalsp <- "PIPO"
+focalsp <- "SHADE.ALLSP"
 d.sp.2.singlesp <- d.sp.2[d.sp.2$species==focalsp,]
 d.mod <- merge(d.plot.3,d.sp.2.singlesp,all.x=TRUE) # data frame for modeling. Has regen-specific and plot-specific data for the species (or species group) specified above
+
+d.mod$regen.prescount.all <- d.mod$regen.presab.all * d.mod$count.highsev
+d.mod$regen.abcount.all <- d.mod$count.highsev - d.mod$regen.prescount.all
 
 #d.mod$interaction <- d.mod$diff.norm.ppt.min.z.highsev * d.mod$ppt.normal.highsev
 #predictors <- c(predictors,"interaction")
@@ -440,14 +445,48 @@ d.mod.glmnet <- d.mod[,c(response,predictors)]
 d.mod.glmnet <- as.matrix(d.mod.glmnet)
 
 
-fit <- glmnet(d.mod.glmnet[,predictors],d.mod.glmnet[,response])
-plot(fit,label=TRUE)
 
-coef(fit,s=0.005)
 
-cvfit <- cv.glmnet(d.mod.glmnet[,predictors],d.mod.glmnet[,response])
-plot(cvfit)
-coef(cvfit,s="lambda.min")
+lambdas = NULL
+for (i in 1:100)
+{
+  fit <- cv.glmnet(d.mod.glmnet[,predictors],d.mod.glmnet[,response],nfolds=10,family="binomial")
+  errors = data.frame(fit$lambda,fit$cvm)
+  lambdas <- rbind(lambdas,errors)
+}
+# take mean cvm for each lambda
+lambdas <- aggregate(lambdas[, 2], list(lambdas$fit.lambda), mean)
+
+# select the best one
+bestindex = which(lambdas[2]==min(lambdas[2]))
+bestlambda = lambdas[bestindex,1]
+bestlambda
+# and now run glmnet once more with it
+fit <- glmnet(d.mod.glmnet[,predictors],d.mod.glmnet[,response],family="binomial",lambda=bestlambda)
+coef(fit)
+
+
+n.bootstraps <- 1000
+boot.coefs <- matrix(nrow=length(predictors)+1,ncol=n.bootstraps)
+### bootstrap the fits. Sample the data 1000 times, with replacement
+for(i in 1:n.bootstraps) {
+  d.mod.glmnet.samp <- d.mod.glmnet[sample(nrow(d.mod.glmnet),size=nrow(d.mod.glmnet),replace=TRUE),]
+  fit <- glmnet(d.mod.glmnet.samp[,predictors],d.mod.glmnet.samp[,response],family="binomial",lambda=bestlambda)
+  coefs <- coef(fit)
+  boot.coefs[,i] <- as.vector(coefs)
+}
+
+rownames(boot.coefs) <- rownames(coefs)
+
+boot.coefs[boot.coefs==0] <- NA
+
+
+
+
+
+m <- glm()
+
+
 
 
 #### GLMNET with interactions ####
@@ -490,161 +529,132 @@ library(snow)
 library(MuMIn)
 
 
-focalsp <- "PINUS.ALLSP"
+focalsp <- "ABCO"
 d.sp.2.singlesp <- d.sp.2[d.sp.2$species==focalsp,]
 d.mod <- merge(d.plot.3,d.sp.2.singlesp,all.x=TRUE) # data frame for modeling. Has regen-specific and plot-specific data for the species (or species group) specified above
 
-predictors <- c("diff.norm.ppt.z.highsev","diff.norm.ppt.min.z.highsev","adult.count","seed_tree_distance_general.highsev","rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev")
 
-d.mod <- d.mod[,c("regen.presab.all",predictors)]
+predictors <- c("diff.norm.ppt.z.highsev","diff.norm.ppt.min.z.highsev","adult.count","seed_tree_distance_general.highsev","rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev","count.highsev","SHRUB.highsev","GRASS.highsev")
+#predictors <- c("perc.norm.ppt.highsev","perc.norm.ppt.min.highsev","adult.count","seed_tree_distance_general.highsev","rad.march.highsev","ppt.normal.highsev","ppt.normal.sq.highsev","count.highsev")
 
+d.mod <- d.mod[,c("regen.presab.all","regen.presab.old","regen.count.all",predictors)]
 d.mod <- d.mod[complete.cases(d.mod),]
+ 
+d.mod$count.present.all <- d.mod$regen.presab.all * d.mod$count.highsev
+d.mod$count.absent.all <- d.mod$count.highsev - d.mod$count.present.all
 
-m.full <- lm(regen.presab.all ~ (diff.norm.ppt.z.highsev + diff.norm.ppt.min.z.highsev + ppt.normal.highsev) + ppt.normal.sq.highsev + rad.march.highsev + adult.count,data=d.mod,na.action="na.fail")
+d.mod$count.present.old <- d.mod$regen.presab.old * d.mod$count.highsev
+d.mod$count.absent.old <- d.mod$count.highsev - d.mod$count.present.old
+
+d.mod$GRASS.highsev.prop <- d.mod$GRASS.highsev/100
+d.mod$SHRUB.highsev.prop <- d.mod$SHRUB.highsev/100
+
+d.mod$regen.count.all <- round(d.mod$regen.count.all)
+
+#m.full <- lm(regen.presab.all ~ (diff.norm.ppt.z.highsev + diff.norm.ppt.min.z.highsev + ppt.normal.highsev)^2 + ppt.normal.sq.highsev + rad.march.highsev + adult.count,data=d.mod,na.action="na.fail")
+#m.full <- glm(cbind(count.present.all,count.absent.all) ~ (perc.norm.ppt.highsev + perc.norm.ppt.min.highsev + ppt.normal.highsev)^2 + ppt.normal.sq.highsev + rad.march.highsev + adult.count,data=d.mod,na.action="na.fail",family="binomial")
+#m.full <- glm(cbind(count.present.all,count.absent.all) ~ (diff.norm.ppt.z.highsev + diff.norm.ppt.min.z.highsev + ppt.normal.highsev)^2 + ppt.normal.sq.highsev + rad.march.highsev + adult.count,data=d.mod,na.action="na.fail",family="binomial")
+#m.full <- betareg(GRASS.highsev.prop ~ (diff.norm.ppt.z.highsev + diff.norm.ppt.min.z.highsev + ppt.normal.highsev)^2 + ppt.normal.sq.highsev + rad.march.highsev + adult.count,data=d.mod,na.action="na.fail")
+m.full <- glm(regen.count.all ~ (diff.norm.ppt.z.highsev + diff.norm.ppt.min.z.highsev + ppt.normal.highsev)^2 + ppt.normal.sq.highsev + rad.march.highsev + adult.count,data=d.mod,na.action="na.fail",family=poisson)
+
 
 
 cl <- makeCluster(4, type = "SOCK")
-clusterExport(cl,"d.mod")
-a <- pdredge(m.full,cluster=cl, subset=(!(`diff.norm.ppt.z.highsev` & `diff.norm.ppt.min.z.highsev`)))
-             
-#              , fixed=c("ppt.normal_c","diff.norm.ppt.min.z"),
-#              subset=
-#                #(!(`seedtr.any.comb_c`&`seedtr.comb_c`)) &
-#                #(!(`diff.norm.tmean.z_c` & `diff.norm.tmean.JJA.mean.z_c`)) &
-#                #(!(`diff.norm.tmean.z_c` & `diff.norm.tmean.DJF.mean.z_c`)) &
-#                (!(`ppt.normal.sq_c` & !`ppt.normal_c`))
-#              #!(`tmean.normal.sq_c` & !`tmean.normal_c`))
-# )
-
-
+clusterExport(cl,c("d.mod","betareg"))
+a <- pdredge(m.full,cluster=cl, subset=(!(`ppt.normal.sq.highsev` & !`ppt.normal.highsev`)
+                                            & !(`diff.norm.ppt.z.highsev` & `diff.norm.ppt.min.z.highsev`)
+                                          & !`diff.norm.ppt.min.z.highsev`
+                                        ))
 stopCluster(cl)
 
 imp <- data.frame(var=names(importance(a)),imp=importance(a))
 best.model.num <- as.character(row.names(a[1,]))
 best.model <- get.models(a,best.model.num)[[1]]
-#best.model <- m.full
-# 
-# print(summary(best.model))
-# #best.model.tree <- best.model
-# best.coef <- fixef(best.model)
-# best.coef <- data.frame(var=names(best.coef),coef=best.coef)
-# #imp.coef <- merge(imp,best.coef,by="var",all.x=TRUE)
-# #write.csv(imp.coef,"mumin_out.csv",row.names=FALSE)
+summary(best.model)
+#best.model <- get.models(a,"29")[[1]]
 
 
-
-a.avg <- model.avg(a,fit=TRUE)
-
-summary(a.avg)
-
-
-
-
-#   mod.names <-row.names(a)
-#   mod.weights <- a[,"weight"]
-
-N <- 1000 #number of samples to take
-nsims <- N
-coef.sim <- data.frame()
-
-# # get all fit models  (this section for multi-model inference only)
-# models <- list()
-# 
-# for(i in 1:length(mod.names)) {
-#   
-#   mod.name <- mod.names[i]
-#   models[[mod.name]] <- get.models(a,mod.name)[[1]]
-#   
-# }
-#  this section for multi-model averaging
-# for(i in 1:N) {
-#   
-#   mod.name <- sample(mod.names,prob=mod.weights,replace=TRUE,size=1)
-#   mod.name <- mod.names[1] # if using only the best model (otherwise comment out for multi-model averaging)
-#   model <- models[[mod.name]]
-#   coef.sim.row <- fixef(sim(model,n.sims=1)) # change to get just one simulation, store in matrix
-#   coef.sim.row <- as.data.frame(coef.sim.row)
-#   coef.sim <- rbind.fill(coef.sim,coef.sim.row)
-#   
-# }
-
-# simulate coef for best model. this section for using best-model only
-
-### old code for simulating
-
-# coef.sim <- fixef(sim(best.model,n.sims=nsims))
-# coef.sim[is.na(coef.sim)] <- 0
-# 
-# 
-# coef.mean <- apply(coef.sim,2,mean)
-# coef.low <- apply(coef.sim,2,quantile,prob=0.025)
-# coef.high <- apply(coef.sim,2,quantile,prob=0.975)
-# 
-# coef.mean <- signif(coef.mean,3)
-# coef.low <- signif(coef.low,3)
-# coef.high <- signif(coef.high,3)
-# 
-# coef.summary <- rbind(coef.mean,coef.low,coef.high)
-# 
-# coef.bounds <- paste("(",coef.low,",",coef.high,")",sep="")
-# coef.full <- paste(coef.mean,coef.bounds)
-# names(coef.full) <- names(coef.mean)
-# coef.full <- as.data.frame(t(coef.full))
-# coef.full$type <- type
-# coef.df <- rbind.fill(coef.df,coef.full)
-
-
-
-#### Make predictions with averaged models ####
+#### Make predictions ####
 
 ## Variation over normal precip, with two levels of post-fire precip
 
 ppt.norm.seq <- seq(from=500,to=2000,length.out=100)
 
-newdat.pptnorm <- data.frame(
-                    ppt.normal.highsev = rep(ppt.norm.seq,2),
-                    ppt.normal.sq.highsev = rep(ppt.norm.seq^2,2),
-                    diff.norm.ppt.min.z.highsev = c(rep(-1.25,100),rep(-0.25,100)),
-                    diff.norm.level = c(rep("low",100),rep("high",100)),
-                    diff.norm.ppt.z.highsev = 0,
-                    adult.count = 1,
-                    rad.march.highsev = 6000)
+# newdat.pptnorm <- data.frame(
+#                     ppt.normal.highsev = rep(ppt.norm.seq,2),
+#                     ppt.normal.sq.highsev = rep(ppt.norm.seq^2,2),
+#                     diff.norm.ppt.z.highsev = c(rep(-0.8,100),rep(0.55,100)),
+#                     diff.norm.level = c(rep("low",100),rep("high",100)),
+#                     adult.count = 1,
+#                     rad.march.highsev = 6000)
                     
-ppt.norm.pred <- predict(best.model,newdata=newdat.pptnorm,se.fit=TRUE)  ## formerly a.avg
-ppt.norm.pred$low <- ppt.norm.pred$fit + ppt.norm.pred$se.fit * 1.96
-ppt.norm.pred$high <- ppt.norm.pred$fit - ppt.norm.pred$se.fit * 1.96
+newdat.pptnorm <- data.frame(
+  ppt.normal.highsev = rep(ppt.norm.seq,2),
+  ppt.normal.sq.highsev = rep(ppt.norm.seq^2,2),
+  diff.norm.ppt.min.z.highsev = c(rep(-1.5,100),rep(-0.2,100)),
+  diff.norm.level = c(rep("low",100),rep("high",100)),
+  adult.count = 1,
+  rad.march.highsev = 6000)
+
+
+
+ppt.norm.pred.obj <- predict(best.model,newdata=newdat.pptnorm,type="link",se.fit=TRUE)
+ppt.norm.pred <- data.frame(fit=ppt.norm.pred.obj)
+ppt.norm.pred$high <- ppt.norm.pred$fit + ppt.norm.pred$se.fit * 1.96
+ppt.norm.pred$low <- ppt.norm.pred$fit - ppt.norm.pred$se.fit * 1.96
+
+
+ppt.norm.pred$fit <- best.model$family$linkinv(ppt.norm.pred$fit)
+ppt.norm.pred$low <- best.model$family$linkinv(ppt.norm.pred$low)
+ppt.norm.pred$high <- best.model$family$linkinv(ppt.norm.pred$high)
 
 pptnorm.dat.pred <- cbind(newdat.pptnorm,ppt.norm.pred)
 
 ggplot(pptnorm.dat.pred,aes(x=ppt.normal.highsev,y=fit,color=diff.norm.level)) +
   geom_line(size=1) +
-  geom_ribbon(aes(ymin=low,ymax=high,fill=diff.norm.level),alpha=0.3,color=NA) +
+  #geom_ribbon(aes(ymin=low,ymax=high,fill=diff.norm.level),alpha=0.3,color=NA) +
   guides(fill=guide_legend(title="Postfire precip anomaly"),color=guide_legend(title="Postfire precip anomaly"))
   
   
 ## Variation over postfire anomaly, with two levels of normal precip
 
-diff.norm.seq <- seq(from=-1.5,to=0,length.out=100)
+diff.norm.seq <- seq(from=-0.8,to=0.5,length.out=100)
 
 newdat.diffnorm <- data.frame(
   ppt.normal.highsev = c(rep(750,100),rep(1750,100)),
   ppt.normal.sq.highsev = c(rep(750^2,100),rep(1750^2,100)),
   ppt.norm.level = c(rep("low",100),rep("high",100)),
-  diff.norm.ppt.min.z.highsev = rep(diff.norm.seq,2),
-  diff.norm.ppt.z.highsev = 0,
+  diff.norm.ppt.z.highsev = rep(diff.norm.seq,2),
   adult.count = 1,
   rad.march.highsev = 6000)
 
-diff.norm.pred <- predict(best.model,newdata=newdat.diffnorm,se.fit=TRUE)
-diff.norm.pred$low <- diff.norm.pred$fit + diff.norm.pred$se.fit * 1.96
-diff.norm.pred$high <- diff.norm.pred$fit - diff.norm.pred$se.fit * 1.96
+ppt.norm.pred.obj <- predict(best.model,newdata=newdat.diffnorm,type="link",se.fit=TRUE)
+#ppt.norm.pred <- data.frame(fit=ppt.norm.pred.obj)
+ppt.norm.pred <- ppt.norm.pred.obj
+ppt.norm.pred$high <- ppt.norm.pred$fit + ppt.norm.pred$se.fit * 1.96
+ppt.norm.pred$low <- ppt.norm.pred$fit - ppt.norm.pred$se.fit * 1.96
 
-diffnorm.dat.pred <- cbind(newdat.diffnorm,diff.norm.pred)
+ppt.norm.pred$fit <- best.model$family$linkinv(ppt.norm.pred$fit)
+ppt.norm.pred$low <- best.model$family$linkinv(ppt.norm.pred$low)
+ppt.norm.pred$high <- best.model$family$linkinv(ppt.norm.pred$high)
 
-ggplot(diffnorm.dat.pred,aes(x=diff.norm.ppt.min.z.highsev,y=fit,color=ppt.norm.level)) +
+diffnorm.dat.pred <- cbind(newdat.diffnorm,ppt.norm.pred)
+
+ggplot(diffnorm.dat.pred,aes(x=diff.norm.ppt.z.highsev,y=fit,color=ppt.norm.level)) +
   geom_line(size=1) +
   geom_ribbon(aes(ymin=low,ymax=high,fill=ppt.norm.level),alpha=0.3,color=NA) +
   guides(fill=guide_legend(title="Normal precip"),color=guide_legend(title="Normal precip"))
+
+
+
+
+
+
+
+
+
+
+
 
 ## predictions from GLMnet ## (not yet working)
 
@@ -668,6 +678,177 @@ diffnorm.dat.pred <- cbind(newdat.diffnorm,diff.norm.pred)
 ggplot(diffnorm.dat.pred,aes(x=diff.norm.ppt.min.z.highsev,y=fit,color=ppt.norm.level)) +
   geom_line(size=1) +
   geom_ribbon(aes(ymin=low,ymax=high,fill=ppt.norm.level),alpha=0.3,color=NA) +
+  guides(fill=guide_legend(title="Normal precip"),color=guide_legend(title="Normal precip"))
+
+
+
+
+#### Plot-level analysis ####
+
+
+#d.sp
+#d.plot
+
+d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV > 3),]
+
+sp <- "PIPO"
+d.sp.curr <- d.sp[d.sp$species==sp,]
+d <- merge(d.plot,d.sp.curr,all.x=TRUE,by="Regen_Plot")
+vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
+vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB")
+d <- d[complete.cases(d[,vars.focal]),]
+d.c <- center.df(d,vars.leave)
+
+vars.focal.c <- paste0(vars.focal[-6],"_c")
+pairs(d.c[,vars.focal.c])
+
+d.c$SHRUB.p <- d.c$SHRUB/100
+d.c$SHRUB.pt <- (d.c$SHRUB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+
+d.c$GRASS.p <- d.c$GRASS/100
+d.c$GRASS.pt <- (d.c$GRASS.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+
+d.c$HARDWOOD.p <- d.c$HARDWOOD/100
+d.c$HARDWOOD.pt <- (d.c$HARDWOOD.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+
+
+d.c$Fire <- as.factor(d.c$Fire)
+
+d.c <- d.c[!(d.c$Fire == "RICH"),]
+
+#d.c <- d.c[complete.cases(d.c$HARDWOOD),]
+
+library(lme4)
+
+library(glmmADMB)
+library(betareg)
+
+#for pres/ab
+#m.full <- glmer(regen.presab.all ~ ppt.normal.sq_c + seed_tree_distance_general_c + rad.march_c +ppt.normal_c * diff.norm.ppt.min.z_c + (1|Fire),family="binomial",na.action="na.fail",data=d.c)
+
+#for cover
+#m.full <- betareg(SHRUB.pt ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal.sq_c + rad.march_c + seed_tree_distance_general_c,data=d.c)
+m.full <- glmmadmb(SHRUB.pt ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal.sq_c + rad.march_c + seed_tree_distance_general_c + (1|Fire),family="beta",data=d.c)
+
+library(MuMIn)
+library(snow)
+
+cl <- makeCluster(4, type = "SOCK")
+clusterExport(cl,c("d.c","glmer","glmmadmb","admbControl"))
+a <- pdredge(m.full,cluster=cl, subset=(!(`ppt.normal.sq_c` & !`ppt.normal_c`)))
+stopCluster(cl)
+
+imp <- data.frame(var=names(importance(a)),imp=importance(a))
+best.model.num <- as.character(row.names(a[1,]))
+best.model <- get.models(a,best.model.num)[[1]]
+summary(best.model)
+best.model <- get.models(a,"15")[[1]]
+
+
+
+
+### make predictions
+library(arm)
+library(merTools)
+
+## for glmer, need to simulate coefs
+
+m.sim <- sim(m.full)
+
+
+
+diff.norm.seq <- seq(from=-1.5,to=1.5,length.out=100)
+
+
+newdat <- data.frame(
+  ppt.normal_c = c(rep(-1,100),rep(1,100)),
+  ppt.normal.sq_c = c(rep(-1,100),rep(1,100)),
+  ppt.norm.level = c(rep("low",100),rep("high",100)),
+  diff.norm.ppt.z_c = rep(diff.norm.seq,2),
+  diff.norm.ppt.min.z_c = rep(diff.norm.seq,2),
+  rad.march_c = 0,
+  seed_tree_distance_general_c = -1)
+
+
+interact.df <- data.frame("Fake"=rep(NA,nrow(newdat)))
+
+for(i in 1:ncol(newdat)) { # for each col
+  
+  for(j in 1:ncol(newdat)) {
+    
+    name.i <- names(newdat)[i]
+    name.j <- names(newdat)[j]
+    name.inter <- paste(name.i,name.j,sep=":")
+    val.inter <- newdat[,i] * newdat[,j]
+    
+    interact.df <- cbind(interact.df,val.inter)
+    names(interact.df)[ncol(interact.df)] <- name.inter
+    
+    
+  }
+  
+}
+
+newdat <- cbind(newdat,interact.df)
+newdat$"(Intercept)" <- 1 # this is the "predictor" value to multiple the intercept by
+
+mod.vars <- colnames(fixef(m.sim))
+
+newdat.ordered <- newdat[,mod.vars]
+
+# for each row of newdat.ordered, multiply data by all coef values, sum across, and compute median and conf int
+preds <- matrix(nrow=nrow(newdat.ordered),ncol=3)
+for(i in 1:nrow(newdat.ordered)) {
+  
+  newdat.row <- as.matrix(newdat.ordered[i,])
+  
+  prod <- sweep(fixef(m.sim),MARGIN=2,newdat.row,`*`)
+  sums <- rowSums(prod)
+  
+  fit <- median(sums)
+  upr <- quantile(sums,probs=0.975)
+  lwr <- quantile(sums,probs=0.025)
+  
+  preds[i,] <- c(fit,lwr,upr)
+  
+}
+
+preds <- inv.logit(preds)
+colnames(preds) <- c("fit","lwr","upr")
+preds <- as.data.frame(preds)
+
+
+dat.preds <- cbind(newdat,preds)
+
+
+ggplot(dat.preds,aes(x=diff.norm.ppt.z_c,y=fit,color=ppt.norm.level)) +
+  geom_line(size=1) +
+  geom_ribbon(aes(ymin=lwr,ymax=upr,fill=ppt.norm.level),alpha=0.3,color=NA) +
+  guides(fill=guide_legend(title="Normal precip"),color=guide_legend(title="Normal precip"))
+
+
+
+### Make predictions for glmmADMB
+
+
+diff.norm.seq <- seq(from=-1.5,to=1.5,length.out=100)
+
+newdat <- data.frame(
+  ppt.normal_c = c(rep(-1,100),rep(1,100)),
+  ppt.normal.sq_c = c(rep(-1,100),rep(1,100)),
+  ppt.norm.level = c(rep("low",100),rep("high",100)),
+  diff.norm.ppt.z_c = rep(diff.norm.seq,2),
+  diff.norm.ppt.min.z_c = rep(diff.norm.seq,2),
+  rad.march_c = 0,
+  seed_tree_distance_general_c = -1)
+
+preds <- predict(best.model,newdat,interval="confidence",type="response")
+
+dat.preds <- cbind(newdat,preds)
+
+ggplot(dat.preds,aes(x=diff.norm.ppt.z_c,y=fit,color=ppt.norm.level)) +
+  geom_line(size=1) +
+  geom_ribbon(aes(ymin=lwr,ymax=upr,fill=ppt.norm.level),alpha=0.3,color=NA) +
   guides(fill=guide_legend(title="Normal precip"),color=guide_legend(title="Normal precip"))
 
 

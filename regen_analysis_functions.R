@@ -23,3 +23,28 @@ remove.vars <- function(df,vars.remove) {
   return(df.clean)
   
 }
+
+
+
+center.df <- function(df,leave.cols) {
+  df.names <- names(df)
+  new.df <- data.frame(SID=1:nrow(df))
+  # get first species ID for thinning
+  first.sp.id <- unique(df$species)[1]
+  for(var.name in df.names) {
+    col.vals <- df[,var.name]
+    colnum <- which(df.names == var.name)
+    if(!is.numeric(col.vals) | var.name %in% leave.cols) {
+      new.df[,var.name] <- col.vals
+    } else {
+      new.var.name <- paste(var.name,"_c",sep="")
+      col.vals.thinned <- col.vals[df$species == first.sp.id]
+      new.df[,new.var.name] <- (col.vals - mean(col.vals.thinned,na.rm=TRUE)) / sd(col.vals.thinned,na.rm=TRUE)
+    }
+  }
+  return(new.df)
+}
+
+inv.logit <- function(x) {
+  exp(x)/(1+exp(x))
+}

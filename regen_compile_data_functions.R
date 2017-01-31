@@ -252,6 +252,22 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl
   names(surviving.allsp.tot.ba) <- c("Regen_Plot","adult.ba")
   surviving.pinus.tot.df <- data.frame(Regen_Plot=surviving.allsp.tot.count$Regen_Plot,species="PINUS.ALLSP",adult.count=surviving.allsp.tot.count$adult.count,adult.ba = surviving.allsp.tot.ba$adult.ba)
   
+  ## compute total for all yellow pine
+  regen.tot.focal <- regen.tot[regen.tot$species %in% c("PIPO","PIJE"),]
+  regen.allsp.tot <- aggregate(regen.tot.focal$regen.count,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
+  
+  names(regen.allsp.tot) <- c("Regen_Plot","regen.count")
+  regen.pipj.tot.df <- data.frame(Regen_Plot=regen.allsp.tot$Regen_Plot,species="PIPJ",regen.count=regen.allsp.tot$regen.count)
+  
+  surviving.allsp.tot.count <- aggregate(regen.tot.focal$surviving.trees.count,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
+  surviving.allsp.tot.ba <- aggregate(regen.tot.focal$surviving.trees.ba,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
+  names(surviving.allsp.tot.count) <- c("Regen_Plot","adult.count")
+  names(surviving.allsp.tot.ba) <- c("Regen_Plot","adult.ba")
+  surviving.pipj.tot.df <- data.frame(Regen_Plot=surviving.allsp.tot.count$Regen_Plot,species="PIPJ",adult.count=surviving.allsp.tot.count$adult.count,adult.ba = surviving.allsp.tot.ba$adult.ba)
+  
+  
+  
+  
   ## compute total for all shade sp
   regen.tot.focal <- regen.tot[regen.tot$species %in% c("ABCO","CADE27","ABIES","TAXUS","TOCA","ABMA"),]
   regen.allsp.tot <- aggregate(regen.tot.focal$regen.count,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
@@ -282,8 +298,8 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl
   surviving.hdwd.tot.df <- data.frame(Regen_Plot=surviving.allsp.tot.count$Regen_Plot,species="HDWD.ALLSP",adult.count=surviving.allsp.tot.count$adult.count,adult.ba = surviving.allsp.tot.ba$adult.ba)
   
   
-  regen.spgrps <- rbind.fill(regen.tot[,1:3],regen.allsp.tot.df,regen.con.tot.df,regen.hdwd.tot.df,regen.pinus.tot.df,regen.shade.tot.df)
-  adult.spgrps <- rbind.fill(surviving.df2,surviving.allsp.tot.df,surviving.con.tot.df,surviving.hdwd.tot.df,surviving.pinus.tot.df,surviving.shade.tot.df)
+  regen.spgrps <- rbind.fill(regen.tot[,1:3],regen.allsp.tot.df,regen.con.tot.df,regen.hdwd.tot.df,regen.pinus.tot.df,regen.shade.tot.df,regen.pipj.tot.df)
+  adult.spgrps <- rbind.fill(surviving.df2,surviving.allsp.tot.df,surviving.con.tot.df,surviving.hdwd.tot.df,surviving.pinus.tot.df,surviving.shade.tot.df,surviving.pipj.tot.df)
   
   trees.spgrps <- merge(regen.spgrps,adult.spgrps)
 
