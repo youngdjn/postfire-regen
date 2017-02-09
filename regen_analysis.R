@@ -574,6 +574,28 @@ summary(best.model)
 #best.model <- get.models(a,"29")[[1]]
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #### Make predictions ####
 
 ## Variation over normal precip, with two levels of post-fire precip
@@ -691,7 +713,7 @@ ggplot(diffnorm.dat.pred,aes(x=diff.norm.ppt.min.z.highsev,y=fit,color=ppt.norm.
 
 d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV > 3),]
 
-sp <- "PIPO"
+sp <- "PINUS.ALLSP"
 d.sp.curr <- d.sp[d.sp$species==sp,]
 d <- merge(d.plot,d.sp.curr,all.x=TRUE,by="Regen_Plot")
 vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
@@ -723,12 +745,16 @@ library(lme4)
 library(glmmADMB)
 library(betareg)
 
+d.c$regen.presab.all.01 <- ifelse(d.c$regen.presab.all == TRUE,1,0)
+
+
 #for pres/ab
-#m.full <- glmer(regen.presab.all ~ ppt.normal.sq_c + seed_tree_distance_general_c + rad.march_c +ppt.normal_c * diff.norm.ppt.min.z_c + (1|Fire),family="binomial",na.action="na.fail",data=d.c)
+m.full <- glmer(regen.presab.all ~ ppt.normal.sq_c +ppt.normal_c * diff.norm.ppt.z_c + (1|Fire),family="binomial",na.action="na.fail",data=d.c)
+m.full <- glmmadmb(regen.presab.all.01 ~ ppt.normal.sq_c + ppt.normal_c * diff.norm.ppt.z_c + (1|Fire),family="binomial",data=d.c)
 
 #for cover
 #m.full <- betareg(SHRUB.pt ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal.sq_c + rad.march_c + seed_tree_distance_general_c,data=d.c)
-m.full <- glmmadmb(SHRUB.pt ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal.sq_c + rad.march_c + seed_tree_distance_general_c + (1|Fire),family="beta",data=d.c)
+#m.full <- glmmadmb(SHRUB.pt ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal.sq_c + rad.march_c + seed_tree_distance_general_c + (1|Fire),family="beta",data=d.c)
 
 library(MuMIn)
 library(snow)
@@ -744,6 +770,183 @@ best.model <- get.models(a,best.model.num)[[1]]
 summary(best.model)
 best.model <- get.models(a,"15")[[1]]
 
+
+
+
+### make predictions
+library(arm)
+library(merTools)
+
+## for glmer, need to simulate coefs
+
+m.sim <- sim(best.model)
+
+
+
+diff.norm.seq <- seq(from=-1.5,to=1.5,length.out=100)
+
+
+newdat <- data.frame(
+  ppt.normal_c = c(rep(-1,100),rep(1,100)),
+  ppt.normal.sq_c = c(rep(-1,100),rep(1,100)),
+  ppt.norm.level = c(rep("low",100),rep("high",100)),
+  diff.norm.ppt.z_c = rep(diff.norm.seq,2),
+  diff.norm.ppt.min.z_c = rep(diff.norm.seq,2),
+  rad.march_c = 0,
+  seed_tree_distance_general_c = -1)
+
+
+interact.df <- data.frame("Fake"=rep(NA,nrow(newdat)))
+
+for(i in 1:ncol(newdat)) { # for each col
+  
+  for(j in 1:ncol(newdat)) {
+    
+    name.i <- names(newdat)[i]
+    name.j <- names(newdat)[j]
+    name.inter <- paste(name.i,name.j,sep=":")
+    val.inter <- newdat[,i] * newdat[,j]
+    
+    interact.df <- cbind(interact.df,val.inter)
+    names(interact.df)[ncol(interact.df)] <- name.inter
+    
+    
+  }
+  
+}
+
+newdat <- cbind(newdat,interact.df)
+newdat$"(Intercept)" <- 1 # this is the "predictor" value to multiple the intercept by
+
+mod.vars <- colnames(fixef(m.sim))
+
+newdat.ordered <- newdat[,mod.vars]
+
+# for each row of newdat.ordered, multiply data by all coef values, sum across, and compute median and conf int
+preds <- matrix(nrow=nrow(newdat.ordered),ncol=3)
+for(i in 1:nrow(newdat.ordered)) {
+  
+  newdat.row <- as.matrix(newdat.ordered[i,])
+  
+  prod <- sweep(fixef(m.sim),MARGIN=2,newdat.row,`*`)
+  sums <- rowSums(prod)
+  
+  fit <- median(sums)
+  upr <- quantile(sums,probs=0.975)
+  lwr <- quantile(sums,probs=0.025)
+  
+  preds[i,] <- c(fit,lwr,upr)
+  
+}
+
+preds <- inv.logit(preds)
+colnames(preds) <- c("fit","lwr","upr")
+preds <- as.data.frame(preds)
+
+
+dat.preds <- cbind(newdat,preds)
+
+
+ggplot(dat.preds,aes(x=diff.norm.ppt.z_c,y=fit,color=ppt.norm.level)) +
+  geom_line(size=1) +
+  geom_ribbon(aes(ymin=lwr,ymax=upr,fill=ppt.norm.level),alpha=0.3,color=NA) +
+  guides(fill=guide_legend(title="Normal precip"),color=guide_legend(title="Normal precip"))
+
+
+
+### Make predictions for glmmADMB
+
+
+diff.norm.seq <- seq(from=-1.5,to=1.5,length.out=100)
+
+newdat <- data.frame(
+  ppt.normal_c = c(rep(-1,100),rep(1,100)),
+  ppt.normal.sq_c = c(rep(-1,100),rep(1,100)),
+  ppt.norm.level = c(rep("low",100),rep("high",100)),
+  diff.norm.ppt.z_c = rep(diff.norm.seq,2),
+  diff.norm.ppt.min.z_c = rep(diff.norm.seq,2),
+  rad.march_c = 0,
+  seed_tree_distance_general_c = -1)
+
+
+
+
+
+
+
+
+preds <- predict(best.model,newdat,interval="confidence",type="response")
+
+dat.preds <- cbind(newdat,preds)
+
+ggplot(dat.preds,aes(x=diff.norm.ppt.z_c,y=fit,color=ppt.norm.level)) +
+  geom_line(size=1) +
+  geom_ribbon(aes(ymin=lwr,ymax=upr,fill=ppt.norm.level),alpha=0.3,color=NA) +
+  guides(fill=guide_legend(title="Normal precip"),color=guide_legend(title="Normal precip"))
+
+
+
+
+
+
+
+
+#### Plot-level analysis without MuMIn (single basic model for all functional groups) ####
+
+
+#d.sp
+#d.plot
+
+d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV > 3),]
+
+sp <- "PINUS.ALLSP"
+d.sp.curr <- d.sp[d.sp$species==sp,]
+d <- merge(d.plot,d.sp.curr,all.x=TRUE,by="Regen_Plot")
+vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
+vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB")
+d <- d[complete.cases(d[,vars.focal]),]
+d.c <- center.df(d,vars.leave)
+#d.c <- d
+
+d.c$ppt.normal_c.sq <- d.c$ppt.normal_c^2
+
+d.c$regen.presab.all.01 <- ifelse(d.c$regen.presab.all == TRUE,1,0)
+
+
+vars.focal.c <- paste0(vars.focal[-6],"_c")
+pairs(d.c[,vars.focal.c])
+
+d.c$SHRUB.p <- d.c$SHRUB/100
+d.c$SHRUB.pt <- (d.c$SHRUB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+
+d.c$GRASS.p <- d.c$GRASS/100
+d.c$GRASS.pt <- (d.c$GRASS.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+
+d.c$HARDWOOD.p <- d.c$HARDWOOD/100
+d.c$HARDWOOD.pt <- (d.c$HARDWOOD.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+
+
+d.c$Fire <- as.factor(d.c$Fire)
+
+d.c <- d.c[!(d.c$Fire == "RICH"),]
+
+#d.c <- d.c[complete.cases(d.c$HARDWOOD),]
+
+library(lme4)
+
+library(glmmADMB)
+library(betareg)
+
+#for pres/ab
+m.full <- glmer(regen.presab.all.01 ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal_c.sq + (1|Fire),family="binomial",na.action="na.fail",data=d.c)
+m.full <- glmmadmb(regen.presab.all.01 ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal.sq_c + (1|Fire),family="binomial",data=d.c)
+
+#for cover
+#m.full <- betareg(SHRUB.pt ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal.sq_c + rad.march_c + seed_tree_distance_general_c,data=d.c)
+#m.full <- glmmadmb(SHRUB.pt ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal.sq_c + rad.march_c + seed_tree_distance_general_c + (1|Fire),family="beta",data=d.c)
+
+library(MuMIn)
+library(snow)
 
 
 
@@ -842,7 +1045,7 @@ newdat <- data.frame(
   rad.march_c = 0,
   seed_tree_distance_general_c = -1)
 
-preds <- predict(best.model,newdat,interval="confidence",type="response")
+preds <- predict(m.full,newdat,interval="confidence",type="response")
 
 dat.preds <- cbind(newdat,preds)
 
@@ -850,5 +1053,204 @@ ggplot(dat.preds,aes(x=diff.norm.ppt.z_c,y=fit,color=ppt.norm.level)) +
   geom_line(size=1) +
   geom_ribbon(aes(ymin=lwr,ymax=upr,fill=ppt.norm.level),alpha=0.3,color=NA) +
   guides(fill=guide_legend(title="Normal precip"),color=guide_legend(title="Normal precip"))
+
+
+
+
+
+
+
+
+
+
+
+
+#### trying to use brms ####
+
+library(brms)
+
+d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV > 3),]
+
+
+
+
+
+sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO","ABMA","CONIF.ALLSP","PSME","PILA","CADE27","PIJE","PIPJ")
+cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB","COV.HARDWOOD","COV.CONIFER")
+sp.opts <- c(cover.opts,sp.opts)
+
+m.p <- list()
+m <- list()
+
+for(sp in sp.opts) {
+  
+      cat("Running model for: ",sp,"\n")
+  
+      if(sp %in% cover.opts) {
+        d.sp.curr <- d.sp[d.sp$species=="PIPO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
+      } else {
+        d.sp.curr <- d.sp[d.sp$species==sp,]
+      }
+      
+      d <- merge(d.plot,d.sp.curr,all.x=TRUE,by="Regen_Plot")
+      vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
+      vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB")
+      d <- d[complete.cases(d[,vars.focal]),]
+      d.c <- center.df(d,vars.leave)
+
+      d.c$ppt.normal_c.sq <- d.c$ppt.normal_c^2
+      
+      d.c$regen.presab.all.01 <- ifelse(d.c$regen.presab.all == TRUE,1,0)
+      
+      vars.focal.c <- paste0(vars.focal[-6],"_c")
+      #pairs(d.c[,vars.focal.c])
+      
+      d.c$SHRUB.p <- d.c$SHRUB/100
+      d.c$SHRUB.pt <- (d.c$SHRUB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+      
+      d.c$GRASS.p <- d.c$GRASS/100
+      d.c$GRASS.pt <- (d.c$GRASS.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+      
+      d.c$HARDWOOD.p <- d.c$HARDWOOD/100
+      d.c$HARDWOOD.pt <- (d.c$HARDWOOD.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+      
+      d.c$FORB.p <- d.c$FORB/100
+      d.c$FORB.pt <- (d.c$FORB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+      
+      d.c$CONIFER.p <- d.c$CONIFER/100
+      d.c$CONIFER.pt <- (d.c$CONIFER.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+      
+      
+      d.c$Fire <- as.factor(d.c$Fire)
+      
+      d.c <- d.c[!(d.c$Fire == "RICH"),]
+      
+      
+      if(sp %in% cover.opts) {
+        
+        sp.cov <- substr(sp,5,100)
+        sp.cov <- paste0(sp.cov,".pt")
+        
+        d.c$cov.response <- d.c[,sp.cov]
+        
+        m[[sp]] <- brm(cov.response ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal_c.sq + (1|Fire),family="Beta",data=d.c,warmup=2000,iter=4000,control = list(adapt_delta = 0.90),cores=4)
+        
+      }
+      
+      
+      
+      
+      m[[sp]] <- brm(regen.presab.all.01 ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal_c.sq + (1|Fire),family="bernoulli",data=d.c,warmup=2000,iter=4000,control = list(adapt_delta = 0.90),cores=4)
+
+}
+
+for(sp in names(m)) {
+  cat("\n",sp)
+  print(summary(m[[sp]]))
+}
+
+
+
+diff.norm.seq <- seq(from=-1.5,to=1.5,length.out=100)
+
+newdat <- data.frame(
+  ppt.normal_c = c(rep(-1,100),rep(1,100)),
+  ppt.normal_c.sq = c(rep(1,100),rep(1,100)),
+  ppt.norm.level = c(rep("low",100),rep("high",100)),
+  diff.norm.ppt.z_c = rep(diff.norm.seq,2)
+  #diff.norm.ppt.min.z_c = rep(diff.norm.seq,2),
+  #rad.march_c = 0,
+  #seed_tree_distance_general_c = -1
+)
+
+
+
+
+interact.df <- data.frame("Fake"=rep(NA,nrow(newdat)))
+
+for(i in 1:ncol(newdat)) { # for each col
+  
+  for(j in 1:ncol(newdat)) {
+    
+    name.i <- names(newdat)[i]
+    name.j <- names(newdat)[j]
+    name.inter <- paste(name.i,name.j,sep=":")
+    val.inter <- newdat[,i] * newdat[,j]
+    
+    interact.df <- cbind(interact.df,val.inter)
+    names(interact.df)[ncol(interact.df)] <- name.inter
+    
+    
+  }
+  
+}
+
+newdat <- cbind(newdat,interact.df)
+newdat$"(Intercept)" <- 1 # this is the "predictor" value to multiple the intercept by
+
+
+
+### put all predictions in a list, with a column for species
+
+
+sp.plots <- list()
+dat.preds <- data.frame()
+
+for(sp in names(m)) {
+  
+  
+  m.sp <- m[[sp]]
+  m.p.sp <- posterior_samples(m.sp,pars="^b")
+  
+
+  names(m.p.sp) <- sapply(names(m.p.sp),substr,start=3,stop=1000)
+  names(m.p.sp)[1] <- "(Intercept)"
+  
+  
+
+  mod.vars <- colnames(m.p.sp)
+  
+  newdat.ordered <- newdat[,mod.vars]
+  
+  # for each row of newdat.ordered, multiply data by all coef values, sum across, and compute median and conf int
+  preds <- matrix(nrow=nrow(newdat.ordered),ncol=3)
+  for(i in 1:nrow(newdat.ordered)) {
+    
+    newdat.row <- as.matrix(newdat.ordered[i,])
+    
+    prod <- sweep(m.p.sp,MARGIN=2,newdat.row,`*`)
+    sums <- rowSums(prod)
+    
+    fit <- median(sums)
+    upr <- quantile(sums,probs=0.975)
+    lwr <- quantile(sums,probs=0.025)
+    
+    preds[i,] <- c(fit,lwr,upr)
+    
+  }
+  
+  preds <- inv.logit(preds)
+  colnames(preds) <- c("fit","lwr","upr")
+  preds <- as.data.frame(preds)
+  
+  sp.grp <- sp
+  
+  dat.preds.sp <- cbind(newdat,preds,sp.grp)
+  
+  dat.preds <- rbind(dat.preds,dat.preds.sp)
+
+
+}
+
+ggplot(dat.preds,aes(x=diff.norm.ppt.z_c,y=fit,color=ppt.norm.level)) +
+  geom_line(size=1) +
+  geom_ribbon(aes(ymin=lwr,ymax=upr,fill=ppt.norm.level),alpha=0.3,color=NA) +
+  guides(fill=guide_legend(title="Normal precip"),color=guide_legend(title="Normal precip")) +
+  facet_wrap(~sp.grp)
+
+
+
+
+
 
 
