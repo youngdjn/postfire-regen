@@ -1133,15 +1133,11 @@ for(sp in sp.opts) {
         
         d.c$cov.response <- d.c[,sp.cov]
         
-        m[[sp]] <- brm(cov.response ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal_c.sq + (1|Fire),family="Beta",data=d.c,warmup=2000,iter=4000,control = list(adapt_delta = 0.90),cores=4)
+        m[[sp]] <- brm(cov.response ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal_c.sq + (1|Fire),family="Beta",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
         
+      } else {
+        m[[sp]] <- brm(regen.presab.all.01 ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal_c.sq + (1|Fire),family="bernoulli",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
       }
-      
-      
-      
-      
-      m[[sp]] <- brm(regen.presab.all.01 ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal_c.sq + (1|Fire),family="bernoulli",data=d.c,warmup=2000,iter=4000,control = list(adapt_delta = 0.90),cores=4)
-
 }
 
 for(sp in names(m)) {
