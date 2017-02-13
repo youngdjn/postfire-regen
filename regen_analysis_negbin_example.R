@@ -1212,7 +1212,7 @@ for(sp in sp.opts) {
         
       } else {
         #m[[sp]] <- brm(regen.presab.all.01 ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c * diff.norm.tmean.z_c + ppt.normal_c.sq,family="bernoulli",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        m[[sp]] <- brm(regen.count.all.int ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + ppt.normal_c.sq,family="zero_inflated_negbinomial",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+        m[[sp]] <- brm(regen.count.all.int ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c * diff.norm.tmean.z_c + ppt.normal_c.sq,family="zero_inflated_negbinomial",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
       }
 }
 
@@ -1341,4 +1341,11 @@ ggplot(dat.preds,aes(x=diff.norm.ppt.min.z_c,y=fit,color=ppt.norm.level)) +
   facet_wrap(~sp.grp,scales="free",ncol=5)
 
 
+
+
+####testing
+library(pROC)
+predicted <- predict(m.bin.9)
+observed <- d.2015$mort.bin
+auc(observed,predicted)
 
