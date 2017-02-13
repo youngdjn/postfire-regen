@@ -1140,21 +1140,16 @@ ggplot(dat.preds,aes(x=diff.norm.ppt.z_c,y=fit,color=ppt.norm.level)) +
 
 library(brms)
 
-d.plot <- d.plot[(d.plot$survey.years.post %in% c(5)) & (d.plot$FIRE_SEV > 3),]
+d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV > 3),]
 
 
-sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO","CONIF.ALLSP","CADE27","PIPJ")
-cover.opts <- c("COV.SHRUB","COV.GRASS","COV.HARDWOOD","COV.CONIFER")
-#cover.opts <- NULL
+sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO","ABMA","CONIF.ALLSP","PSME","PILA","CADE27","PIJE","PIPJ")
+cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB","COV.HARDWOOD","COV.CONIFER")
+cover.opts <- NULL
 sp.opts <- c(cover.opts,sp.opts)
 
-m.p <- m.pP <- m.pt <- m.pPtT <- m.t <- m.tT <- list()
-auc.p <- auc.pP <- auc.pt <- auc.pPtT <- auc.t <- auc.tT <- list()
-loo.p <- loo.pP <- loo.pt <- loo.pPtT <- loo.t <- loo.tT <- list()
-
-loos <- list()
-
-aucs.sp <- data.frame()
+m.p <- list()
+m <- list()
 
 for(sp in sp.opts) {
   
@@ -1202,6 +1197,8 @@ for(sp in sp.opts) {
       
       d.c <- d.c[!(d.c$Fire == "RICH"),]
       
+      d.c$regen.count.all.int <- ceiling(d.c$regen.count.all)
+      
       
       if(sp %in% cover.opts) {
         
@@ -1210,62 +1207,14 @@ for(sp in sp.opts) {
         
         d.c$cov.response <- d.c[,sp.cov]
         
-        m.p[[sp]] <- brm(cov.response ~ ppt.normal_c + ppt.normal_c.sq + (1|Fire),family="Beta",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        m.pP[[sp]] <- brm(cov.response ~ ppt.normal_c * diff.norm.ppt.z_c  + ppt.normal_c.sq + (1|Fire),family="Beta",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        m.pt[[sp]] <- brm(cov.response ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + (1|Fire),family="Beta",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        m.pPtT[[sp]] <- brm(cov.response ~ ppt.normal_c * diff.norm.ppt.z_c  + ppt.normal_c.sq + tmean.normal_c * diff.norm.tmean.z_c  + tmean.normal_c.sq + (1|Fire),family="Beta",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        m.t[[sp]] <- brm(cov.response ~ tmean.normal_c + tmean.normal_c.sq + (1|Fire),family="Beta",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        m.tT[[sp]] <- brm(cov.response ~ tmean.normal_c * diff.norm.tmean.z_c  + tmean.normal_c.sq + (1|Fire),family="Beta",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        
-        
-        
+        m[[sp]] <- brm(cov.response ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c * diff.norm.tmean.z_c + ppt.normal_c.sq + (1|Fire),family="Beta",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
         
         
       } else {
-        
-        m.p[[sp]] <- brm(regen.presab.all.01 ~ ppt.normal_c + ppt.normal_c.sq + (1|Fire),family="bernoulli",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        m.pP[[sp]] <- brm(regen.presab.all.01 ~ ppt.normal_c * diff.norm.ppt.z_c  + ppt.normal_c.sq + (1|Fire),family="bernoulli",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        m.pt[[sp]] <- brm(regen.presab.all.01 ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + (1|Fire),family="bernoulli",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        m.pPtT[[sp]] <- brm(regen.presab.all.01 ~ ppt.normal_c * diff.norm.ppt.z_c  + ppt.normal_c.sq + tmean.normal_c * diff.norm.tmean.z_c  + tmean.normal_c.sq + (1|Fire),family="bernoulli",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        m.t[[sp]] <- brm(regen.presab.all.01 ~ tmean.normal_c + tmean.normal_c.sq + (1|Fire),family="bernoulli",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        m.tT[[sp]] <- brm(regen.presab.all.01 ~ tmean.normal_c * diff.norm.tmean.z_c  + tmean.normal_c.sq + (1|Fire),family="bernoulli",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        
-        observed <- d.c$regen.presab.all.01
-        
-        predicted <- predict(m.p[[sp]])[,"Estimate"]
-        auc.p<- auc(observed,predicted)
-        
-        predicted <- predict(m.pP[[sp]])[,"Estimate"]
-        auc.pP<- auc(observed,predicted)
-        
-        predicted <- predict(m.pt[[sp]])[,"Estimate"]
-        auc.pt<- auc(observed,predicted)
-        
-        predicted <- predict(m.pPtT[[sp]])[,"Estimate"]
-        auc.pPtT<- auc(observed,predicted)
-        
-        predicted <- predict(m.t[[sp]])[,"Estimate"]
-        auc.t<- auc(observed,predicted)
-        
-        predicted <- predict(m.tT[[sp]])[,"Estimate"]
-        auc.tT<- auc(observed,predicted)
-        
-        aucs <- data.frame(sp=sp,auc.p,auc.pP,auc.pt,auc.pPtT,auc.t,auc.tT)
-        aucs.sp <- rbind(aucs.sp,aucs)
-        
+        #m[[sp]] <- brm(regen.presab.all.01 ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c * diff.norm.tmean.z_c + ppt.normal_c.sq,family="bernoulli",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+        m[[sp]] <- brm(regen.count.all.int ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + ppt.normal_c.sq,family="zero_inflated_negbinomial",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
       }
-      
-      
-      ## compute LOOCV vals and compare
-      loos[[sp]] <- loo(m.p[[sp]],m.pP[[sp]],m.t[[sp]],m.tT[[sp]],m.pt[[sp]],m.pPtT[[sp]])
-
 }
-
-write.csv(aucs.sp,"aucs_5yr_allages_partA.csv")
-
-
-
-
 
 for(sp in names(m)) {
   print("\n\n\n")
@@ -1371,7 +1320,8 @@ for(sp in names(m)) {
     
   }
   
-  preds <- inv.logit(preds)
+  #preds <- inv.logit(preds)
+  preds <- exp(preds)
   colnames(preds) <- c("fit","lwr","upr")
   preds <- as.data.frame(preds)
   
@@ -1390,6 +1340,5 @@ ggplot(dat.preds,aes(x=diff.norm.ppt.min.z_c,y=fit,color=ppt.norm.level)) +
   guides(fill=guide_legend(title="Normal precip"),color=guide_legend(title="Normal precip")) +
   facet_wrap(~sp.grp,scales="free",ncol=5)
 
-#### testing
 
 
