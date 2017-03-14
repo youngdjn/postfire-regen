@@ -1139,13 +1139,15 @@ ggplot(dat.preds,aes(x=diff.norm.ppt.z_c,y=fit,color=ppt.norm.level)) +
 
 
 library(brms)
+library(pROC)
+library(loo)
 
-d.plot <- d.plot[(d.plot$survey.years.post %in% c(5)) & (d.plot$FIRE_SEV > 3),]
+d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV > 3),]
 
 
 sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO","CONIF.ALLSP","CADE27","PIPJ")
 cover.opts <- c("COV.SHRUB","COV.GRASS","COV.HARDWOOD","COV.CONIFER")
-#cover.opts <- NULL
+cover.opts <- NULL
 sp.opts <- c(cover.opts,sp.opts)
 
 m.p <- m.pP <- m.pt <- m.pPtT <- m.t <- m.tT <- list()

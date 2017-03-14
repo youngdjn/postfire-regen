@@ -1207,12 +1207,12 @@ for(sp in sp.opts) {
         
         d.c$cov.response <- d.c[,sp.cov]
         
-        m[[sp]] <- brm(cov.response ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c * diff.norm.tmean.z_c + ppt.normal_c.sq + (1|Fire),family="Beta",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+        m[[sp]] <- brm(cov.response ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c * diff.norm.tmean.z_c + ppt.normal_c.sq,family="Beta",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
         
         
       } else {
         #m[[sp]] <- brm(regen.presab.all.01 ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c * diff.norm.tmean.z_c + ppt.normal_c.sq,family="bernoulli",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        m[[sp]] <- brm(regen.count.all.int ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c * diff.norm.tmean.z_c + ppt.normal_c.sq,family="zero_inflated_negbinomial",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+        m[[sp]] <- brm(regen.count.all.int ~ ppt.normal_c * diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c * diff.norm.tmean.z_c + ppt.normal_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,warmup=3000,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
       }
 }
 
@@ -1320,8 +1320,8 @@ for(sp in names(m)) {
     
   }
   
-  #preds <- inv.logit(preds)
-  preds <- exp(preds)
+  preds <- inv.logit(preds)
+  #preds <- exp(preds)
   colnames(preds) <- c("fit","lwr","upr")
   preds <- as.data.frame(preds)
   
