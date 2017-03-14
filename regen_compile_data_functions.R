@@ -139,11 +139,11 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl
   get.regen.years <- function(plot.survey.years.post) {
     
     if(regen.ages == "young") {
-      years.regen <- 0:2
+      years.regen <- 1:2
     } else if(regen.ages == "old") {
-      years.regen <- plot.survey.years.post - 1:0 # the second-to-last and last year of the plot before it was surveyed
+      years.regen <- plot.survey.years.post - 1:-1 # the second-to-last and last year of the plot before it was surveyed (also the year after it was surveyed, in case of mis-aging)
     } else if(regen.ages == "all") {
-      years.regen <- 1:plot.survey.years.post
+      years.regen <- 1:(plot.survey.years.post+1) #+1 in case a seedling was over-aged by one year
     }
 
   }
@@ -173,11 +173,25 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl
     
     #include unknown age if examining all-aged trees
     if((regen.ages == "all")&(incl.unk.age.for.all==TRUE)) {
-      regen.row.cols <- c(regen.row.cols,"unk_yr") 
+      regen.row.cols.complete <- c(regen.row.cols,"unk_yr") 
+    } else {
+      regen.row.cols.complete <- regen.row.cols
     }
     
-    regen.tot.sp <- sum(regen.sp.row[,regen.row.cols],na.rm=TRUE)
-    regen.peryr.sp[i] <- regen.tot.sp / length(regen.row.cols)
+    regen.tot.sp <- sum(regen.sp.row[,regen.row.cols.complete],na.rm=TRUE)
+    
+    #compute number of years
+    if(regen.ages=="young") {
+      regen.nyears <- length(regen.row.cols)
+    } else if(regen.ages=="old") {
+      regen.nyears <- length(regen.row.cols) -1 #-1 because added an extra year in case seedlings were over-aged, but in realiy they only came from the the years between the fire and the survey
+    } else if(regen.ages=="all") {
+      regen.nyears <- length(regen.row.cols) -1 #-1 because added an extra year in case seedlings were over-aged, but in realiy they only came from the the years between the fire and the survey
+    }
+      
+    
+    
+    regen.peryr.sp[i] <- regen.tot.sp / regen.nyears #this is not "regen.row.cols.complete" because don't want to consider "unk_yr" as another year to have to divide counts by to get seedlings/yr (when computing all ages, the ages are restricted to the ages assigned to "all", which are all years between the fire and the survey)
     
   }
   
@@ -192,7 +206,7 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl
   regen.tot$surviving.trees.count[is.na(regen.tot$surviving.trees.count)] <- 0
   regen.tot$surviving.trees.ba[is.na(regen.tot$surviving.trees.ba)] <- 0
   
-  ##create data frame of surviving counts per species per plot (with all species--so 0 of none, rather than having now row)
+  ##create data frame of surviving counts per species per plot (with all species--so 0 if none, rather than having no row)
   species.all <- regen.all #just a list of all species crossed with all plots
   surviving.df <- data.frame(Regen_Plot=regen.sp$Regen_Plot,species=regen.sp$species,adult.count=regen.sp$surviving.trees.count,adult.ba=regen.sp$surviving.trees.ba)
   surviving.df2 <- merge(species.all,surviving.df,by=c("Regen_Plot","species"),all.x=TRUE)
@@ -213,17 +227,59 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl
   
   
   ## compute total for all conifers
-  regen.tot.focal <- regen.tot[regen.tot$species %in% c("ABCO","PIPO","PSME","CADE27","PIJE","PILA","PIAT","ABIES","PICO","PINUS","PSMA","TAXUS","TOCA","ABMA","JUNIPERUS","JUOC","JUCA7","PISA"),]
+  regen.tot.focal <- regen.tot[regen.tot$species %in% c("ABCO","PIPO","PSME","CADE27","PIJE","PILA","PIAT","ABIES","PICO","PINUS","PSMA","TAXUS","TOCA","ABMA","JUNIPERUS","JUOC","JUCA7","PISA","CONIFER"),]
   regen.allsp.tot <- aggregate(regen.tot.focal$regen.count,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
 
   names(regen.allsp.tot) <- c("Regen_Plot","regen.count")
-  regen.con.tot.df <- data.frame(Regen_Plot=regen.allsp.tot$Regen_Plot,species="CONIFER",regen.count=regen.allsp.tot$regen.count)
+  regen.con.tot.df <- data.frame(Regen_Plot=regen.allsp.tot$Regen_Plot,species="CONIF.ALLSP",regen.count=regen.allsp.tot$regen.count)
   
   surviving.allsp.tot.count <- aggregate(regen.tot.focal$surviving.trees.count,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
   surviving.allsp.tot.ba <- aggregate(regen.tot.focal$surviving.trees.ba,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
   names(surviving.allsp.tot.count) <- c("Regen_Plot","adult.count")
   names(surviving.allsp.tot.ba) <- c("Regen_Plot","adult.ba")
-  surviving.con.tot.df <- data.frame(Regen_Plot=surviving.allsp.tot.count$Regen_Plot,species="CONIFER",adult.count=surviving.allsp.tot.count$adult.count,adult.ba = surviving.allsp.tot.ba$adult.ba)
+  surviving.con.tot.df <- data.frame(Regen_Plot=surviving.allsp.tot.count$Regen_Plot,species="CONIF.ALLSP",adult.count=surviving.allsp.tot.count$adult.count,adult.ba = surviving.allsp.tot.ba$adult.ba)
+  
+  ## compute total for all Pinus
+  regen.tot.focal <- regen.tot[regen.tot$species %in% c("PIPO","PIJE","PILA","PIAT","PICO","PINUS","PISA"),]
+  regen.allsp.tot <- aggregate(regen.tot.focal$regen.count,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
+  
+  names(regen.allsp.tot) <- c("Regen_Plot","regen.count")
+  regen.pinus.tot.df <- data.frame(Regen_Plot=regen.allsp.tot$Regen_Plot,species="PINUS.ALLSP",regen.count=regen.allsp.tot$regen.count)
+  
+  surviving.allsp.tot.count <- aggregate(regen.tot.focal$surviving.trees.count,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
+  surviving.allsp.tot.ba <- aggregate(regen.tot.focal$surviving.trees.ba,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
+  names(surviving.allsp.tot.count) <- c("Regen_Plot","adult.count")
+  names(surviving.allsp.tot.ba) <- c("Regen_Plot","adult.ba")
+  surviving.pinus.tot.df <- data.frame(Regen_Plot=surviving.allsp.tot.count$Regen_Plot,species="PINUS.ALLSP",adult.count=surviving.allsp.tot.count$adult.count,adult.ba = surviving.allsp.tot.ba$adult.ba)
+  
+  ## compute total for all yellow pine
+  regen.tot.focal <- regen.tot[regen.tot$species %in% c("PIPO","PIJE"),]
+  regen.allsp.tot <- aggregate(regen.tot.focal$regen.count,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
+  
+  names(regen.allsp.tot) <- c("Regen_Plot","regen.count")
+  regen.pipj.tot.df <- data.frame(Regen_Plot=regen.allsp.tot$Regen_Plot,species="PIPJ",regen.count=regen.allsp.tot$regen.count)
+  
+  surviving.allsp.tot.count <- aggregate(regen.tot.focal$surviving.trees.count,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
+  surviving.allsp.tot.ba <- aggregate(regen.tot.focal$surviving.trees.ba,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
+  names(surviving.allsp.tot.count) <- c("Regen_Plot","adult.count")
+  names(surviving.allsp.tot.ba) <- c("Regen_Plot","adult.ba")
+  surviving.pipj.tot.df <- data.frame(Regen_Plot=surviving.allsp.tot.count$Regen_Plot,species="PIPJ",adult.count=surviving.allsp.tot.count$adult.count,adult.ba = surviving.allsp.tot.ba$adult.ba)
+  
+  
+  
+  
+  ## compute total for all shade sp
+  regen.tot.focal <- regen.tot[regen.tot$species %in% c("ABCO","CADE27","ABIES","TAXUS","TOCA","ABMA"),]
+  regen.allsp.tot <- aggregate(regen.tot.focal$regen.count,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
+  
+  names(regen.allsp.tot) <- c("Regen_Plot","regen.count")
+  regen.shade.tot.df <- data.frame(Regen_Plot=regen.allsp.tot$Regen_Plot,species="SHADE.ALLSP",regen.count=regen.allsp.tot$regen.count)
+  
+  surviving.allsp.tot.count <- aggregate(regen.tot.focal$surviving.trees.count,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
+  surviving.allsp.tot.ba <- aggregate(regen.tot.focal$surviving.trees.ba,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
+  names(surviving.allsp.tot.count) <- c("Regen_Plot","adult.count")
+  names(surviving.allsp.tot.ba) <- c("Regen_Plot","adult.ba")
+  surviving.shade.tot.df <- data.frame(Regen_Plot=surviving.allsp.tot.count$Regen_Plot,species="SHADE.ALLSP",adult.count=surviving.allsp.tot.count$adult.count,adult.ba = surviving.allsp.tot.ba$adult.ba)
   
   
   
@@ -233,17 +289,17 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl
   regen.allsp.tot <- aggregate(regen.tot.focal$regen.count,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
   
   names(regen.allsp.tot) <- c("Regen_Plot","regen.count")
-  regen.hdwd.tot.df <- data.frame(Regen_Plot=regen.allsp.tot$Regen_Plot,species="HARDWOOD",regen.count=regen.allsp.tot$regen.count)
+  regen.hdwd.tot.df <- data.frame(Regen_Plot=regen.allsp.tot$Regen_Plot,species="HDWD.ALLSP",regen.count=regen.allsp.tot$regen.count)
   
   surviving.allsp.tot.count <- aggregate(regen.tot.focal$surviving.trees.count,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
   surviving.allsp.tot.ba <- aggregate(regen.tot.focal$surviving.trees.ba,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
   names(surviving.allsp.tot.count) <- c("Regen_Plot","adult.count")
   names(surviving.allsp.tot.ba) <- c("Regen_Plot","adult.ba")
-  surviving.hdwd.tot.df <- data.frame(Regen_Plot=surviving.allsp.tot.count$Regen_Plot,species="HARDWOOD",adult.count=surviving.allsp.tot.count$adult.count,adult.ba = surviving.allsp.tot.ba$adult.ba)
+  surviving.hdwd.tot.df <- data.frame(Regen_Plot=surviving.allsp.tot.count$Regen_Plot,species="HDWD.ALLSP",adult.count=surviving.allsp.tot.count$adult.count,adult.ba = surviving.allsp.tot.ba$adult.ba)
   
   
-  regen.spgrps <- rbind.fill(regen.tot[,1:3],regen.allsp.tot.df,regen.con.tot.df,regen.hdwd.tot.df)
-  adult.spgrps <- rbind.fill(surviving.df2,surviving.allsp.tot.df,surviving.con.tot.df,surviving.hdwd.tot.df)
+  regen.spgrps <- rbind.fill(regen.tot[,1:3],regen.allsp.tot.df,regen.con.tot.df,regen.hdwd.tot.df,regen.pinus.tot.df,regen.shade.tot.df,regen.pipj.tot.df)
+  adult.spgrps <- rbind.fill(surviving.df2,surviving.allsp.tot.df,surviving.con.tot.df,surviving.hdwd.tot.df,surviving.pinus.tot.df,surviving.shade.tot.df,surviving.pipj.tot.df)
   
   trees.spgrps <- merge(regen.spgrps,adult.spgrps)
 
