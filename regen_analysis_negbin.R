@@ -11,7 +11,7 @@ d.plot <- read.csv("data_intermediate/plot_level.csv",header=T,stringsAsFactors=
 d.sp <- read.csv("data_intermediate/speciesXplot_level.csv",header=T,stringsAsFactors=FALSE)
 
 # only keep the necessary columns
-d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general","seed_tree_distance_conifer","seed_tree_distance_hardwood","diff.norm.ppt.z","diff.norm.ppt.min.z","tmean.post","ppt.post","ppt.post.min","perc.norm.ppt","perc.norm.ppt.min","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z")]
+d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general","seed_tree_distance_conifer","seed_tree_distance_hardwood","diff.norm.ppt.z","diff.norm.ppt.min.z","tmean.post","ppt.post","ppt.post.min","perc.norm.ppt","perc.norm.ppt.min","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z","def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","diff.norm.def.max.z","diff.norm.aet.min.z","def.post","aet.post")]
 
 # only Sierra Nevada fires #! removed DEEP
 sierra.fires <- c("STRAYLOR","CUB","RICH","MOONLIGHT","ANTELOPE","BTU LIGHTENING","HARDING","BASSETTS","PENDOLA","AMERICAN RIVER","RALSTON","FREDS","SHOWERS","POWER","BAGLEY","PEAK","CHIPS")
@@ -181,6 +181,13 @@ d.plot.3 <- d.plot.2[which((d.plot.2$count.control > 3) & (d.plot.2$count.highse
 
 # Compute additional variables
 d.sp.2$proportion.young <- d.sp.2$regen.count.young / d.sp.2$regen.count.all
+
+
+
+
+
+
+
 
 
 
@@ -386,7 +393,7 @@ sp <- "PIPO"
 d.sp.curr <- d.sp[d.sp$species==sp,]
 d <- merge(d.plot,d.sp.curr,all.x=TRUE,by="Regen_Plot")
 vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
-vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB")
+vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","def.normal","diff.norm.def.z")
 d <- d[complete.cases(d[,vars.focal]),]
 d.c <- center.df(d,vars.leave)
 
@@ -443,9 +450,16 @@ newdat.ppt <- data.frame(
   tmean.normal_c.sq = 0,
   diff.norm.tmean.z_c = 0,
   diff.norm.tmean.z_c.sq = 0,
-  scenario = "ppt"
-  #rad.march_c = 0,
-  #seed_tree_distance_general_c = -1
+  scenario = "ppt",
+  
+  aet.normal_c = c(rep(-1,100),rep(1,100)),
+  aet.normal_c.sq = c(rep(1,100),rep(1,100)),
+  diff.norm.aet.z_c = rep(diff.norm.seq,2),
+  diff.norm.aet.z_c.sq = rep(diff.norm.seq^2,2),
+  def.normal_c = 0,
+  def.normal_c.sq = 0,
+  diff.norm.def.z_c = 0,
+  diff.norm.def.z_c.sq = 0
 )
 
 newdat.tmean <- data.frame(
@@ -458,9 +472,16 @@ newdat.tmean <- data.frame(
   ppt.normal_c.sq = 0,
   diff.norm.ppt.z_c = 0,
   diff.norm.ppt.z_c.sq = 0,
-  scenario = "tmean"
-  #rad.march_c = 0,
-  #seed_tree_distance_general_c = -1
+  scenario = "tmean",
+  
+  def.normal_c = c(rep(-1,100),rep(1,100)),
+  def.normal_c.sq = c(rep(1,100),rep(1,100)),
+  diff.norm.def.z_c = rep(diff.norm.seq,2),
+  diff.norm.def.z_c.sq = rep(diff.norm.seq^2,2),
+  aet.normal_c = 0,
+  aet.normal_c.sq = 0,
+  diff.norm.aet.z_c = 0,
+  diff.norm.aet.z_c.sq = 0
 )
 
 newdat <- rbind(newdat.ppt,newdat.tmean)
@@ -485,28 +506,31 @@ newdat$"(Intercept)" <- 1 # this is the "predictor" value to multiple the interc
 ## Next, fit models ## 
 
 library(brms)
+library(loo)
 
 d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV > 3),]
 
 
 sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO","ABMA","CONIF.ALLSP","PSME","PILA","CADE27","PIJE","PIPJ")
-sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO") # reduced
+sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO","PSME","PILA","PIPJ") # reduced
 
 
 cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB","COV.HARDWOOD","COV.CONIFER")
 cover.opts <- c("COV.SHRUB","COV.GRASS") # reduced
-cover.opts <- NULL
-sp.opts <- c(cover.opts,sp.opts)
+#cover.opts <- NULL
+sp.opts <- c(sp.opts,cover.opts)
 
 m.p <- list()
-m <- list()
 
 loos <- list()
 
 dat.preds <- data.frame()
 pred.obs <- data.frame()
 
-for(sp in sp.opts) {
+d.loos.all <- data.frame()
+d.loo.comps <- data.frame()
+
+for(sp in sp.opts) { # about 1 hr per species
   
       cat("\n\n#####")
       cat("Running model for: ",sp,"")
@@ -521,12 +545,15 @@ for(sp in sp.opts) {
       
       d <- merge(d.plot,d.sp.curr,all.x=TRUE,by="Regen_Plot")
       vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
-      vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z")
+      vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z", "def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","def.post","aet.post")
       d <- d[complete.cases(d[,vars.focal]),]
       d.c <- center.df(d,vars.leave)
 
       d.c$ppt.normal_c.sq <- d.c$ppt.normal_c^2
       d.c$tmean.normal_c.sq <- d.c$tmean.normal_c^2
+      
+      d.c$def.normal_c.sq <- d.c$def.normal_c^2
+      d.c$aet.normal_c.sq <- d.c$aet.normal_c^2
       
       # ####!!!! trick model: make diff.norm into diff.norm.min
       # d.c$diff.norm.ppt.z_c <- d.c$diff.norm.ppt.min.z_c
@@ -537,8 +564,14 @@ for(sp in sp.opts) {
       d.c$diff.norm.ppt.z_c.sq <- d.c$diff.norm.ppt.z_c^2
       d.c$diff.norm.tmean.z_c.sq <- d.c$diff.norm.tmean.z_c^2
       
+      d.c$diff.norm.def.z_c.sq <- d.c$diff.norm.def.z_c^2
+      d.c$diff.norm.aet.z_c.sq <- d.c$diff.norm.aet.z_c^2
+      
       d.c$ppt.post_c.sq <- d.c$ppt.post_c^2
       d.c$tmean.post_c.sq <- d.c$tmean.post_c^2
+      
+      d.c$def.post_c.sq <- d.c$def.post_c^2
+      d.c$aet.post_c.sq <- d.c$aet.post_c^2
       
       d.c$regen.presab.all.01 <- ifelse(d.c$regen.presab.all == TRUE,1,0)
       d.c$regen.presab.old.01 <- ifelse(d.c$regen.presab.old == TRUE,1,0)
@@ -578,106 +611,142 @@ for(sp in sp.opts) {
         sp.cov <- paste0(sp.cov,".pt")
         
         d.c$cov.response <- d.c[,sp.cov]
+  
+        d.c$response.var <- d.c$cov.response
         
-        m.null <- brm(cov.response ~ 1 + (1|Fire),family="Beta",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        print(summary(m.null))
-        m.PTn <- brm(cov.response ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + (1|Fire),family="Beta",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        print(summary(m.PTn))
-        m.PTna <- brm(cov.response ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq + (1|Fire),family="Beta",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        print(summary(m.PTna))
-        m.PTna2 <- brm(cov.response ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq + (1|Fire),family="Beta",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        print(summary(m.PTna2))
-        m.PTp <- brm(cov.response ~ ppt.post_c + ppt.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family="Beta",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        print(summary(m.PTp))
-        m.Pn <- brm(cov.response ~ ppt.normal_c + ppt.normal_c.sq + (1|Fire),family="Beta",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        print(summary(m.Pn))
-        m.Pna <- brm(cov.response ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + (1|Fire),family="Beta",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        print(summary(m.Pna))
-        m.Pna2 <- brm(cov.response ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + (1|Fire),family="Beta",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        print(summary(m.Pna2))
-        m.Pp <- brm(cov.response ~ ppt.post_c + ppt.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family="Beta",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        print(summary(m.Pp))
-        
-        ## get the LOOICs and save them
-        loos[[sp]] <- loo(m.null,m.PTn,m.PTp,m.PTna,m.PTna2,m.PTn,m.Pn,m.Pna,m.Pna2,m.Pp)
-        cat(pareto_k_table(loos[[sp]]$m.null))
-        cat(pareto_k_table(loos[[sp]]$m.PTn))
-        cat(pareto_k_table(loos[[sp]]$m.PTna))
-        cat(pareto_k_table(loos[[sp]]$m.PTna2))
-        cat(pareto_k_table(loos[[sp]]$m.Pn))
-        cat(pareto_k_table(loos[[sp]]$m.Pna))
-        cat(pareto_k_table(loos[[sp]]$m.Pna2))
-        cat(pareto_k_table(loos[[sp]]$m.Pp))
-        
-        
-        
-        observed <- d.c[!is.na(d.c$cov.response),]$cov.response
-        
-        
-        
-        ##save observed
+        mod.family <- "Beta"
         
       } else {
-        m.null <- brm(regen.count.old.int ~ 1 + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        print(summary(m.null))
-        m.PTn <- brm(regen.count.old.int ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        print(summary(m.PTn))
-        m.PTna <- brm(regen.count.old.int ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        print(summary(m.PTna))
-        m.PTna2 <- brm(regen.count.old.int ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        print(summary(m.PTna2))
-        m.PTp <- brm(regen.count.old.int ~ ppt.post_c + ppt.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        print(summary(m.PTp))
-        m.Pn <- brm(regen.count.old.int ~ ppt.normal_c + ppt.normal_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        print(summary(m.Pn))
-        m.Pna <- brm(regen.count.old.int ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        print(summary(m.Pna))
-        m.Pna2 <- brm(regen.count.old.int ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        print(summary(m.Pna2))
-        m.Pp <- brm(regen.count.old.int ~ ppt.post_c + ppt.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-        print(summary(m.Pp))
-        
 
-        ## get the LOOICs and save them
-        loos[[sp]] <- loo(m.null,m.PTn,m.PTna,m.PTna2,m.Pn,m.Pna,m.Pna2,m.Pp)
-        cat(pareto_k_table(loos[[sp]]$m.null))
-        cat(pareto_k_table(loos[[sp]]$m.PTn))
-        cat(pareto_k_table(loos[[sp]]$m.PTna))
-        cat(pareto_k_table(loos[[sp]]$m.PTna2))
-        cat(pareto_k_table(loos[[sp]]$m.Pn))
-        cat(pareto_k_table(loos[[sp]]$m.Pna))
-        cat(pareto_k_table(loos[[sp]]$m.Pna2))
-        cat(pareto_k_table(loos[[sp]]$m.Pp))
+        d.c$response.var <- d.c$regen.count.old.int
         
-        observed <- d.c[!is.na(d.c$regen.count.all.int),]$regen.count.all.int
+        mod.family <- "zero_inflated_negbinomial"
         
       }
       
-      ### store a predicted vs. observed data frame here: one for the "PTn" model and one for the "PTna" model ###
-      predicted.PTn <- predict(m.PTn)[,1]
-      predicted.PTna <- predict(m.PTna)[,1]
+      m <- list()
+      
+      m[["n0.a0"]] <- brm(response.var ~ 1 + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nPT.a0"]] <- brm(response.var ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nPT.aPT"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nPT.aPT2"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["pPT"]] <- brm(response.var ~ ppt.post_c + ppt.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nP.a0"]] <- brm(response.var ~ ppt.normal_c + ppt.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nP.aP"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nP.aP2"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["pP"]] <- brm(response.var ~ ppt.post_c + ppt.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nT.p0"]] <- brm(response.var ~ tmean.normal_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nT.aT"]] <- brm(response.var ~ tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nT.aT2"]] <- brm(response.var ~ tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["pT"]] <- brm(response.var ~ tmean.post_c + tmean.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      
+      m[["n0.a0"]] <- brm(response.var ~ 1 + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nAD.a0"]] <- brm(response.var ~ aet.normal_c + aet.normal_c.sq + def.normal_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nAD.aAD"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq + def.normal_c*diff.norm.def.z_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nAD.aAD2"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq + def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["pAD"]] <- brm(response.var ~ aet.post_c + aet.post_c.sq + def.post_c + def.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nA.a0"]] <- brm(response.var ~ aet.normal_c + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nA.aA"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nA.aA2"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["pA"]] <- brm(response.var ~ aet.post_c + aet.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nD.p0"]] <- brm(response.var ~ def.normal_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nD.aD"]] <- brm(response.var ~ def.normal_c*diff.norm.def.z_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nD.aD2"]] <- brm(response.var ~ def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["pD"]] <- brm(response.var ~ def.post_c + def.post_c.sq + def.post_c + def.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
       
 
-      pred.obs.PTn <- data.frame(pred=predicted.PTn,obs=observed,mod="PTn",sp=sp)
-      pred.obs.PTna <- data.frame(pred=predicted.PTna,obs=observed,mod="PTna",sp=sp)
       
-      pred.obs.sp <- rbind(pred.obs.PTn,pred.obs.PTna)
+      #get individual loos (will get specific pairs later)
       
-      if(sp %in% cover.opts) {
-        pred.obs.sp$pred <- inv.logit(pred.obs.sp$pred)
-      } else {
-        pred.obs.sp$pred <- exp(pred.obs.sp$pred)
+      d.loos <- data.frame()
+      
+      for(mod in names(m)) {
+        cat(mod," ")
+        loo.mod <- loo(m[[mod]])
+        d.mod <- data.frame(sp=sp,mod=mod,LOOIC=loo.mod$looic,SE=loo.mod$se_looic)
+        d.loos <- rbind(d.loos,d.mod)
+        
       }
       
-      pred.obs <- rbind(pred.obs,pred.obs.sp)
+      d.loos$upr <- d.loos$LOOIC + 1.96*d.loos$SE
+      
+      d.loos.all <- rbind(d.loos.all,d.loos)
+      
+      ### Specify model categories
+      
+      ## normal models
+      search <- ".a0"
+      normal.model.names <- d.loos[grep(search,d.loos$mod,fixed=TRUE),]$mod
+      
+      ## anomaly models
+      search <- ".a"
+      anomaly.model.names <- d.loos[grep(search,d.loos$mod,fixed=TRUE),]$mod
+      anomaly.model.names <- anomaly.model.names[!(anomaly.model.names %in% normal.model.names)]
+      
+      ### Find the best normal model
+      
+      d.loos.normal <- d.loos[d.loos$mod %in% normal.model.names,]
+      best.normal.mod <- d.loos.normal[d.loos.normal$upr == min(d.loos.normal$upr),]$mod[1]
+      
+      ### Compare null to best normal
+      comp.null.normal <- loo(m[["n0.a0"]],m[[best.normal.mod]])$ic_diffs__
+      
+      ### Get post corresponding to best normal
+      norm.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
+      norm.post.mod <- sub("n","p",norm.part)
+      
+      ### Compare best normal to corresponding post
+      comp.normal.post <- loo(m[[best.normal.mod]],m[[norm.post.mod]])$ic_diffs__
+      
+      
+      ### Get anomaly models corresponding to best normal
+      
+      normal.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
+      search <- paste0(normal.part,".")
+      normal.matches <- grepl(search,d.loos$mod,fixed=TRUE)
+      search <- paste0(normal.part,".a0")
+      non.anom.match <- grepl(search,d.loos$mod,fixed=TRUE)
+      normal.anom <- normal.matches & (!non.anom.match)
+      normal.anom.names <- d.loos[normal.anom,]$mod
+      
+      ### Get the best corresponding anomaly model
+      
+      d.loos.anom <- d.loos[d.loos$mod %in% normal.anom.names,]
+      best.normal.anom <- d.loos.anom[d.loos.anom$upr == min(d.loos.anom$upr),]$mod[1]
+      
+      ### Compare best normal with corresponding best anomaly
+      comp.normal.anom <- loo(m[[best.normal.mod]],m[[best.normal.anom]])$ic_diffs__
+      
+      
+      ### Get the best anomaly, independent of best normal
+      d.loos.anomaly <- d.loos[d.loos$mod %in% anomaly.model.names,]
+      best.anomaly.mod <- d.loos.anomaly[d.loos.anomaly$upr == min(d.loos.anomaly$upr),]$mod[1]
+      
+      ### Get the normal corresponding to the best anomaly
+      best.anom.normal.part <- strsplit(as.character(best.anomaly.mod),".",fixed=TRUE)[[1]][1]
+      best.anom.normal <- paste0(best.anom.normal.part,".a0")
+      
+      ### Compare corresponding normal to best anomaly
+      comp.anom.normal <- loo(m[[best.anom.normal]],m[[best.anomaly.mod]])$ic_diffs__
+      
+      
+      
+      ### Store loos comps
+      d.loo.comps.sp <- rbind(comp.null.normal,comp.normal.post,comp.normal.anom,comp.anom.normal)
+      d.loo.comps.sp <- as.data.frame(d.loo.comps.sp)
+      d.loo.comps.sp$comp <-c("null.normal","normal.post","normal.anom","anom.normal")
+      d.loo.comps.sp$sp <- sp
+      
+      d.loo.comps <- rbind(d.loo.comps,d.loo.comps.sp)
       
       
       
       
       
       
-      ### store predictions for counterfactual plots here: from "PTna" model ###
-      m.sp <- m.PTna2
+      
+      ### For best anomaly model, store predictions for counterfactual plots
+      m.sp <- m[[best.anomaly.mod]]
       m.p.sp <- posterior_samples(m.sp,pars="^b")
       
       names(m.p.sp) <- sapply(names(m.p.sp),substr,start=3,stop=1000)
@@ -715,42 +784,45 @@ for(sp in sp.opts) {
       preds <- as.data.frame(preds)
       
       sp.grp <- sp
-      dat.preds.sp <- cbind(newdat,preds,sp.grp)
+      dat.preds.sp <- cbind(newdat,preds,sp.grp,best.anomaly.mod)
       dat.preds <- rbind(dat.preds,dat.preds.sp) # make sure this is working right to store all species in th e same DF
+      
 
+      
+      
+      
+      
+      ### store a predicted vs. observed data frame here: one for the best anomaly model and one for the corresponding normal model ###
+      predicted.normal <- predict(m[[best.anom.normal]])[,1]
+      predicted.anomaly <- predict(m[[best.anomaly.mod]])[,1]
+      
+      observed <- d.c$response.var
+      
+
+      pred.obs.normal <- data.frame(pred=predicted.normal,obs=observed,mod="normal",sp=sp)
+      pred.obs.anomaly <- data.frame(pred=predicted.anomaly,obs=observed,mod="anomaly",sp=sp)
+      
+      pred.obs.sp <- rbind(pred.obs.normal,pred.obs.anomaly)
+      
+      if(sp %in% cover.opts) {
+        pred.obs.sp$pred <- inv.logit(pred.obs.sp$pred)
+      } else {
+        pred.obs.sp$pred <- exp(pred.obs.sp$pred)
+      }
+      
+      pred.obs <- rbind(pred.obs,pred.obs.sp)
+      
+      
+      
+      
       
       
 }
 
 
 
-### assemble loos
-m.loos <- data.frame()
-for(sp in sp.opts) {
-  a <- loos[[sp]]
-  b <- a$ic_diffs__
-  m.loo <- data.frame(sp=sp,comp=rownames(b),LOOdiff=b[,1],SE=b[,2])
-  m.loos <- rbind(m.loos,m.loo)
-}
 
-m.loos
-
-
-
-
-### plot looic diffs
-
-## null vs: Pn, PTn
-## Pn vs: PTn
-## Pn vs: Pp
-## PTn vs: PTp
-## Pn vs: Pna, Pna2
-## PTn vs: PTna, PTna2
-## Pna vs: Pna2
-## PTna vs: PTna2
-
-
-# dat.preds <- read.csv("summaries_2/counterfactual_df.csv",header=TRUE)
+dat.preds <- read.csv("../data_model_summaries/summaries_wb_1/counterfactual_df.csv",header=TRUE)
 
 
 
@@ -758,11 +830,13 @@ m.loos
 
 dat.pred <- dat.preds[dat.preds$scenario=="ppt",]
 
+
 ggplot(dat.pred,aes(x=diff.norm.ppt.z_c,y=fit,color=norm.level)) +
   geom_line(size=1) +
   geom_ribbon(aes(ymin=lwr,ymax=upr,fill=norm.level),alpha=0.3,color=NA) +
   guides(fill=guide_legend(title="Normal precip"),color=guide_legend(title="Normal precip")) +
-  facet_wrap(~sp.grp,scales="free",ncol=5)
+  facet_wrap(~sp.grp,scales="free",ncol=5) +
+  scale_y_continuous(limits=c(0,1))
 
 
 ## plot predictions over tmean anomaly
@@ -773,7 +847,8 @@ ggplot(dat.pred,aes(x=diff.norm.tmean.z_c,y=fit,color=norm.level)) +
   geom_line(size=1) +
   geom_ribbon(aes(ymin=lwr,ymax=upr,fill=norm.level),alpha=0.3,color=NA) +
   guides(fill=guide_legend(title="Normal tmean"),color=guide_legend(title="Normal tmean")) +
-  facet_wrap(~sp.grp,scales="free",ncol=5)
+  facet_wrap(~sp.grp,scales="free",ncol=5) +
+  scale_y_continuous(limits=c(0,10))
 
 
 
@@ -922,23 +997,28 @@ loos
 
 #d.plot.3
 #d.sp.2
+library(data.table)
 
 
 
-
-focal.sp <- c("PIPJ","ABCO","PILA","PSME","QUKE","LIDE3","CONU4","CADE27")
-focal.cols <- c("Fire","topoclim.cat","species","regen.presab.old")
+focal.sp <- c("PIPJ","ABCO","PILA","PSME","QUKE","CADE27") #   "ABMA","QUCH2","ARME") #ABMA, PIPO, QUCH2, 
+#focal.sp <- c("PIPO","ABCO","PILA","PSME","QUKE","LIDE3","QUCH2","CADE27")
+#focal.sp <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP")
+focal.cols <- c("Fire","topoclim.cat","species","regen.count.old","regen.count.all","adult.ba")
 
 
 d.sp.simp <- d.sp.2[d.sp.2$species %in% focal.sp,focal.cols]
 
-d.sp.cast <- dcast(d.sp.simp,topoclim.cat + Fire~species)
+names(d.sp.simp)[4:6] <- c("r.old","r.all","a.ba")
 
-names(d.sp.cast)[3:length(names(d.sp.cast))] <- paste0("sp.",names(d.sp.cast[3:length(names(d.sp.cast))]))
+d.sp.simp <- as.data.table(d.sp.simp)
+d.sp.cast <- dcast(d.sp.simp,topoclim.cat + Fire~species,value.var=c("r.old","r.all","a.ba"))
 
+
+regen.var <- "r.all"
 
 d.all <- merge(d.plot.3,d.sp.cast,by=c("Fire","topoclim.cat"))
-sp.cols <- grep("^sp.",names(d.all))
+sp.cols <- grep(regen.var,names(d.all))
 d.all.sp <- d.all[,sp.cols]
 d.all.sp.tot <- rowSums(d.all.sp)
 keep.rows <- d.all.sp.tot > 0
@@ -950,23 +1030,58 @@ library(vegan)
 
 
 ### try adding diff predictors
+# 
+# c0 <- cca(d.all.sp ~ 1,data=d.all)
+# c1 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + rad.march.highsev + seed_tree_distance_general.highsev + BA.Live1.control,data=d.all)
+# c1.fire <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + rad.march.highsev + seed_tree_distance_general.highsev + BA.Live1.control + Fire,data=d.all)
+# c2  <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + rad.march.highsev + seed_tree_distance_general.highsev + BA.Live1.control + diff.norm.ppt.z.highsev + diff.norm.tmean.z.highsev,data=d.all)
 
-c0 <- cca(d.all.sp ~ 1,data=d.all)
-c1 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + rad.march.highsev + seed_tree_distance_general.highsev + BA.Live1.control,data=d.all)
-c1.fire <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + rad.march.highsev + seed_tree_distance_general.highsev + BA.Live1.control + Fire,data=d.all)
-c2  <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + rad.march.highsev + seed_tree_distance_general.highsev + BA.Live1.control + diff.norm.ppt.z.highsev,data=d.all)
+c3  <- cca(d.all.sp ~ ppt.normal.highsev + rad.march.highsev + diff.norm.ppt.z.highsev + a.ba_ABCO + a.ba_PIPJ + a.ba_PSME + a.ba_PILA + a.ba_QUKE,data=d.all)
+c4 <- cca(d.all.sp ~ ppt.normal.highsev + rad.march.highsev + a.ba_ABCO + a.ba_PIPJ + a.ba_PSME + a.ba_PILA + a.ba_QUKE,data=d.all)
 
-cca1.plot <- plot(c1,choices=c(1,2))
-cca1.fire.plot <- plot(c1.fire,choices=c(1,2))
-cca2.plot <- plot(c2,choices=c(1,2))
+c3.def  <- cca(d.all.sp ~ def.normal.highsev + rad.march.highsev + diff.norm.def.z.highsev + a.ba_ABCO + a.ba_PIPJ + a.ba_PSME + a.ba_PILA + a.ba_QUKE,data=d.all)
+c4.def <- cca(d.all.sp ~ def.normal.highsev + rad.march.highsev + a.ba_ABCO + a.ba_PIPJ + a.ba_PSME + a.ba_PILA + a.ba_QUKE,data=d.all)
+c5.def  <- cca(d.all.sp ~ def.normal.highsev + aet.normal.highsev + rad.march.highsev + diff.norm.def.z.highsev + diff.norm.aet.z.highsev + a.ba_ABCO + a.ba_PIPJ + a.ba_PSME + a.ba_PILA + a.ba_QUKE,data=d.all)
+
+
+# cca1.plot <- plot(c1,choices=c(1,2))
+# cca1.fire.plot <- plot(c1.fire,choices=c(1,2))
+# cca2.plot <- plot(c2,choices=c(1,2))
+
+cca3.plot <- plot(c3,choices=c(1,2))
+
+cca3.def.plot <- plot(c3.def,choices=c(1,2))
+cca5.def.plot <- plot(c5.def,choices=c(1,2))
 
 
 extractAIC(c1)
 
 
+summary(c2)
 
 
+#### Mantel test to explain regen species comp with control species comp ####
 
+regen.var <- "r.old"
+control.var <- "a.ba"
+d.all <- merge(d.plot.3,d.sp.cast,by=c("Fire","topoclim.cat"))
+sp.cols <- grep(regen.var,names(d.all)) #regen
+a.cols <- grep(control.var,names(d.all)) #adult (control)
+d.all.sp <- d.all[,sp.cols]
+d.all.a <- d.all[,a.cols]
+d.all.sp.tot <- rowSums(d.all.sp)
+d.all.a.tot <- rowSums(d.all.a)
+keep.rows <- ((d.all.sp.tot > 0) & (d.all.a.tot > 0))
+d.all.sp <- d.all.sp[keep.rows,]
+d.all.a <- d.all.a[keep.rows,]
+d.all <- d.all[keep.rows,]
+
+#d.all.sp, d.all.a
+
+regen.dist <- vegdist(d.all.sp,method="jaccard")
+adult.dist <- vegdist(d.all.a,method="jaccard")
+
+mantel(regen.dist,adult.dist)
 
 
 

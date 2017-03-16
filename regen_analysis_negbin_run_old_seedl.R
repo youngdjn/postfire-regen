@@ -426,13 +426,14 @@ sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO") # reduced
 
 cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB","COV.HARDWOOD","COV.CONIFER")
 cover.opts <- c("COV.SHRUB","COV.GRASS") # reduced
-cover.opts <- NULL
 sp.opts <- c(cover.opts,sp.opts)
 
 m.p <- list()
 m <- list()
 
 loos <- list()
+
+loos.pareto <- list()
 
 dat.preds <- data.frame()
 pred.obs <- data.frame()
@@ -532,17 +533,22 @@ for(sp in sp.opts) {
         
         ## get the LOOICs and save them
         loos[[sp]] <- loo(m.null,m.PTn,m.PTp,m.PTna,m.PTna2,m.PTn,m.Pn,m.Pna,m.Pna2,m.Pp)
-        print(pareto_k_table(loos[[sp]]$m.null))
-        print(pareto_k_table(loos[[sp]]$m.PTn))
-        print(pareto_k_table(loos[[sp]]$m.PTna))
-        print(pareto_k_table(loos[[sp]]$m.PTna2))
-        print(pareto_k_table(loos[[sp]]$m.Pn))
-        print(pareto_k_table(loos[[sp]]$m.Pna))
-        print(pareto_k_table(loos[[sp]]$m.Pna2))
-        print(pareto_k_table(loos[[sp]]$m.Pp))
         
+        filename <- paste0("loo_paretos_",sp,".txt")
         
+        capture.output( 
+        print("m.null,m.PTn,m.PTp,m.PTna,m.PTna2,m.PTn,m.Pn,m.Pna,m.Pna2,m.Pp"),
+        print(pareto_k_table(loos[[sp]]$m.null)),
+        print(pareto_k_table(loos[[sp]]$m.PTn)),
+        print(pareto_k_table(loos[[sp]]$m.PTna)),
+        print(pareto_k_table(loos[[sp]]$m.PTna2)),
+        print(pareto_k_table(loos[[sp]]$m.Pn)),
+        print(pareto_k_table(loos[[sp]]$m.Pna)),
+        print(pareto_k_table(loos[[sp]]$m.Pna2)),
+        print(pareto_k_table(loos[[sp]]$m.Pp)),
+        file=filename)
         
+        loos.pareto[[sp]] <- paste(pareto_k_table(loos[[sp]]$m.null),pareto_k_table(loos[[sp]]$m.PTn),pareto_k_table(loos[[sp]]$m.PTna),pareto_k_table(loos[[sp]]$m.PTna2),pareto_k_table(loos[[sp]]$m.Pn),pareto_k_table(loos[[sp]]$m.Pna),pareto_k_table(loos[[sp]]$m.Pna2),pareto_k_table(loos[[sp]]$m.Pp),sep="\n")
         observed <- d.c[!is.na(d.c$cov.response),]$cov.response
         
         
@@ -550,36 +556,42 @@ for(sp in sp.opts) {
         ##save observed
         
       } else {
-        m.null <- brm(regen.count.old.int ~ 1 + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+        m.null <- brm(regen.count.all.int ~ 1 + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
         print(summary(m.null))
-        m.PTn <- brm(regen.count.old.int ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+        m.PTn <- brm(regen.count.all.int ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
         print(summary(m.PTn))
-        m.PTna <- brm(regen.count.old.int ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+        m.PTna <- brm(regen.count.all.int ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
         print(summary(m.PTna))
-        m.PTna2 <- brm(regen.count.old.int ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+        m.PTna2 <- brm(regen.count.all.int ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
         print(summary(m.PTna2))
-        m.PTp <- brm(regen.count.old.int ~ ppt.post_c + ppt.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+        m.PTp <- brm(regen.count.all.int ~ ppt.post_c + ppt.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
         print(summary(m.PTp))
-        m.Pn <- brm(regen.count.old.int ~ ppt.normal_c + ppt.normal_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+        m.Pn <- brm(regen.count.all.int ~ ppt.normal_c + ppt.normal_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
         print(summary(m.Pn))
-        m.Pna <- brm(regen.count.old.int ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+        m.Pna <- brm(regen.count.all.int ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
         print(summary(m.Pna))
-        m.Pna2 <- brm(regen.count.old.int ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+        m.Pna2 <- brm(regen.count.all.int ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
         print(summary(m.Pna2))
-        m.Pp <- brm(regen.count.old.int ~ ppt.post_c + ppt.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+        m.Pp <- brm(regen.count.all.int ~ ppt.post_c + ppt.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
         print(summary(m.Pp))
         
 
         ## get the LOOICs and save them
-        loos[[sp]] <- loo(m.null,m.PTn,m.PTna,m.PTna2,m.Pn,m.Pna,m.Pna2,m.Pp)
-        print(pareto_k_table(loos[[sp]]$m.null))
-        print(pareto_k_table(loos[[sp]]$m.PTn))
-        print(pareto_k_table(loos[[sp]]$m.PTna))
-        print(pareto_k_table(loos[[sp]]$m.PTna2))
-        print(pareto_k_table(loos[[sp]]$m.Pn))
-        print(pareto_k_table(loos[[sp]]$m.Pna))
-        print(pareto_k_table(loos[[sp]]$m.Pna2))
-        print(pareto_k_table(loos[[sp]]$m.Pp))
+        loos[[sp]] <- loo(m.null,m.PTn,m.PTna,m.PTna2,m.Pn,m.Pna,m.Pna2,m.Pp,m.PTp)
+
+        filename <- paste0("loo_paretos_",sp,".txt")
+        
+        capture.output( 
+          print("m.null,m.PTn,m.PTp,m.PTna,m.PTna2,m.PTn,m.Pn,m.Pna,m.Pna2,m.Pp"),
+          print(pareto_k_table(loos[[sp]]$m.null)),
+          print(pareto_k_table(loos[[sp]]$m.PTn)),
+          print(pareto_k_table(loos[[sp]]$m.PTna)),
+          print(pareto_k_table(loos[[sp]]$m.PTna2)),
+          print(pareto_k_table(loos[[sp]]$m.Pn)),
+          print(pareto_k_table(loos[[sp]]$m.Pna)),
+          print(pareto_k_table(loos[[sp]]$m.Pna2)),
+          print(pareto_k_table(loos[[sp]]$m.Pp)),
+          file=filename)
         
         observed <- d.c[!is.na(d.c$regen.count.all.int),]$regen.count.all.int
         
@@ -608,8 +620,8 @@ for(sp in sp.opts) {
       
       
       
-      ### store predictions for counterfactual plots here: from "PTna" model ###
-      m.sp <- m.PTna2
+      ### store predictions for counterfactual plots here: from "Pna" model ###
+      m.sp <- m.Pna2
       m.p.sp <- posterior_samples(m.sp,pars="^b")
       
       names(m.p.sp) <- sapply(names(m.p.sp),substr,start=3,stop=1000)
@@ -694,7 +706,8 @@ ggplot(dat.pred,aes(x=diff.norm.ppt.z_c,y=fit,color=norm.level)) +
   geom_line(size=1) +
   geom_ribbon(aes(ymin=lwr,ymax=upr,fill=norm.level),alpha=0.3,color=NA) +
   guides(fill=guide_legend(title="Normal precip"),color=guide_legend(title="Normal precip")) +
-  facet_wrap(~sp.grp,scales="free",ncol=5)
+  facet_wrap(~sp.grp,scales="free",ncol=5) +
+  scale_y_continuous(limits = c(0,10))
 
 
 ## plot predictions over tmean anomaly
@@ -733,7 +746,7 @@ write.csv(pred.obs,"pred_obs.csv",row.names=FALSE)
 ## Pna vs: Pna2
 ## PTna vs: PTna2
 
-m.loos <- read.csv("summaries_2/loos_df.csv",header=TRUE,stringsAsFactors=TRUE)
+m.loos <- read.csv("summaries_6/loos_df.csv",header=TRUE,stringsAsFactors=TRUE)
 
 comps <- c("m.null - m.Pn",
            "m.null - m.PTn",

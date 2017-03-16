@@ -24,21 +24,29 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
     tmean.JJA.cols <- grep("tmean.JJA.[0-9][0-9][0-9][0-9]",names(clim.plot))
     tmean.cols <- grep("tmean.[0-9][0-9][0-9][0-9]",names(clim.plot))
     ppt.cols <- grep("ppt.[0-9][0-9][0-9][0-9]",names(clim.plot))
+    def.cols <- grep("def.[0-9][0-9][0-9][0-9]",names(clim.plot))
+    aet.cols <- grep("aet.[0-9][0-9][0-9][0-9]",names(clim.plot))
     
     tmean.DJF.plot <- unlist(clim.plot[,tmean.DJF.cols])
     tmean.JJA.plot <- unlist(clim.plot[,tmean.JJA.cols])
     tmean.plot <- unlist(clim.plot[,tmean.cols])
     ppt.plot <- unlist(clim.plot[,ppt.cols])
+    def.plot <- unlist(clim.plot[,def.cols])
+    aet.plot <- unlist(clim.plot[,aet.cols])
     
     tmean.DJF.mean <- mean(tmean.DJF.plot)
     tmean.JJA.mean <- mean(tmean.JJA.plot)
     tmean.mean <- mean(tmean.plot)
     ppt.mean <- mean(ppt.plot)
+    def.mean <- mean(def.plot)
+    aet.mean <- mean(aet.plot)
     
     tmean.DJF.sd <- sd(tmean.DJF.plot)
     tmean.JJA.sd <- sd(tmean.JJA.plot)
     tmean.sd <- sd(tmean.plot)
     ppt.sd <- sd(ppt.plot)
+    def.sd <- sd(def.plot)
+    aet.sd <- sd(aet.plot)
     
     
     ## get the post-fire values of each variable
@@ -49,6 +57,8 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
     tmean.JJA.cols <- paste("tmean.JJA.",clim.years,sep="")
     tmean.DJF.cols <- paste("tmean.DJF.",clim.years,sep="")
     ppt.cols <- paste("ppt.",clim.years,sep="")
+    def.cols <- paste("def.",clim.years,sep="")
+    aet.cols <- paste("aet.",clim.years,sep="")
     
     snow.cols <- paste("snow.",clim.years,sep="")
     rain.cols <- paste("rain.",clim.years,sep="")
@@ -58,7 +68,9 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
     tmean.JJA.plot <- unlist(clim.plot[,tmean.JJA.cols])
     ppt.plot <- unlist(clim.plot[,ppt.cols])
     snow.plot <- unlist(clim.plot[,snow.cols])
-    rain.plot <- unlist(clim.plot[,rain.cols])    
+    rain.plot <- unlist(clim.plot[,rain.cols])
+    def.plot <- unlist(clim.plot[,def.cols])
+    aet.plot <- unlist(clim.plot[,aet.cols])
     
     tmean.post.mean <- mean(tmean.plot)
     tmean.DJF.post.mean <- mean(tmean.DJF.plot)
@@ -74,10 +86,18 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
     snow.post.max <- max(snow.plot)
     snow.post.mean <- mean(snow.plot)
     
+    aet.post.min <- min(aet.plot)
+    aet.post.mean <- mean(aet.plot)
+    def.post.max <- max(def.plot)
+    def.post.mean <- mean(def.plot)
+    
     tmean.normal <- clim.plot$tmean.normal.ann
     ppt.normal <- clim.plot$ppt.normal
     snow.normal <- clim.plot$snow.normal
     rain.normal <- clim.plot$rain.normal
+    
+    aet.normal <- aet.mean
+    def.normal <- def.mean
     
     perc.norm.ppt <- ppt.post.mean/ppt.normal
     perc.norm.ppt.min <- ppt.post.min/ppt.normal
@@ -94,6 +114,12 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
     diff.norm.tmean.JJA.max.z <- (tmean.JJA.post.max-tmean.JJA.mean)/tmean.JJA.sd
     diff.norm.tmean.DJF.min.z <- (tmean.DJF.post.min-tmean.DJF.mean)/tmean.DJF.sd
     
+    diff.norm.def.z <- (def.post.mean-def.mean)/def.sd
+    diff.norm.def.max.z <- (def.post.max-def.mean)/def.sd
+    
+    diff.norm.aet.z <- (aet.post.mean-aet.mean)/aet.sd
+    diff.norm.aet.min.z <- (aet.post.min-aet.mean)/aet.sd
+    
     
     ### compute average negative (only) precipitation z-score departure
     # each years' departure
@@ -104,11 +130,14 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
     
     diff.norm.tmean <- tmean.post.mean - tmean.normal
     
-    clim.plot.out <- data.frame(Regen_Plot=plot.id,tmean.post=tmean.post.mean,ppt.post=ppt.post.mean,ppt.post.min=ppt.post.min,tmean.normal=tmean.normal,ppt.normal=ppt.normal,perc.norm.ppt=perc.norm.ppt,perc.norm.ppt.min=perc.norm.ppt.min,diff.norm.ppt,diff.norm.ppt.min,diff.norm.tmean=diff.norm.tmean,
+    clim.plot.out <- data.frame(Regen_Plot=plot.id,tmean.post=tmean.post.mean,ppt.post=ppt.post.mean,def.post=def.post.mean,aet.post=aet.post.mean,ppt.post.min=ppt.post.min,def.post.max,aet.post.min,tmean.normal=tmean.normal,ppt.normal=ppt.normal,def.normal,aet.normal,perc.norm.ppt=perc.norm.ppt,perc.norm.ppt.min=perc.norm.ppt.min,diff.norm.ppt,diff.norm.ppt.min,diff.norm.tmean=diff.norm.tmean,
                                 diff.norm.ppt.z,diff.norm.ppt.min.z,diff.norm.tmean.z,diff.norm.tmean.max.z,
+                                diff.norm.def.z,diff.norm.def.max.z,diff.norm.aet.z,diff.norm.aet.min.z,
                                 diff.norm.tmean.JJA.mean.z, diff.norm.tmean.DJF.mean.z,
                                 diff.norm.tmean.JJA.max.z, diff.norm.tmean.DJF.min.z,
                                 ppt.plot[1],ppt.plot[2],ppt.plot[3],ppt.plot[4],
+                                def.plot[1],def.plot[2],def.plot[3],def.plot[4],
+                                aet.plot[1],aet.plot[2],aet.plot[3],aet.plot[4],
                                 rain.post.min,rain.post.mean,snow.post.min,snow.post.max,snow.post.mean,
                                 snow.plot[1],snow.plot[2],snow.plot[3],snow.plot[4],
                                 rain.plot[1],rain.plot[2],rain.plot[3],rain.plot[4],
