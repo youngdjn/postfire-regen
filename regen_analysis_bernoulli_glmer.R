@@ -568,41 +568,41 @@ for(sp in sp.opts) { # about 1 hr per species
         
       } else {
 
-        d.c$response.var <- round(d.c$regen.count.old * 3)
+        d.c$response.var <- round(d.c$regen.presab.old.01)
         
-        mod.family <- "zero_inflated_negbinomial"
+        mod.family <- "binomial"
         
       }
       
       m <- list()
       
-      m[["n0.a0"]] <- brm(response.var ~ 1 + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nPT.a0"]] <- brm(response.var ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nPT.aPT"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nPT.aPT2"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["pPT"]] <- brm(response.var ~ ppt.post_c + ppt.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nP.a0"]] <- brm(response.var ~ ppt.normal_c + ppt.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nP.aP"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nP.aP2"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["pP"]] <- brm(response.var ~ ppt.post_c + ppt.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nT.a0"]] <- brm(response.var ~ tmean.normal_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nT.aT"]] <- brm(response.var ~ tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nT.aT2"]] <- brm(response.var ~ tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["pT"]] <- brm(response.var ~ tmean.post_c + tmean.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["n0.a0"]] <- glmer(response.var ~ 1 + (1|Fire),family=mod.family,data=d.c)
+      m[["nPT.a0"]] <- glmer(response.var ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c)
+      m[["nPT.aPT"]] <- glmer(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c)
+      m[["nPT.aPT2"]] <- glmer(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c)
+      m[["pPT"]] <- glmer(response.var ~ ppt.post_c + ppt.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family=mod.family,data=d.c)
+      m[["nP.a0"]] <- glmer(response.var ~ ppt.normal_c + ppt.normal_c.sq + (1|Fire),family=mod.family,data=d.c)
+      m[["nP.aP"]] <- glmer(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + (1|Fire),family=mod.family,data=d.c)
+      m[["nP.aP2"]] <- glmer(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + (1|Fire),family=mod.family,data=d.c)
+      m[["pP"]] <- glmer(response.var ~ ppt.post_c + ppt.post_c.sq + (1|Fire),family=mod.family,data=d.c)
+      #m[["nT.a0"]] <- glmer(response.var ~ tmean.normal_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c)
+      #m[["nT.aT"]] <- glmer(response.var ~ tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c)
+      #m[["nT.aT2"]] <- glmer(response.var ~ tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c)
+      #m[["pT"]] <- glmer(response.var ~ tmean.post_c + tmean.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family=mod.family,data=d.c)
       
-      m[["n0.a0"]] <- brm(response.var ~ 1 + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nAD.a0"]] <- brm(response.var ~ aet.normal_c + aet.normal_c.sq + def.normal_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nAD.aAD"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq + def.normal_c*diff.norm.def.z_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nAD.aAD2"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq + def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["pAD"]] <- brm(response.var ~ aet.post_c + aet.post_c.sq + def.post_c + def.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nA.a0"]] <- brm(response.var ~ aet.normal_c + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nA.aA"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nA.aA2"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["pA"]] <- brm(response.var ~ aet.post_c + aet.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nD.a0"]] <- brm(response.var ~ def.normal_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nD.aD"]] <- brm(response.var ~ def.normal_c*diff.norm.def.z_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nD.aD2"]] <- brm(response.var ~ def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["pD"]] <- brm(response.var ~ def.post_c + def.post_c.sq + def.post_c + def.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["n0.a0"]] <- glmer(response.var ~ 1 + (1|Fire),family=mod.family,data=d.c)
+      m[["nAD.a0"]] <- glmer(response.var ~ aet.normal_c + aet.normal_c.sq + def.normal_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c)
+      m[["nAD.aAD"]] <- glmer(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq + def.normal_c*diff.norm.def.z_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c)
+      m[["nAD.aAD2"]] <- glmer(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq + def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c)
+      m[["pAD"]] <- glmer(response.var ~ aet.post_c + aet.post_c.sq + def.post_c + def.post_c.sq + (1|Fire),family=mod.family,data=d.c)
+      #m[["nA.a0"]] <- glmer(response.var ~ aet.normal_c + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c)
+      #m[["nA.aA"]] <- glmer(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c)
+      #m[["nA.aA2"]] <- glmer(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c)
+      #m[["pA"]] <- glmer(response.var ~ aet.post_c + aet.post_c.sq + (1|Fire),family=mod.family,data=d.c)
+      m[["nD.a0"]] <- glmer(response.var ~ def.normal_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c)
+      m[["nD.aD"]] <- glmer(response.var ~ def.normal_c*diff.norm.def.z_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c)
+      m[["nD.aD2"]] <- glmer(response.var ~ def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c)
+      m[["pD"]] <- glmer(response.var ~ def.post_c + def.post_c.sq + def.post_c + def.post_c.sq + (1|Fire),family=mod.family,data=d.c)
       
 
       
@@ -617,6 +617,17 @@ for(sp in sp.opts) { # about 1 hr per species
         d.loos <- rbind(d.loos,d.mod)
         
       }
+      
+      
+      for(mod in names(m)) {
+        cat(mod," ")
+        loo.mod <- AIC(m[[mod]])
+        d.mod <- data.frame(sp=sp,mod=mod,IC=loo.mod)
+        d.loos <- rbind(d.loos,d.mod)
+        
+      }
+      
+      
       
       d.loos$upr <- d.loos$LOOIC + 1.96*d.loos$SE
       
@@ -886,7 +897,7 @@ for(sp in sp.opts) { # about 1 hr per species
       if(sp %in% cover.opts) {
         preds <- inv.logit(preds)
       } else {
-        preds <- exp(preds)
+        preds <- inv.logit(preds)
       }
       
       
@@ -917,7 +928,7 @@ for(sp in sp.opts) { # about 1 hr per species
       if(sp %in% cover.opts) {
         pred.obs.sp$pred <- inv.logit(pred.obs.sp$pred)
       } else {
-        pred.obs.sp$pred <- exp(pred.obs.sp$pred)
+        pred.obs.sp$pred <- inv.logit(pred.obs.sp$pred)
         
       }
       
@@ -976,6 +987,7 @@ dat.pred <- dat.preds[dat.preds$scenario=="ppt",]
 ## troubleshooting
 dat.pred.simp <- dat.pred[,c("diff.norm.ppt.z_c","fit","norm.level","lwr","upr")]
 
+dat.pred <- dat.pred[dat.pred$norm.level != "mid",]
 
 ggplot(dat.pred,aes(x=diff.norm.ppt.z_c,y=fit,color=norm.level)) +
   geom_line(size=1) +

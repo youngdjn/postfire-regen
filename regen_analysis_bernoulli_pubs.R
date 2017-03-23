@@ -1,6 +1,9 @@
 setwd("~/UC Davis/Research Projects/Post-fire regen/Dev/postfire-regen")
 
 library(ggplot2)
+library(brms)
+library(pROC)
+
 
 source("regen_analysis_functions.R")
 
@@ -101,6 +104,10 @@ d.plot[d.plot$Fire == "HARDING","topoclim.cat"] <- ifelse(d.plot[d.plot$Fire=="H
 ### Plot relevant "topoclimate space" for each fire and see how the categories broke them down
 ## note that Cub and straylor do not have radiation (yet)
 
+## remove PEAK and PENDOLA
+d.plot <- d.plot[!(d.plot$Fire %in% c("PEAK","PENDOLA","SHOWERS")),]
+
+
 # look at high sev only
 ggplot(d.plot[d.plot$FIRE_SEV %in% high.sev,],aes(x=ppt.normal,y=rad.march,col=topoclim.cat)) +
   geom_point() +
@@ -191,252 +198,16 @@ d.sp.2$proportion.young <- d.sp.2$regen.count.young / d.sp.2$regen.count.all
 
 
 
-#### 4. Exploration of pairwise correlations between response variables and predictor variables ####
-
-# Analysis for a single focal species (or species group, such as CONIFER)
-focalsp <- "PIPO"
-d.sp.2.singlesp <- d.sp.2[d.sp.2$species==focalsp,]
-d.mod <- merge(d.plot.3,d.sp.2.singlesp,all.x=TRUE) # data frame for modeling. Has regen-specific and plot-specific data for the species (or species group) specified above
-
-is.nan.data.frame <- function(x)
-  do.call(cbind, lapply(x, is.nan))
-d.mod[is.nan(d.mod)] <- NA
-
-# List interesting variables and make pairs plots
-response <- "regen.presab.old"
-preds <- c("SHRUB.highsev", "rad.march.highsev", "ppt.normal.highsev", "ppt.post.highsev", "ppt.post.min.highsev", "diff.norm.ppt.z.highsev", "diff.norm.ppt.min.z.highsev", "seed_tree_distance_general.highsev", "adult.ba", "adult.count","proportion.young")
-#pairs(d.mod[,c(response,preds)])
-
-# Get the pearson correlation of each predictor with the response (individually)
-corr <- NULL
-for(i in 1:length(preds)) {
-  cat(preds[i])
-  corr[preds[i]] <- cor(d.mod[,response],d.mod[,preds[i]],use="complete.obs")
-}
-corr
-
-pairs(d.mod[,preds])
-
-
-### Make a heatmap of pairwise correlations for different predictors and responses
-
-# Define the interesting set of responses
-sps <- c("CONIF.ALLSP","PIPO","ABCO","HDWD.ALLSP","PSME","PILA","QUKE","SHADE.ALLSP","PINUS.ALLSP")
-responses <- c("regen.presab.old","regen.presab.all","regen.count.all","proportion.young")
-
-opts <- expand.grid(responses,sps,stringsAsFactors=FALSE)
-names(opts) <- c("response.opt","sp.opt")
-
-opts.names <- paste(opts$sp.opt,opts$response.opt,sep="-")
-
-#interesting predictors
-#early climate
-preds <- c("SHRUB.highsev", "rad.march.highsev", "ppt.normal.highsev", "ppt.post.highsev", "ppt.post.min.highsev", "diff.norm.ppt.z.highsev", "diff.norm.ppt.min.z.highsev", "seed_tree_distance_general.highsev", "adult.ba", "adult.count")
-# full climate
-preds <- c("SHRUB.highsev", "rad.march.highsev", "ppt.normal.highsev", "ppt.post.highsev", "ppt.post.min.highsev", "diff.norm.ppt.z.highsev", "diff.norm.ppt.min.z.highsev", "seed_tree_distance_general.highsev", "adult.ba", "adult.count")
-
-# data frame to store correlation values
-corr.df <- data.frame(opt=NA,pred=NA,cor=NA,pval=NA)
-
-for(i in 1:nrow(opts)) {
-  
-  opt <- opts[i,]
-  
-  focalsp <- opt$sp.opt
-  d.sp.2.singlesp <- d.sp.2[d.sp.2$species==focalsp,]
-  d.mod <- merge(d.plot.3,d.sp.2.singlesp,all.x=TRUE) # data frame for modeling. Has regen-specific and plot-specific data for the species (or species group) specified above
-  
-  d.mod[d.mod==Inf] <- NA
-  d.mod[is.nan(d.mod)] <- NA
-  
-  newfires <- c("BAGLEY","PEAK","CHIPS")
-  #! test removing new fires
-  #d.mod <- d.mod[!(d.mod$Fire %in% newfires),]
-  
-  
-  # List interesting variables and make pairs plots
-  response <- opt$response.opt
-
-  
-
-  for(j in 1:length(preds)) {
-    corr <- cor(d.mod[,response],d.mod[,preds[j]],use="complete.obs")
-    
-    mod.df <- data.frame(y=d.mod[,response],pred=d.mod[,preds[j]])
-    
-    #if the response is all the same number (e.g. all plots had no hardwoods), can't fit model; skip
-    if(length(unique(mod.df$pred)) < 2) {
-      next()
-    }
-    
-    mod.df[is.nan(mod.df)] <- NA
-    mod.df[mod.df==Inf] <- NA
-
-    m <- lm(y~pred,data=mod.df,na.action=na.omit)
-    p <- summary(m)$coefficients["pred","Pr(>|t|)"]
-
-    corr.df <- rbind(corr.df,data.frame(opt=opts.names[i],pred=preds[j],cor=corr,pval=p))
-    
-    
-  }
-}
-# remove first row (blank)
-corr.df <- corr.df[-1,]
-
-## Plot heatmap
-library(ggplot2)
-
-
-corr.df$cor.sig <- ifelse(corr.df$pval < 0.05, corr.df$cor,NA) #sed non-sig correlations to NA
-corr.df$sig <- ifelse(corr.df$pval < 0.05,"*","")
-
-ggplot(corr.df,aes(x=opt,y=pred)) +
-  geom_tile(aes(fill=cor)) +
-  scale_fill_gradientn(colours=c("red","white","blue"),limits=c(1,-1)) +
-  geom_text(aes(label=sig)) +
-  labs(x="response",y="predictor") +
-  theme_bw(15) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  
-
-
-
-
-
-#### 4.1 Statistical models with cluster-level data ####
-
-# Analysis for a single focal species (or species group, such as CONIFER)
-focalsp <- "ABCO"
-d.sp.2.singlesp <- d.sp.2[d.sp.2$species==focalsp,]
-d.mod <- merge(d.plot.3,d.sp.2.singlesp,all.x=TRUE) # data frame for modeling. Has regen-specific and plot-specific data for the species (or species group) specified above
-
-
-
-vars.leave <- c("","FORB.highsev","SHRUB.highsev","GRASS.highsev","CONIFER.highsev","HARDWOOD.highsev","FIRE_SEV.highsev","firesev.highsev","fire.year.highsev","survey.years.post.highsev","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
-vars.focal <- c("ppt.normal.highsev","diff.norm.ppt.z.highsev","ppt.normal.sq.highsev","rad.march.highsev","seed_tree_distance_general.highsev","SHRUB.highsev","adult.count","adult.ba")
-d.mod <- d.mod[complete.cases(d.mod[,vars.focal]),]
-d.c <- center.df(d.mod,vars.leave)
-# 
-# ## transform cover so it does not include 0 or 1 (for Beta distrib)
-# d.c$SHRUB.p <- d.c$SHRUB/100
-# d.c$SHRUB.pt <- (d.c$SHRUB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-# 
-# d.c$GRASS.p <- d.c$GRASS/100
-# d.c$GRASS.pt <- (d.c$GRASS.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-# 
-# d.c$HARDWOOD.p <- d.c$HARDWOOD/100
-# d.c$HARDWOOD.pt <- (d.c$HARDWOOD.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-# 
-# d.c$FORB.p <- d.c$FORB/100
-# d.c$FORB.pt <- (d.c$FORB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-# 
-# d.c$CONIFER.p <- d.c$CONIFER/100
-# d.c$CONIFER.pt <- (d.c$CONIFER.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-# 
-
-d.c$Fire <- as.factor(d.c$Fire)
-
-d.c <- d.c[!(d.c$Fire == "RICH"),]
-
-d.c$regen.count.all.int <- ceiling(d.c$regen.count.all)
-d.c$regen.count.old.int <- ceiling(d.c$regen.count.old)
-
-
-d.c$ppt.normal.highsev_c.sq <- d.c$ppt.normal.highsev_c^2
-d.c$tmean.normal.highsev_c.sq <- d.c$tmean.normal.highsev_c^2
-
-
-vars <- c("ppt.normal.highsev_c" , "ppt.normal.highsev_c.sq" , "tmean.normal.highsev_c" , "tmean.normal.highsev_c.sq" , "seed_tree_distance_general.highsev_c" , "rad.march.highsev_c")
-d.foc <- d.c[,vars]
-pairs(d.foc)
-
-d.c$regen.count.all.nz <- ifelse(d.c$regen.count.all == 0,0.1,d.c$regen.count.all)
-
-m.nofire <- brm(regen.count.all.nz ~ ppt.normal.highsev_c + ppt.normal.highsev_c.sq + seed_tree_distance_general.highsev_c + rad.march.highsev_c,family="Gamma",data=d.c,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-m.fire <- brm(regen.count.all.nz ~ ppt.normal.highsev_c + ppt.normal.highsev_c.sq + seed_tree_distance_general.highsev_c + rad.march.highsev_c + (1|Fire),family="Gamma",data=d.c,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-m.adult <- brm(regen.count.all.nz ~ ppt.normal.highsev_c + ppt.normal.highsev_c.sq + seed_tree_distance_general.highsev_c + rad.march.highsev_c + adult.count_c,family="Gamma",data=d.c,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-m.adultba <- brm(regen.count.all.nz ~ ppt.normal.highsev_c + ppt.normal.highsev_c.sq + seed_tree_distance_general.highsev_c + rad.march.highsev_c + adult.ba_c,family="Gamma",data=d.c,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-m.adultba.fire <- brm(regen.count.all.nz ~ ppt.normal.highsev_c + ppt.normal.highsev_c.sq + seed_tree_distance_general.highsev_c + rad.march.highsev_c + adult.ba_c + (1|Fire),family="Gamma",data=d.c,iter=6000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-
-loos <- loo(m.nofire,m.fire,m.adult,m.adultba,m.adultba.fire)
-loos
-
-summary(m)
-
-
-
-###+ For cluster-level analysis, regardless of species, adding fire random effect dramatically improves model (but probably because very few data points per fire), regardless of species
-
-
-
-
-# Summary of correlation results: patterns we would expect, and pretty strong! Comparing regen count and regen pres/ab, all of the site factors are more correlated with regen presab, EXCEPT seed tree and adult ba/count
-# Shrubs are not important for old seedlings, but they're important for all seedlings. So shrubs become more important later!
-# When looking at all seedlings instead of just old seedlings, all predictors are even stronger (weird!) even post-fire weather anomaly. Is it because shrubs do poorly when seedlings initially do well? Hard to tease that apart with this dataset; maybe with a multiple regression Exception to this is adult BA and count better explain old regen than all regen.
-# Patterns even stronger when looking at "CONIFER" (especially radiation--weird!), generally even stronger with using all seedlings instead of just old seedlings
-# Post precip is a better predictor than normal precip
-
-
-
-
-
-
-
-
-
-#### 5. Plot-level exploration ####
-
-
-d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV > 3),]
-
-sp <- "PIPO"
-d.sp.curr <- d.sp[d.sp$species==sp,]
-d <- merge(d.plot,d.sp.curr,all.x=TRUE,by="Regen_Plot")
-vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
-vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","def.normal","diff.norm.def.z")
-d <- d[complete.cases(d[,vars.focal]),]
-d.c <- center.df(d,vars.leave)
-
-vars.focal.c <- paste0(vars.focal[-6],"_c")
-pairs(d.c[,vars.focal.c])
-
-d.c$SHRUB.p <- d.c$SHRUB/100
-d.c$SHRUB.pt <- (d.c$SHRUB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-
-d.c$GRASS.p <- d.c$GRASS/100
-d.c$GRASS.pt <- (d.c$GRASS.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-
-d.c$HARDWOOD.p <- d.c$HARDWOOD/100
-d.c$HARDWOOD.pt <- (d.c$HARDWOOD.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-
-
-d.c$Fire <- as.factor(d.c$Fire)
-
-d.c <- d.c[!(d.c$Fire == "RICH"),]
-
-
-ggplot(d.c,aes(x=diff.norm.ppt.z_c,y=ppt.normal_c,color=Fire,shape=regen.presab.all)) +
-  geom_point(size=3) +
-  scale_shape_manual(values=c(1,19)) +
-  #facet_wrap(~Fire,scales="free") +
-  theme_bw(20)
-
-
-
-
-
-
-
-
-
-
 
 
 #### 6. Plot-level analysis with BRMS ####
 
 
 
-## First, data frame for making predictions
+
+
+
+
 
 
 
@@ -446,7 +217,7 @@ ggplot(d.c,aes(x=diff.norm.ppt.z_c,y=ppt.normal_c,color=Fire,shape=regen.presab.
 library(brms)
 library(loo)
 
-d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV > 3),]
+d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV %in% c(4,5)),]
 
 ## remove an outlier plot with 20 abco that is preventing model conversion
 d.plot <- d.plot[!(d.plot$Regen_Plot == "CHI1248"),]
@@ -454,17 +225,106 @@ d.plot <- d.plot[!(d.plot$Regen_Plot == "CHI1248"),]
 ## remove another potential outlier plot: extremely high normal precip and high numbers of ABCO way above other plots with similar precip
 d.plot <- d.plot[!(d.plot$Regen_Plot == "BTU1300185"),]
 
+## remove a plot that has no grass cover data
+d.plot <- d.plot[!(d.plot$Regen_Plot == "AMR1300445"),]
+
+
+## remove an NA fire value
+d.plot <- d.plot[!is.na(d.plot$Fire),]
+
 ## other potential plots to remove: BTU1300050, CUB1300305
 
-
-sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO","ABMA","CONIF.ALLSP","PSME","PILA","CADE27","PIJE","PIPJ")
-sp.opts <- c("PIPO","ABCO","PSME","PILA","PIPJ") # reduced
-sp.opts <- c("PIPO","ABCO","PINUS.ALLSP") # reduced
+d.plot$Fire[d.plot$Fire == "BTU LIGHTENING"] <- "BTU LIGHTNING"
 
 
-cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB","COV.HARDWOOD","COV.CONIFER")
-cover.opts <- c("COV.SHRUB","COV.GRASS") # reduced
-cover.opts <- c("COV.SHRUB") # reduced
+
+
+
+### Plot of monitoring plots in climate space ###
+
+# For each fire, make a point at mean normal precip and mean precip anom
+fire.centers <- data.frame()
+fires <- unique(d.plot$Fire)
+for(fire in fires) {
+  d.fire <- d.plot[d.plot$Fire == fire,]
+  norm.mean <- mean(d.fire$ppt.normal)
+  anom.mean <- mean(d.fire$diff.norm.ppt.z)
+  year <- d.fire$Year.of.Fire[1]
+  
+  fire.center <- data.frame(Fire=fire,year=year,ppt.normal=norm.mean,diff.norm.ppt.z=anom.mean)
+  fire.centers <- rbind(fire.centers,fire.center)  
+}
+fire.centers$fire.year <- paste0(fire.centers$Fire,", ",fire.centers$year)
+
+
+p <- ggplot(d.plot,aes(x=ppt.normal,y=diff.norm.ppt.z,color=Fire)) +
+  geom_point(size=3) +
+  #geom_point(data=fire.centers,size=5,pch=1) +
+  geom_text(data=fire.centers,aes(label=fire.year),nudge_y=.04,size=6,color="darkgray") +
+  guides(color=FALSE) +
+  theme_bw(18) +
+  labs(x="Normal precipitation (mm)",y="Postfire precipitation anomaly (SD)") +
+  scale_x_continuous(limits=c(180,2580))
+
+
+Cairo(file=paste0("../Figures/Fig1_climateSpace_",Sys.Date(),".png"),width=1500,height=1500,ppi=200,res=200,dpi=200)
+print(p)
+dev.off()
+
+
+
+
+## plot seed tree distance effect
+
+d.plot.temp <- read.csv("data_intermediate/plot_level.csv",header=T,stringsAsFactors=FALSE)
+d.sp.temp <- read.csv("data_intermediate/speciesXplot_level.csv",header=T,stringsAsFactors=FALSE)
+
+# only keep the necessary columns
+d.plot.temp <- d.plot.temp[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general","seed_tree_distance_conifer","seed_tree_distance_hardwood","diff.norm.ppt.z","diff.norm.ppt.min.z","tmean.post","ppt.post","ppt.post.min","perc.norm.ppt","perc.norm.ppt.min","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z","def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","diff.norm.def.max.z","diff.norm.aet.min.z","def.post","aet.post")]
+
+# only Sierra Nevada fires #! removed DEEP
+sierra.fires <- c("STRAYLOR","CUB","RICH","MOONLIGHT","ANTELOPE","BTU LIGHTENING","HARDING","BASSETTS","PENDOLA","AMERICAN RIVER","RALSTON","FREDS","SHOWERS","POWER","BAGLEY","PEAK","CHIPS")
+d.plot.temp <- d.plot.temp[d.plot.temp$Fire %in% sierra.fires,]
+
+d.plot.temp <- d.plot.temp[d.plot.temp$Regen_Plot != "SHR0900015",]
+
+## Remove managed plots, plots in nonforested locations (e.g. exposed bedrock), etc.
+plots.exclude <- read.csv("data_intermediate/plots_exclude.csv",header=T,stringsAsFactors=FALSE)
+plot.ids.exclude <- plots.exclude[plots.exclude$Exclude != "",]$Regen_Plot
+d.plot.temp <- d.plot.temp[!(d.plot.temp$Regen_Plot %in% plot.ids.exclude),]
+
+
+d.sp.curr <- d.sp[d.sp$species=="CONIF.ALLSP",]
+d <- merge(d.plot.temp,d.sp.curr,all.x=TRUE,by="Regen_Plot")
+
+d <- d[d$seed_tree_distance_general < 200,]
+d <- d[d$FIRE_SEV > 3,]
+
+p <- ggplot(d,aes(x=seed_tree_distance_general,y=regen.count.all)) +
+  geom_point(size=3) +
+  scale_y_continuous(limits=c(0,70)) +
+  labs(x="Distance to seed tree (m)",y="Number of seedlings") +
+  theme_bw(18)
+
+Cairo(file=paste0("../Figures/Fig6_seedTree_",Sys.Date(),".png"),width=1500,height=1500,ppi=200,res=200,dpi=200)
+print(p)
+dev.off()
+
+
+### end plotting ###
+
+
+
+
+#sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO","ABMA","CONIF.ALLSP","PSME","PILA","CADE27","PIJE","PIPJ")
+sp.opts <- c("PIPO","ABCO","PILA","SHADE.ALLSP","QUKE","PINUS.ALLSP","QUCH2","HDWD.ALLSP") # reduced
+#sp.opts <- c("PIPO","ABCO") # reduced
+#sp.opts <- c("SHADE.ALLSP","PSME","QUKE","QUCH2")
+
+
+#cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB","COV.HARDWOOD","COV.CONIFER")
+cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB") # reduced
+#cover.opts <- c("COV.SHRUB") # reduced
 #cover.opts <- NULL
 sp.opts <- c(sp.opts,cover.opts)
 
@@ -479,6 +339,8 @@ d.loos.all <- data.frame()
 d.loo.comps <- data.frame()
 
 mods.best <- data.frame()
+
+aucs <- data.frame()
 
 for(sp in sp.opts) { # about 1 hr per species
   
@@ -508,6 +370,8 @@ for(sp in sp.opts) { # about 1 hr per species
       # ####!!!! trick model: make diff.norm into diff.norm.min
       # d.c$diff.norm.ppt.z_c <- d.c$diff.norm.ppt.min.z_c
       # d.c$diff.norm.tmean.z_c <- d.c$diff.norm.tmean.max.z_c
+      # d.c$diff.norm.aet.z_c <- d.c$diff.norm.aet.min.z_c
+      # d.c$diff.norm.def.z_c <- d.c$diff.norm.def.max.z_c
       # #### end trick model
       
       
@@ -549,7 +413,7 @@ for(sp in sp.opts) { # about 1 hr per species
       
       d.c$Fire <- as.factor(d.c$Fire)
       
-      d.c <- d.c[!(d.c$Fire == "RICH"),]
+      #d.c <- d.c[!(d.c$Fire == "RICH"),]
       
       d.c$regen.count.all.int <- ceiling(d.c$regen.count.all)
       d.c$regen.count.old.int <- ceiling(d.c$regen.count.old)
@@ -568,19 +432,19 @@ for(sp in sp.opts) { # about 1 hr per species
         
       } else {
 
-        d.c$response.var <- round(d.c$regen.count.old * 3)
+        d.c$response.var <- round(d.c$regen.presab.old.01)
         
-        mod.family <- "zero_inflated_negbinomial"
+        mod.family <- "bernoulli"
         
       }
       
       m <- list()
       
       m[["n0.a0"]] <- brm(response.var ~ 1 + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nPT.a0"]] <- brm(response.var ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nPT.aPT"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nPT.aPT2"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["pPT"]] <- brm(response.var ~ ppt.post_c + ppt.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      #m[["nPT.a0"]] <- brm(response.var ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      #m[["nPT.aPT"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      #m[["nPT.aPT2"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      #m[["pPT"]] <- brm(response.var ~ ppt.post_c + ppt.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
       m[["nP.a0"]] <- brm(response.var ~ ppt.normal_c + ppt.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
       m[["nP.aP"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
       m[["nP.aP2"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
@@ -590,20 +454,20 @@ for(sp in sp.opts) { # about 1 hr per species
       #m[["nT.aT2"]] <- brm(response.var ~ tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
       #m[["pT"]] <- brm(response.var ~ tmean.post_c + tmean.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
       
-      m[["n0.a0"]] <- brm(response.var ~ 1 + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nAD.a0"]] <- brm(response.var ~ aet.normal_c + aet.normal_c.sq + def.normal_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nAD.aAD"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq + def.normal_c*diff.norm.def.z_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nAD.aAD2"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq + def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["pAD"]] <- brm(response.var ~ aet.post_c + aet.post_c.sq + def.post_c + def.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nA.a0"]] <- brm(response.var ~ aet.normal_c + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nA.aA"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nA.aA2"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["pA"]] <- brm(response.var ~ aet.post_c + aet.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nD.a0"]] <- brm(response.var ~ def.normal_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nD.aD"]] <- brm(response.var ~ def.normal_c*diff.norm.def.z_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nD.aD2"]] <- brm(response.var ~ def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["pD"]] <- brm(response.var ~ def.post_c + def.post_c.sq + def.post_c + def.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      
+      # m[["n0.a0"]] <- brm(response.var ~ 1 + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      # m[["nAD.a0"]] <- brm(response.var ~ aet.normal_c + aet.normal_c.sq + def.normal_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      # m[["nAD.aAD"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq + def.normal_c*diff.norm.def.z_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      # m[["nAD.aAD2"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq + def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      # m[["pAD"]] <- brm(response.var ~ aet.post_c + aet.post_c.sq + def.post_c + def.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      # #m[["nA.a0"]] <- brm(response.var ~ aet.normal_c + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      # #m[["nA.aA"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      # #m[["nA.aA2"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      # #m[["pA"]] <- brm(response.var ~ aet.post_c + aet.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      # m[["nD.a0"]] <- brm(response.var ~ def.normal_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      # m[["nD.aD"]] <- brm(response.var ~ def.normal_c*diff.norm.def.z_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      # m[["nD.aD2"]] <- brm(response.var ~ def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      # m[["pD"]] <- brm(response.var ~ def.post_c + def.post_c.sq + def.post_c + def.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      # 
 
       
       #get individual loos (will get specific pairs later)
@@ -715,40 +579,50 @@ for(sp in sp.opts) { # about 1 hr per species
       ### Function to find the center of a "fixed" predictor variable within the species distribution
       mid.val.fun <- function(var) {
         d.c.sp <- d.c[d.c$regen.count.old > 0,]
-        d.c.sp$prod <- d.c.sp[,var] * d.c.sp$regen.count.old
-        prod.sum <- sum(d.c.sp$prod)
-        count.tot <- sum(d.c.sp$regen.count.old)
-        mid.val <- prod.sum/count.tot
+        #d.c.sp$prod <- d.c.sp[,var] * d.c.sp$regen.count.old
+        #prod.sum <- sum(d.c.sp$prod)
+        #count.tot <- sum(d.c.sp$regen.count.old)
+        #mid.val <- prod.sum/count.tot
+        
+        mid.val <- mean(d.c.sp[,var])
+        
         return(mid.val)
       }
       
       low.val.fun <- function(var) {
         d.c.sp <- d.c[d.c$regen.count.old > 0,]
               
-        vals.rep <- list()
-        for(i in 1:nrow(d.c.sp))      {
-
-          d.c.sp.row <- d.c.sp[i,]
-          vals.rep[[i]] <- rep(d.c.sp.row[,var],round(d.c.sp.row$regen.count.old*3))
-        }
-      
-        vals.rep <- unlist(vals.rep)
-        a <- quantile(vals.rep,0.25)
+        # vals.rep <- list()
+        # for(i in 1:nrow(d.c.sp))      {
+        # 
+        #   d.c.sp.row <- d.c.sp[i,]
+        #   vals.rep[[i]] <- rep(d.c.sp.row[,var],round(d.c.sp.row$regen.count.old*3))
+        # }
+        # 
+        # vals.rep <- unlist(vals.rep)
+        # 
+        # a <- quantile(vals.rep,0.25)
+        
+        a <- quantile(d.c.sp[,var],0.25)
+        
         return(a)
       }
       
       high.val.fun <- function(var) {
 
         d.c.sp <- d.c[d.c$regen.count.old > 0,]        
-        vals.rep <- list()
-        for(i in 1:nrow(d.c.sp))      {
-
-          d.c.sp.row <- d.c.sp[i,]
-          vals.rep[[i]] <- rep(d.c.sp.row[,var],round(d.c.sp.row$regen.count.old*3))
-        }
+        # vals.rep <- list()
+        # for(i in 1:nrow(d.c.sp))      {
+        # 
+        #   d.c.sp.row <- d.c.sp[i,]
+        #   vals.rep[[i]] <- rep(d.c.sp.row[,var],round(d.c.sp.row$regen.count.old*3))
+        # }
+        # 
+        # vals.rep <- unlist(vals.rep)
+        # a <- quantile(vals.rep,0.75)
+        # 
+        a <- quantile(d.c.sp[,var],0.75)
         
-        vals.rep <- unlist(vals.rep)
-        a <- quantile(vals.rep,0.75)
         return(a)
       }
       
@@ -767,7 +641,7 @@ for(sp in sp.opts) { # about 1 hr per species
 
       vars <- c("ppt.normal_c","ppt.normal_c.sq","diff.norm.ppt.z_c","diff.norm.ppt.z_c.sq","tmean.normal_c","tmean.normal_c.sq",
                 "diff.norm.tmean.z_c","diff.norm.tmean.z_c.sq",
-                "aet.normal_c","aet.normal_c.sq","diff.norm.ppt.z_c","diff.norm.aet.z_c.sq","def.normal_c","def.normal_c.sq",
+                "aet.normal_c","aet.normal_c.sq","diff.norm.aet.z_c","diff.norm.aet.z_c.sq","def.normal_c","def.normal_c.sq",
                 "diff.norm.def.z_c","diff.norm.def.z_c.sq"
                 )
       
@@ -882,13 +756,13 @@ for(sp in sp.opts) { # about 1 hr per species
         preds[i,] <- c(fit,lwr,upr)
         
       }
-      
+
       if(sp %in% cover.opts) {
         preds <- inv.logit(preds)
       } else {
-        preds <- exp(preds)
+        preds <- inv.logit(preds)
       }
-      
+
       
       colnames(preds) <- c("fit","lwr","upr")
       preds <- as.data.frame(preds)
@@ -914,37 +788,32 @@ for(sp in sp.opts) { # about 1 hr per species
       
       pred.obs.sp <- rbind(pred.obs.normal,pred.obs.anomaly)
       
-      if(sp %in% cover.opts) {
-        pred.obs.sp$pred <- inv.logit(pred.obs.sp$pred)
-      } else {
-        pred.obs.sp$pred <- exp(pred.obs.sp$pred)
-        
-      }
+      # if(sp %in% cover.opts) {
+      #   pred.obs.sp$pred <- inv.logit(pred.obs.sp$pred)
+      # } else {
+      #   #pred.obs.sp$pred <- inv.logit(pred.obs.sp$pred)
+      #   
+      # }
       
       pred.obs <- rbind(pred.obs,pred.obs.sp)
       
-      # 
-      # 
-      # ##### cleanup
-      # 
-      # obj <- objects(all=TRUE)
-      # obj.rstan <- grep("__C__",obj)
-      # remove(list=obj[obj.rstan])
-      # 
-      # gcDLLs()
-      # 
-      # 
-      # dlls <- getLoadedDLLs()
-      # 
-      # for(i in 1:length(dlls)) {
-      #   dll <- dlls[[i]]
-      #   filename <- dll[["path"]]
-      #   if(grepl("Local/Temp",filename)[1]) { #if it's on of the temp ones
-      #     dyn.unload(filename)
-      #   }
-      #   
-      # }
-      # 
+      
+      ## Calculate AUC (for bernoulli) or R-sq (for cover)
+      
+      if(sp %in% cover.opts) {
+        auc.normal <- cor(observed,predicted.normal)^2
+        auc.anomaly <- cor(observed,predicted.anomaly)^2
+      } else {
+        auc.normal <- auc(observed,predicted.normal)
+        auc.anomaly <- auc(observed,predicted.anomaly)
+      }
+      
+      aucs.sp <- data.frame(auc.normal,auc.anomaly,sp)
+      
+      aucs <- rbind(aucs,aucs.sp)
+      
+      
+
 }
 
 
@@ -957,136 +826,305 @@ write.csv(pred.obs,"pred_obs.csv",row.names=FALSE)
 write.csv(d.loo.comps,"loo_comps.csv",row.names=FALSE)
 write.csv(d.loos.all,"loos.csv",row.names=FALSE)
 write.csv(mods.best,"mods_best.csv",row.names=FALSE)
-
-
-
-dat.preds <- read.csv("../data_model_summaries/mod_output_03/counterfactual_df.csv",header=TRUE)
-pred.obs <- read.csv("../data_model_summaries/mod_output_03/pred_obs.csv",header=TRUE)
-d.loo.comps <- read.csv("../data_model_summaries/mod_output_02/loo_comps.csv",header=TRUE)
-d.loos.all <- read.csv("../data_model_summaries/mod_output_02/loos.csv",header=TRUE)
-mods.best <- read.csv("../data_model_summaries/mod_output_02/mods_best.csv",header=TRUE)
+write.csv(aucs,"norm_anom_aucs_rsqs.csv",row.names=FALSE)
 
 
 
 
-## plot predictions over precip anomaly
-
-dat.pred <- dat.preds[dat.preds$scenario=="ppt",]
-
-## troubleshooting
-dat.pred.simp <- dat.pred[,c("diff.norm.ppt.z_c","fit","norm.level","lwr","upr")]
 
 
-ggplot(dat.pred,aes(x=diff.norm.ppt.z_c,y=fit,color=norm.level)) +
+
+
+
+
+
+
+
+
+#### Open saved output ####
+
+folder <- "../data_model_summaries/out_03_mean_pptOnly_goodPred/"
+
+dat.preds <- read.csv(paste0(folder,"counterfactual_df.csv"),header=TRUE)
+pred.obs <- read.csv(paste0(folder,"pred_obs.csv"),header=TRUE)
+d.loo.comps <- read.csv(paste0(folder,"loo_comps.csv"),header=TRUE)
+d.loos.all <- read.csv(paste0(folder,"loos.csv"),header=TRUE)
+mods.best <- read.csv(paste0(folder,"mods_best.csv"),header=TRUE)
+aucs <- read.csv(paste0(folder,"norm_anom_aucs_rsqs.csv"),header=TRUE)
+# 
+# # second
+# 
+# folder <- "../data_model_summaries/model_output_07_bern_good_b_mean/"
+# 
+# dat.preds.b <- read.csv(paste0(folder,"counterfactual_df.csv"),header=TRUE)
+# pred.obs.b <- read.csv(paste0(folder,"pred_obs.csv"),header=TRUE)
+# d.loo.comps.b <- read.csv(paste0(folder,"loo_comps.csv"),header=TRUE)
+# d.loos.all.b <- read.csv(paste0(folder,"loos.csv"),header=TRUE)
+# mods.best.b <- read.csv(paste0(folder,"mods_best.csv"),header=TRUE)
+# 
+# # merge
+# 
+# dat.preds <- rbind(dat.preds,dat.preds.b)
+# pred.obs <- rbind(pred.obs,pred.obs.b)
+# d.loo.comps <- rbind(d.loo.comps,d.loo.comps.b)
+# d.loos.all <- rbind(d.loos.all,d.loos.all.b)
+# mods.best <- rbind(mods.best,mods.best.b)
+# 
+
+sp.names <- c(
+  "PIPO"="Ponderosa pine",
+  "PILA"="Sugar pine",
+  "ABCO"="White fir",    
+  "QUKE"="Black oak",  
+  "QUCH2"="Canyon live oak",
+  "PINUS.ALLSP"="Pines",
+  "SHADE.ALLSP"="Shade tolerant conifers",
+  "COV.SHRUB"="Shrub cover",
+  "COV.GRASS"="Grass cover",
+  "COV.FORB"="Forb cover",
+  "HDWD.ALLSP"="Hardwoods"
+)
+
+dat.preds$sp.grp <- factor(dat.preds$sp.grp,levels=c("PIPO","PILA","ABCO","QUKE","QUCH2","PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","COV.SHRUB","COV.GRASS","COV.FORB"))
+
+dat.preds <- dat.preds[dat.preds$norm.level != "mid",]
+dat.preds <- dat.preds[dat.preds$sp.grp != 'COV.FORB',]
+
+dat.ppt <- dat.preds[dat.preds$scenario=="ppt",]
+dat.ppt$variable <- "ppt-aet"
+dat.ppt$anomaly <- dat.ppt$diff.norm.ppt.z_c
+
+dat.ppt$ppt.level <- ifelse(dat.ppt$norm.level == "high","Wet","Dry")
+
+ggplot(dat.ppt,aes(x=anomaly,y=fit,color=ppt.level)) +
   geom_line(size=1) +
-  geom_ribbon(aes(ymin=lwr,ymax=upr,fill=norm.level),alpha=0.3,color=NA) +
-  guides(fill=guide_legend(title="Normal precip"),color=guide_legend(title="Normal precip")) +
-  facet_wrap(~sp.grp,scales="free",ncol=5)
-
-
-## plot predictions over tmean anomaly
-
-dat.pred <- dat.preds[dat.preds$scenario=="tmean",]
-
-ggplot(dat.pred,aes(x=diff.norm.tmean.z_c,y=fit,color=norm.level)) +
-  geom_line(size=1) +
-  geom_ribbon(aes(ymin=lwr,ymax=upr,fill=norm.level),alpha=0.3,color=NA) +
-  guides(fill=guide_legend(title="Normal tmean"),color=guide_legend(title="Normal tmean")) +
-  facet_wrap(~sp.grp,scales="free",ncol=5) +
-  scale_y_continuous(limits=c(0,10))
+  geom_ribbon(aes(ymin=lwr,ymax=upr,fill=ppt.level),alpha=0.3,color=NA) +
+  guides(fill=guide_legend(title="Normal\nprecipitation"),color=guide_legend(title="Normal\nprecipitation")) +
+  facet_wrap(~sp.grp,scales="free",nrow=2,labeller=as_labeller(sp.names)) +
+  labs(y="Regeneration probability or cover",x="Precipitation anomaly (z-score)") +
+  theme_bw(15)
 
 
 
+### For plotting responses to any climate variable and bivariate responses, sep file per species ###
+# 
+# library(gridExtra)
+# library(Cairo)
+# 
+# 
+# sp.lookup <- rbind(
+#   c("PIPO","Ponderosa pine"),
+#   #c("PILA","Sugar pine")
+#   c("ABCO","White fir"),    
+#   c("QUKE","Black oak"),  
+#   c("QUCH2","Canyon live oak"),
+#   c("PINUS.ALLSP","All pines"),
+#   c("SHADE.ALLSP","Shade tolerant conifers"),
+#   c("COV.SHRUB","Shrub cover")
+#   #c("PSME","Douglas-fir")
+# )
+# colnames(sp.lookup) <- c("code","species")
+# sp.lookup <- as.data.frame(sp.lookup,stringsAsFactors=FALSE)
+# 
+# 
+# sp.opts <- sp.lookup$code
+# 
+# for(sp in sp.opts) {
+#   
+#   sp.name <- sp.lookup[sp.lookup$code == sp,]$species
+#   
+#   dat.pred.sp <- dat.pred[dat.pred$sp.grp == sp,]
+#   
+#   #is it a ppt-tmean or def-aet model?
+#   anom <- as.character(dat.pred.sp$best.anomaly.mod[1])
+#   anom.first <- strsplit(anom,".",fixed=TRUE)[[1]][1]
+#   anom.symb <- substr(anom.first,2,100)
+#   
+#   if(anom.symb %in% c("P","PT")) {
+#     mod.type <- "ppt"
+#     title.top <- sp.name
+#     title.bottom <- ""
+#     subtitle.top <- "Precipitation"
+#     subtitle.bottom <- "Temperature"
+#     legend.top <- "Normal precipitation"
+#     legend.bottom <- "Normal temperature"
+#     anom.top <- "Precipitation anomaly (z-score)"
+#     anom.bottom <- "Temperature anomaly (z-score)"
+#   } else {
+#     mod.type <- "def"
+#     title.top <- sp.name
+#     title.bottom <- ""
+#     subtitle.top <- "AET"
+#     subtitle.bottom <- "Deficit"
+#     title.bottom <- ""
+#     legend.top <- "Normal AET"
+#     legend.bottom <- "Normal deficit"
+#     anom.top <- "AET anomaly (z-score)"
+#     anom.bottom <- "Deficit anomaly (z-score)"
+#   }
+#   
+#   ## top plot
+#   
+#   dat.pred.sp.top <- dat.pred.sp[dat.pred.sp$variable=="ppt-aet",]
+#   
+#   gtop <- ggplot(dat.pred.sp.top,aes(x=anomaly,y=fit,color=norm.level)) +
+#     geom_line(size=1) +
+#     geom_ribbon(aes(ymin=lwr,ymax=upr,fill=norm.level),alpha=0.3,color=NA) +
+#     guides(fill=guide_legend(title="Normal climate"),color=guide_legend(title="Normal climate")) +
+#     labs(title=title.top,subtitle=subtitle.top,x="Climate anomaly (z-score)",y="Regeneration probability") +
+#     theme_bw(15) +
+#     theme(plot.title = element_text(hjust = 0.5),plot.subtitle = element_text(hjust = 0.5))
+#     
+#   ## bottom plot
+#   
+#   dat.pred.sp.top <- dat.pred.sp[dat.pred.sp$variable=="tmean-def",]
+#   
+#   gbottom <- ggplot(dat.pred.sp.top,aes(x=anomaly,y=fit,color=norm.level)) +
+#     geom_line(size=1) +
+#     geom_ribbon(aes(ymin=lwr,ymax=upr,fill=norm.level),alpha=0.3,color=NA) +
+#     guides(fill=guide_legend(title="Normal climate"),color=guide_legend(title="Normal climate")) +
+#     labs(title=title.bottom,subtitle=subtitle.bottom,x="Climate anomaly (z-score)",y="Regeneration probability") +
+#     theme_bw(15) +
+#     theme(plot.title = element_text(hjust = 0.5),plot.subtitle = element_text(hjust = 0.5))
+#   
+#   Cairo(file=paste0("../Figures/Fig2_",sp,"_",Sys.Date(),".png"),width=1200,height=1750,ppi=200,res=200,dpi=200)
+#   grid.arrange(gtop,gbottom,nrow=2)
+#   dev.off()
+# }
+#   
 
 
 
 
+### LOO comp plots
 
-### LOO plots: null vs. normal
+sp.names <- c(
+  "PIPO"="Ponderosa pine",
+  "PILA"="Sugar pine",
+  "ABCO"="White fir",    
+  "QUKE"="Black oak",  
+  "QUCH2"="Canyon live oak",
+  "PINUS.ALLSP"="Pines",
+  "SHADE.ALLSP"="Shade tolerant conifers",
+  "COV.SHRUB"="Shrub cover",
+  "COV.GRASS"="Grass cover",
+  "COV.FORB"="Forb cover",
+  "HDWD.ALLSP"="Hardwoods"
+)
 
 d.loo.comps$upr <- d.loo.comps$LOOIC + d.loo.comps$SE*1.96
 d.loo.comps$lwr <- d.loo.comps$LOOIC - d.loo.comps$SE*1.96
 
-d.comp <- d.loo.comps[d.loo.comps$comp == "null.normal",]
+d.loo.comps$sp <- factor(d.loo.comps$sp,levels=rev(c("PIPO","PILA","ABCO","QUKE","QUCH2","PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","COV.SHRUB","COV.GRASS","COV.FORB")))
 
-ggplot(d.comp,aes(x=sp,y=LOOIC)) +
-  geom_point() +
-  geom_errorbar(aes(ymax=upr,ymin=lwr)) +
-  #facet_wrap(~sp,scales="free_x",ncol=2) +
-  theme_bw(15) +
-  geom_hline(yintercept=0,color="red")
+comp.opts <- c("null.normal","normal.post","normal.anom","anom.normal")
 
+for(comp.opt in comp.opts) {
+  
+  d.comp <- d.loo.comps[d.loo.comps$comp == comp.opt,]
+  
+  p <- ggplot(d.comp,aes(y=sp,x=LOOIC)) +
+    geom_point() +
+    geom_errorbarh(aes(xmax=upr,xmin=lwr),height=.2) +
+    theme_bw(18) +
+    geom_vline(xintercept=0,color="red") +
+    scale_y_discrete(labels=as_labeller(sp.names)) +
+    labs(x="Model improvement (delta LOOIC)",y="") +
+    theme(axis.text.x = element_text(size=18),axis.text.y=element_text(size=18),axis.title.x=element_text(size=18))
 
-
-### LOO plots: normal vs. post
-
-d.loo.comps$upr <- d.loo.comps$LOOIC + d.loo.comps$SE*1.96
-d.loo.comps$lwr <- d.loo.comps$LOOIC - d.loo.comps$SE*1.96
-
-d.comp <- d.loo.comps[d.loo.comps$comp == "normal.post",]
-
-ggplot(d.comp,aes(x=sp,y=LOOIC)) +
-  geom_point() +
-  geom_errorbar(aes(ymax=upr,ymin=lwr)) +
-  #facet_wrap(~sp,scales="free_x",ncol=2) +
-  theme_bw(15) +
-  geom_hline(yintercept=0,color="red")
-
-
-### LOO plots: (best) normal vs. (best) corresponding anomaly
-
-d.loo.comps$upr <- d.loo.comps$LOOIC + d.loo.comps$SE*1.96
-d.loo.comps$lwr <- d.loo.comps$LOOIC - d.loo.comps$SE*1.96
-
-d.comp <- d.loo.comps[d.loo.comps$comp == "normal.anom",]
-
-ggplot(d.comp,aes(x=sp,y=LOOIC)) +
-  geom_point() +
-  geom_errorbar(aes(ymax=upr,ymin=lwr)) +
-  #facet_wrap(~sp,scales="free_x",ncol=2) +
-  theme_bw(15) +
-  geom_hline(yintercept=0,color="red")
+    Cairo(file=paste0("../Figures/Fig3_loocomps_",comp.opt,"_",Sys.Date(),".png"),width=1400,height=1600,ppi=200,res=200,dpi=200)
+    print(p)
+    dev.off()
+  
+  
+}
 
 
-### LOO plots: corresponding normal vs. (best) anomaly
 
-d.loo.comps$upr <- d.loo.comps$LOOIC + d.loo.comps$SE*1.96
-d.loo.comps$lwr <- d.loo.comps$LOOIC - d.loo.comps$SE*1.96
 
-d.comp <- d.loo.comps[d.loo.comps$comp == "anom.normal",]
 
-ggplot(d.comp,aes(x=sp,y=LOOIC)) +
-  geom_point() +
-  geom_errorbar(aes(ymax=upr,ymin=lwr)) +
-  #facet_wrap(~sp,scales="free_x",ncol=2) +
-  theme_bw(12) +
-  geom_hline(yintercept=0,color="red")
+
 
 
 
 
 ### Plot pred vs. observed for best anomaly model (without and then with anomaly)
+sp.names <- c(
+  "PIPO"="Ponderosa pine",
+  "PILA"="Sugar pine",
+  "ABCO"="White fir",    
+  "QUKE"="Black oak",  
+  "QUCH2"="Canyon live oak",
+  "PINUS.ALLSP"="Pines",
+  "SHADE.ALLSP"="Shade tolerant conifers",
+  "COV.SHRUB"="Shrub cover",
+  "COV.GRASS"="Grass cover",
+  "COV.FORB"="Forb cover",
+  "HDWD.ALLSP"="Hardwoods"
+)
 
-#sp <- "PINUS.ALLSP"
-#pred.obs.sp <- pred.obs[pred.obs$sp==sp,]
+sp.names <- as.data.frame(as.matrix(sp.names))
+names(sp.names) <- "name"
+sp.names$sp <- row.names(sp.names)
 
-pred.obs.sp <- pred.obs
+## Tree seedlings
 
-pred.obs.sp$mod <- factor(pred.obs.sp$mod,levels=c("normal","anomaly"))
-pred.obs.sp$mod <- ifelse(pred.obs.sp$mod=="anomaly","normal+anomaly","normal")
 
-range.po <- range(c(pred.obs.sp$obs,pred.obs.sp$pred))
+pred.obs2 <- pred.obs
+pred.obs2$mod <- ifelse(pred.obs2$mod=="anomaly","Norm & Anom","Normal climate")
+pred.obs2$mod <- factor(pred.obs2$mod,levels=c("Normal climate","Norm & Anom"))
+pred.obs2 <- merge(pred.obs2,sp.names,by.x="sp",by.y="sp",all.x=TRUE)
 
-dummy <- data.frame(obs=range.po,pred=range.po)
 
-ggplot(pred.obs.sp,aes(x=obs,y=pred)) +
+sp.plot <- c("PIPO","ABCO","QUKE")
+pred.obs2$name <- factor(pred.obs2$name,levels=c("Ponderosa pine","White fir","Black oak"))
+pred.obs2$obs.int <- ifelse(pred.obs2$obs == 0,"Absent","Present")
+pred.obs2$obs.int <- factor(pred.obs2$obs.int,levels=c("Absent","Present"))
+
+pred.obs.sp <- pred.obs2[pred.obs2$sp %in% sp.plot,]
+
+p <- ggplot(pred.obs.sp,aes(x=obs.int,y=pred)) +
   geom_point(position = position_jitter(w = 0.2, h = 0)) +
-  facet_wrap(~sp+mod,scales="free") +
+  facet_wrap(~name+mod,scales="free",ncol=2) +
   #geom_abline(intercept=0, slope=1,color="red") +
-  #geom_blank(data=dummy) +
   theme_bw(15) +
-  #scale_x_continuous(limits=c(0,10)) +
-  #scale_y_continuous(limits=c(0,10))
+  labs(x="Observed presence/absence",y="Fitted probability of presence")
+
+Cairo(file=paste0("../Figures/Fig4_presab_tree_",Sys.Date(),".png"),width=1200,height=1800,ppi=200,res=200,dpi=200)
+print(p)
+dev.off()
+
+
+### Covers
+
+
+pred.obs2 <- pred.obs
+pred.obs2$mod <- ifelse(pred.obs2$mod=="anomaly","Norm & Anom","Normal climate")
+pred.obs2$mod <- factor(pred.obs2$mod,levels=c("Normal climate","Norm & Anom"))
+pred.obs2 <- merge(pred.obs2,sp.names,by.x="sp",by.y="sp",all.x=TRUE)
+
+
+sp.plot <- c("COV.SHRUB")
+#pred.obs2$name <- factor(pred.obs2$name,levels=c("Ponderosa pine","White fir","Black oak"))
+pred.obs2$obs.int <- ifelse(pred.obs2$obs == 0,"Absent","Present")
+pred.obs2$obs.int <- factor(pred.obs2$obs.int,levels=c("Absent","Present"))
+
+pred.obs.sp <- pred.obs2[pred.obs2$sp %in% sp.plot,]
+
+p <- ggplot(pred.obs.sp,aes(x=obs.int,y=pred)) +
+  geom_point(position = position_jitter(w = 0.2, h = 0)) +
+  facet_wrap(~name+mod,scales="free",ncol=2) +
+  #geom_abline(intercept=0, slope=1,color="red") +
+  theme_bw(15) +
+  labs(x="Observed presence/absence",y="Fitted probability of presence")
+
+Cairo(file=paste0("../Figures/Fig4_presab_cover_",Sys.Date(),".png"),width=1200,height=700,ppi=200,res=200,dpi=200)
+print(p)
+dev.off()
+
+
+
+
 
 
 
@@ -1095,77 +1133,179 @@ ggplot(pred.obs.sp,aes(x=obs,y=pred)) +
 #### 7. Test how much better a model is with FIRE ####
 
 
-d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV > 3),]
+d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV %in% c(4,5)),]
 
+## remove an outlier plot with 20 abco that is preventing model conversion
+d.plot <- d.plot[!(d.plot$Regen_Plot == "CHI1248"),]
 
-sp <- "ABCO"
-d.sp.curr <- d.sp[d.sp$species==sp,]
-d <- merge(d.plot,d.sp.curr,all.x=TRUE,by="Regen_Plot")
-vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
-vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z")
-d <- d[complete.cases(d[,vars.focal]),]
-d.c <- center.df(d,vars.leave)
-
-d.c$ppt.normal_c.sq <- d.c$ppt.normal_c^2
-d.c$tmean.normal_c.sq <- d.c$tmean.normal_c^2
-
-# ####!!!! trick model: make diff.norm into diff.norm.min
-# d.c$diff.norm.ppt.z_c <- d.c$diff.norm.ppt.min.z_c
-# d.c$diff.norm.tmean.z_c <- d.c$diff.norm.tmean.max.z_c
-# #### end trick model
-
-
-d.c$diff.norm.ppt.z_c.sq <- d.c$diff.norm.ppt.z_c^2
-d.c$diff.norm.tmean.z_c.sq <- d.c$diff.norm.tmean.z_c^2
-
-d.c$ppt.post_c.sq <- d.c$ppt.post_c^2
-d.c$tmean.post_c.sq <- d.c$tmean.post_c^2
-
-d.c$regen.presab.all.01 <- ifelse(d.c$regen.presab.all == TRUE,1,0)
-d.c$regen.presab.old.01 <- ifelse(d.c$regen.presab.old == TRUE,1,0)
-
-
-vars.focal.c <- paste0(vars.focal[-6],"_c")
-pairs(d.c[,vars.focal.c])
-
-## transform cover so it does not include 0 or 1 (for Beta distrib)
-d.c$SHRUB.p <- d.c$SHRUB/100
-d.c$SHRUB.pt <- (d.c$SHRUB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-
-d.c$GRASS.p <- d.c$GRASS/100
-d.c$GRASS.pt <- (d.c$GRASS.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-
-d.c$HARDWOOD.p <- d.c$HARDWOOD/100
-d.c$HARDWOOD.pt <- (d.c$HARDWOOD.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-
-d.c$FORB.p <- d.c$FORB/100
-d.c$FORB.pt <- (d.c$FORB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-
-d.c$CONIFER.p <- d.c$CONIFER/100
-d.c$CONIFER.pt <- (d.c$CONIFER.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-
-
-d.c$Fire <- as.factor(d.c$Fire)
-
-d.c <- d.c[!(d.c$Fire == "RICH"),]
-
-d.c$regen.count.all.int <- ceiling(d.c$regen.count.all)
-d.c$regen.count.old.int <- ceiling(d.c$regen.count.old)
-
-
-library(brms)
-
-m.nofire <- brm(regen.count.all.int ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + seed_tree_distance_general_c + rad.march_c,family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-m.fire <- brm(regen.count.all.int ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + seed_tree_distance_general_c + rad.march_c + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-
-
-loos <- loo(m.nofire,m.fire)
-loos
+## remove another potential outlier plot: extremely high normal precip and high numbers of ABCO way above other plots with similar precip
+d.plot <- d.plot[!(d.plot$Regen_Plot == "BTU1300185"),]
 
 
 
+loos.fire <- data.frame()
 
-###+ Summary of results: with PIPO, using all non-anomaly predictors without fire random effect is worse than including fire random effect, but with ABCO, adding fire random effect provides little improvement. Is this legit though?
+
+sp.opts <- c("PIPO","ABCO","PILA","SHADE.ALLSP","QUKE","PINUS.ALLSP","QUCH2") # reduced
+cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB")
+sp.opts <- c(sp.opts,cover.opts)
+
+
+for(sp in sp.opts) {
+
+  cat("\n\n#####")
+  cat("Running fire-nofire comparison for: ",sp,"")
+  cat("#####\n\n")
+  
+  if(sp %in% cover.opts) {
+    d.sp.curr <- d.sp[d.sp$species=="PIPO",]
+  } else {
+    d.sp.curr <- d.sp[d.sp$species==sp,]
+  }
+  d <- merge(d.plot,d.sp.curr,all.x=TRUE,by="Regen_Plot")
+  vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
+  vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z")
+  d <- d[complete.cases(d[,vars.focal]),]
+  d.c <- center.df(d,vars.leave)
+  
+  d.c$ppt.normal_c.sq <- d.c$ppt.normal_c^2
+  d.c$tmean.normal_c.sq <- d.c$tmean.normal_c^2
+  
+  # ####!!!! trick model: make diff.norm into diff.norm.min
+  # d.c$diff.norm.ppt.z_c <- d.c$diff.norm.ppt.min.z_c
+  # d.c$diff.norm.tmean.z_c <- d.c$diff.norm.tmean.max.z_c
+  # #### end trick model
+  
+  
+  d.c$diff.norm.ppt.z_c.sq <- d.c$diff.norm.ppt.z_c^2
+  d.c$diff.norm.tmean.z_c.sq <- d.c$diff.norm.tmean.z_c^2
+  
+  d.c$ppt.post_c.sq <- d.c$ppt.post_c^2
+  d.c$tmean.post_c.sq <- d.c$tmean.post_c^2
+  
+  d.c$regen.presab.all.01 <- ifelse(d.c$regen.presab.all == TRUE,1,0)
+  d.c$regen.presab.old.01 <- ifelse(d.c$regen.presab.old == TRUE,1,0)
+  
+  ## transform cover so it does not include 0 or 1 (for Beta distrib)
+  d.c$SHRUB.p <- d.c$SHRUB/100
+  d.c$SHRUB.pt <- (d.c$SHRUB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+  
+  d.c$GRASS.p <- d.c$GRASS/100
+  d.c$GRASS.pt <- (d.c$GRASS.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+  
+  d.c$HARDWOOD.p <- d.c$HARDWOOD/100
+  d.c$HARDWOOD.pt <- (d.c$HARDWOOD.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+  
+  d.c$FORB.p <- d.c$FORB/100
+  d.c$FORB.pt <- (d.c$FORB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+  
+  d.c$CONIFER.p <- d.c$CONIFER/100
+  d.c$CONIFER.pt <- (d.c$CONIFER.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+  
+  
+  d.c$Fire <- as.factor(d.c$Fire)
+  
+  d.c$regen.count.all.int <- ceiling(d.c$regen.count.all)
+  d.c$regen.count.old.int <- ceiling(d.c$regen.count.old)
+  
+  if(sp %in% cover.opts) {
+    
+    sp.cov <- substr(sp,5,100)
+    sp.cov <- paste0(sp.cov,".pt")
+    
+    d.c$cov.response <- d.c[,sp.cov]
+    
+    d.c$response.var <- d.c$cov.response
+    
+    mod.family <- "Beta"
+    
+  } else {
+    
+    d.c$response.var <- round(d.c$regen.presab.old.01)
+    
+    mod.family <- "bernoulli"
+    
+  }
+  
+
+  m.nofire <- brm(response.var ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + seed_tree_distance_general_c + rad.march_c,family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+  m.fire <- brm(response.var ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + seed_tree_distance_general_c + rad.march_c + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+    
+
+  
+  loos <- loo(m.nofire,m.fire)$ic_diffs__
+  loos <- as.data.frame(loos)
+  loos$sp <- sp
+  
+
+  # calc AUC or Rsq
+  predicted.nofire <- predict(m.nofire)[,1]
+  predicted.fire <- predict(m.fire)[,1]
+
+  
+  if(sp %in% cover.opts) {
+    observed <- d.c$response.var
+    auc.nofire <- cor(observed,predicted.nofire)^2
+    auc.fire <- cor(observed,predicted.fire)^2
+  } else {
+    observed <- d.c$regen.presab.old.01
+    auc.nofire <- auc(observed,predicted.nofire)
+    auc.fire <- auc(observed,predicted.fire)
+  }
+  
+
+  
+  loos$auc.nofire <- auc.nofire
+  loos$auc.fire <- auc.fire
+  
+  loos.fire <- rbind(loos.fire,loos)
+  
+}
+
+
+write.csv(loos.fire,"loos_fire.csv",row.names=FALSE)
+
+## Plot the LOOS associated with adding fire
+
+
+sp.names <- c(
+  "PIPO"="Ponderosa pine",
+  "PILA"="Sugar pine",
+  "ABCO"="White fir",    
+  "QUKE"="Black oak",  
+  "QUCH2"="Canyon live oak",
+  "PINUS.ALLSP"="Pines",
+  "SHADE.ALLSP"="Shade tolerant conifers",
+  "COV.SHRUB"="Shrub cover",
+  "COV.GRASS"="Grass cover",
+  "COV.FORB"="Forb cover",
+  "HDWD.ALLSP"="Hardwoods"
+)
+
+loos.fire$upr <- loos.fire$LOOIC + loos.fire$SE*1.96
+loos.fire$lwr <- loos.fire$LOOIC - loos.fire$SE*1.96
+
+loos.fire$sp <- factor(loos.fire$sp,levels=rev(c("PIPO","PILA","ABCO","QUKE","QUCH2","PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","COV.SHRUB","COV.GRASS","COV.FORB")))
+
+  p <- ggplot(loos.fire,aes(y=sp,x=LOOIC)) +
+    geom_point() +
+    geom_errorbarh(aes(xmax=upr,xmin=lwr),height=.2) +
+    theme_bw(18) +
+    geom_vline(xintercept=0,color="red") +
+    scale_y_discrete(labels=as_labeller(sp.names)) +
+    labs(x="Model improvement (delta LOOIC)",y="") +
+    theme(axis.text.x = element_text(size=18),axis.text.y=element_text(size=18),axis.title.x=element_text(size=18))
+  
+  Cairo(file=paste0("../Figures/Fig5_fireLoos_",Sys.Date(),".png"),width=1400,height=1600,ppi=200,res=200,dpi=200)
+  print(p)
+  dev.off()
+
+
+
+
+
+
+
 
 
 
@@ -1185,7 +1325,8 @@ library(data.table)
 
 
 
-focal.sp <- c("PIPJ","ABCO","PILA","QUKE") #   "ABMA","QUCH2","ARME") #ABMA, PIPO, QUCH2, 
+focal.sp <- c("PIPO","ABCO","PILA","QUKE") #   "ABMA","QUCH2","ARME") #ABMA, PIPO, QUCH2, 
+focal.sp <- c("PIPO","ABCO","PILA","QUKE","QUCH2","LIDE3","ABMA")
 #focal.sp <- c("PIPO","ABCO","PILA","PSME","QUKE","LIDE3","QUCH2","CADE27")
 #focal.sp <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP")
 focal.cols <- c("Fire","topoclim.cat","species","regen.presab.old","regen.presab.all","adult.ba")
@@ -1200,7 +1341,7 @@ d.sp.simp <- as.data.table(d.sp.simp)
 d.sp.cast <- dcast(d.sp.simp,topoclim.cat + Fire~species,value.var=c("r.old","r.all","a.ba"))
 
 
-regen.var <- "r.all"
+regen.var <- "r.old"
 
 d.all <- merge(d.plot.3,d.sp.cast,by=c("Fire","topoclim.cat"))
 sp.cols <- grep(regen.var,names(d.all))
@@ -1209,6 +1350,46 @@ d.all.sp.tot <- rowSums(d.all.sp)
 keep.rows <- d.all.sp.tot > 0
 d.all.sp <- d.all.sp[keep.rows,]
 d.all <- d.all[keep.rows,]
+
+
+### remove the prefixes from the regen and adult species names
+
+adult.cols <- grep("^a[.]ba",names(d.all))
+adult.colnames.simp <- substr(names(d.all)[adult.cols],6,100)
+names(d.all)[adult.cols] <- adult.colnames.simp
+
+regen.cols <- grep("^r[.]",names(d.all.sp))
+regen.colnames.simp <- substr(names(d.all.sp)[regen.cols],7,100)
+names(d.all.sp)[regen.cols] <- regen.colnames.simp
+
+### change species names to common name abbreviations
+
+sublist <- c("LIDE3" = "Tanoak",
+             "PILA" = "SP",
+             "ABCO" = "WF",
+             "ABMA" = "RF",
+             "QUKE" = "BlkOak",
+             "QUCH2" = "CynOak",
+             "PIPO" = "PP",
+             "rad.march.highsev" = "solar.rad",
+             "tmean.normal.highsev" = "temp.norm",
+             "ppt.normal.highsev" = "ppt.norm",
+             "diff.norm.ppt.z.highsev" = "ppt.anom",
+             "diff.norm.tmean.z.highsev" = "temp.anom")
+
+d.names <- names(d.all)
+d.names.new <- match(d.names,names(sublist))
+d.names.match <- !is.na(d.names.new)
+d.names[d.names.match] <- sublist[d.names.new][d.names.match]
+names(d.all) <- d.names
+
+d.names <- names(d.all.sp)
+d.names.new <- match(d.names,names(sublist))
+d.names.match <- !is.na(d.names.new)
+d.names[d.names.match] <- sublist[d.names.new][d.names.match]
+names(d.all.sp) <- d.names
+
+
 
 
 library(vegan)
@@ -1237,57 +1418,104 @@ library(vegan)
 
 
 # all non-anomaly, excluding species
-cc1 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + rad.march.highsev,data=d.all)
+cc1 <- cca(d.all.sp ~ ppt.norm + temp.norm + solar.rad,data=d.all)
 
 # all non-anomaly, including species
-cc2 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + rad.march.highsev + a.ba_ABCO + a.ba_PIPJ + a.ba_PILA + a.ba_QUKE,data=d.all)
+cc2 <- cca(d.all.sp ~ ppt.norm + temp.norm + solar.rad + WF + PP + SP + BlkOak + CynOak + Tanoak + RF,data=d.all)
 
 # non-anamoly and anomaly, excluding species
-cc2b <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + diff.norm.ppt.z.highsev + diff.norm.tmean.z.highsev + rad.march.highsev,data=d.all)
+#cc2b <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + diff.norm.ppt.z.highsev + diff.norm.tmean.z.highsev + rad.march.highsev,data=d.all)
 
 # all including anomaly, including species
-cc3 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + diff.norm.ppt.z.highsev + diff.norm.tmean.z.highsev + rad.march.highsev + a.ba_ABCO + a.ba_PIPJ + a.ba_PILA + a.ba_QUKE,data=d.all)
+cc3 <- cca(d.all.sp ~ ppt.norm + temp.norm + ppt.anom + temp.anom + solar.rad + WF + PP + SP + BlkOak + CynOak + Tanoak + RF,data=d.all)
 
 
 cc1
 cc2
-cc2b
+#cc2b
 cc3
 
 plot(cc1,choices=c(1,2))
 plot(cc2,choices=c(1,2))
-plot(cc2b,choices=c(1,2))
+#plot(cc2b,choices=c(1,2))
 plot(cc3,choices=c(1,2))
 
 
 
 
-# cca1.plot <- plot(c1,choices=c(1,2))
-# cca1.fire.plot <- plot(c1.fire,choices=c(1,2))
-# cca2.plot <- plot(c2,choices=c(1,2))
+### Redo CCA for wet plots only
+median.ppt <- median(d.all$ppt.norm)
+keep <- which(d.all$ppt.norm > median.ppt)
+d.all.wet <- d.all[keep,]
+d.all.sp.wet <- d.all.sp[keep,]
 
-plot(c.nosp,choices=c(1,2))
-plot(c.sp,choices=c(1,2))
-plot(c3.nosp,choices=c(1,2))
-
-
-
-
-cca3.plot <- plot(c3,choices=c(1,2))
-
-cca3.def.plot <- plot(c3.def,choices=c(1,2))
-cca5.def.plot <- plot(c5.def,choices=c(1,2))
+cc3.wet <- cca(d.all.sp.wet ~ ppt.anom + temp.anom,data=d.all.wet)
+plot(cc3.wet)
 
 
-extractAIC(c1)
+### Redo CCA for dry plots only
+median.ppt <- median(d.all$ppt.norm)
+keep <- which((d.all$ppt.norm < median.ppt) & !(d.all$Fire == "MOONLIGHT" & d.all$topoclim.cat == "P.2_R.1")) #second part is to remove an outlier category that had red fir even though these are supposed to be dry plots
+d.all.wet <- d.all[keep,]
+d.all.sp.wet <- d.all.sp[keep,]
 
 
-summary(c2)
+cc3.wet <- cca(d.all.sp.wet ~ ppt.anom + temp.anom + solar.rad,data=d.all.wet)
+plot(cc3.wet)
+
+
+
+
+
+# 
+# #### repeat, but by cover types
+# 
+# 
+# 
+# # all non-anomaly, excluding species
+# cc1 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + rad.march.highsev,data=d.all)
+# 
+# # all non-anomaly, including species
+# cc2 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + rad.march.highsev + a.ba_PINUS.ALLSP + a.ba_SHADE.ALLSP + a.ba_HDWD.ALLSP,data=d.all)
+# 
+# # non-anamoly and anomaly, excluding species
+# cc2b <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + diff.norm.ppt.z.highsev + diff.norm.tmean.z.highsev + rad.march.highsev,data=d.all)
+# 
+# # all including anomaly, including species
+# cc3 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + diff.norm.ppt.z.highsev + diff.norm.tmean.z.highsev + rad.march.highsev + a.ba_PINUS.ALLSP + a.ba_SHADE.ALLSP + a.ba_HDWD.ALLSP,data=d.all)
+# 
+# cc1
+# cc2
+# cc3
+
+
+
+Cairo(file=paste0("../Figures/Fig5_CCA1_",Sys.Date(),".png"),width=1200,height=1200,ppi=200,res=200,dpi=200)
+plot(cc1,choices=c(1,2))
+dev.off()
+
+Cairo(file=paste0("../Figures/Fig5_CCA2_",Sys.Date(),".png"),width=1200,height=1200,ppi=200,res=200,dpi=200)
+plot(cc2,choices=c(1,2))
+dev.off()
+
+Cairo(file=paste0("../Figures/Fig5_CCA3_",Sys.Date(),".png"),width=1200,height=1200,ppi=200,res=200,dpi=200)
+plot(cc3,choices=c(1,2))
+dev.off()
+
+Cairo(file=paste0("../Figures/Fig5_CCA4wet_",Sys.Date(),".png"),width=1200,height=1200,ppi=200,res=200,dpi=200)
+plot(cc3.wet,choices=c(1,2))
+dev.off()
+
+
+
+
+
+
 
 
 #### Mantel test to explain regen species comp with control species comp ####
 
-regen.var <- "r.all"
+regen.var <- "r.old"
 control.var <- "a.ba"
 d.all <- merge(d.plot.3,d.sp.cast,by=c("Fire","topoclim.cat"))
 sp.cols <- grep(regen.var,names(d.all)) #regen

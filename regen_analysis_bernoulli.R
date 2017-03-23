@@ -460,6 +460,7 @@ d.plot <- d.plot[!(d.plot$Regen_Plot == "BTU1300185"),]
 sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO","ABMA","CONIF.ALLSP","PSME","PILA","CADE27","PIJE","PIPJ")
 sp.opts <- c("PIPO","ABCO","PSME","PILA","PIPJ") # reduced
 sp.opts <- c("PIPO","ABCO","PINUS.ALLSP") # reduced
+sp.opts <- c("SHADE.ALLSP","PSME","QUKE","QUCH2")
 
 
 cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB","COV.HARDWOOD","COV.CONIFER")
@@ -505,10 +506,12 @@ for(sp in sp.opts) { # about 1 hr per species
       d.c$def.normal_c.sq <- d.c$def.normal_c^2
       d.c$aet.normal_c.sq <- d.c$aet.normal_c^2
       
-      # ####!!!! trick model: make diff.norm into diff.norm.min
-      # d.c$diff.norm.ppt.z_c <- d.c$diff.norm.ppt.min.z_c
-      # d.c$diff.norm.tmean.z_c <- d.c$diff.norm.tmean.max.z_c
-      # #### end trick model
+      ####!!!! trick model: make diff.norm into diff.norm.min
+      d.c$diff.norm.ppt.z_c <- d.c$diff.norm.ppt.min.z_c
+      d.c$diff.norm.tmean.z_c <- d.c$diff.norm.tmean.max.z_c
+      d.c$diff.norm.aet.z_c <- d.c$diff.norm.aet.min.z_c
+      d.c$diff.norm.def.z_c <- d.c$diff.norm.def.max.z_c
+      #### end trick model
       
       
       d.c$diff.norm.ppt.z_c.sq <- d.c$diff.norm.ppt.z_c^2
@@ -568,9 +571,9 @@ for(sp in sp.opts) { # about 1 hr per species
         
       } else {
 
-        d.c$response.var <- round(d.c$regen.count.old * 3)
+        d.c$response.var <- round(d.c$regen.presab.old.01)
         
-        mod.family <- "zero_inflated_negbinomial"
+        mod.family <- "bernoulli"
         
       }
       
@@ -715,40 +718,50 @@ for(sp in sp.opts) { # about 1 hr per species
       ### Function to find the center of a "fixed" predictor variable within the species distribution
       mid.val.fun <- function(var) {
         d.c.sp <- d.c[d.c$regen.count.old > 0,]
-        d.c.sp$prod <- d.c.sp[,var] * d.c.sp$regen.count.old
-        prod.sum <- sum(d.c.sp$prod)
-        count.tot <- sum(d.c.sp$regen.count.old)
-        mid.val <- prod.sum/count.tot
+        #d.c.sp$prod <- d.c.sp[,var] * d.c.sp$regen.count.old
+        #prod.sum <- sum(d.c.sp$prod)
+        #count.tot <- sum(d.c.sp$regen.count.old)
+        #mid.val <- prod.sum/count.tot
+        
+        mid.val <- mean(d.c.sp[,var])
+        
         return(mid.val)
       }
       
       low.val.fun <- function(var) {
         d.c.sp <- d.c[d.c$regen.count.old > 0,]
               
-        vals.rep <- list()
-        for(i in 1:nrow(d.c.sp))      {
-
-          d.c.sp.row <- d.c.sp[i,]
-          vals.rep[[i]] <- rep(d.c.sp.row[,var],round(d.c.sp.row$regen.count.old*3))
-        }
-      
-        vals.rep <- unlist(vals.rep)
-        a <- quantile(vals.rep,0.25)
+        # vals.rep <- list()
+        # for(i in 1:nrow(d.c.sp))      {
+        # 
+        #   d.c.sp.row <- d.c.sp[i,]
+        #   vals.rep[[i]] <- rep(d.c.sp.row[,var],round(d.c.sp.row$regen.count.old*3))
+        # }
+        # 
+        # vals.rep <- unlist(vals.rep)
+        # 
+        # a <- quantile(vals.rep,0.25)
+        
+        a <- quantile(d.c.sp[,var],0.25)
+        
         return(a)
       }
       
       high.val.fun <- function(var) {
 
         d.c.sp <- d.c[d.c$regen.count.old > 0,]        
-        vals.rep <- list()
-        for(i in 1:nrow(d.c.sp))      {
-
-          d.c.sp.row <- d.c.sp[i,]
-          vals.rep[[i]] <- rep(d.c.sp.row[,var],round(d.c.sp.row$regen.count.old*3))
-        }
+        # vals.rep <- list()
+        # for(i in 1:nrow(d.c.sp))      {
+        # 
+        #   d.c.sp.row <- d.c.sp[i,]
+        #   vals.rep[[i]] <- rep(d.c.sp.row[,var],round(d.c.sp.row$regen.count.old*3))
+        # }
+        # 
+        # vals.rep <- unlist(vals.rep)
+        # a <- quantile(vals.rep,0.75)
+        # 
+        a <- quantile(d.c.sp[,var],0.75)
         
-        vals.rep <- unlist(vals.rep)
-        a <- quantile(vals.rep,0.75)
         return(a)
       }
       
@@ -767,7 +780,7 @@ for(sp in sp.opts) { # about 1 hr per species
 
       vars <- c("ppt.normal_c","ppt.normal_c.sq","diff.norm.ppt.z_c","diff.norm.ppt.z_c.sq","tmean.normal_c","tmean.normal_c.sq",
                 "diff.norm.tmean.z_c","diff.norm.tmean.z_c.sq",
-                "aet.normal_c","aet.normal_c.sq","diff.norm.ppt.z_c","diff.norm.aet.z_c.sq","def.normal_c","def.normal_c.sq",
+                "aet.normal_c","aet.normal_c.sq","diff.norm.aet.z_c","diff.norm.aet.z_c.sq","def.normal_c","def.normal_c.sq",
                 "diff.norm.def.z_c","diff.norm.def.z_c.sq"
                 )
       
@@ -886,7 +899,7 @@ for(sp in sp.opts) { # about 1 hr per species
       if(sp %in% cover.opts) {
         preds <- inv.logit(preds)
       } else {
-        preds <- exp(preds)
+        preds <- inv.logit(preds)
       }
       
       
@@ -917,7 +930,7 @@ for(sp in sp.opts) { # about 1 hr per species
       if(sp %in% cover.opts) {
         pred.obs.sp$pred <- inv.logit(pred.obs.sp$pred)
       } else {
-        pred.obs.sp$pred <- exp(pred.obs.sp$pred)
+        pred.obs.sp$pred <- inv.logit(pred.obs.sp$pred)
         
       }
       
@@ -974,8 +987,9 @@ mods.best <- read.csv("../data_model_summaries/mod_output_02/mods_best.csv",head
 dat.pred <- dat.preds[dat.preds$scenario=="ppt",]
 
 ## troubleshooting
-dat.pred.simp <- dat.pred[,c("diff.norm.ppt.z_c","fit","norm.level","lwr","upr")]
+dat.pred.simp <- dat.pred[,c("diff.norm.ppt.z_c","diff.norm.def.z_c","fit","norm.level","lwr","upr")]
 
+dat.pred <- dat.pred[dat.pred$norm.level != "mid",]
 
 ggplot(dat.pred,aes(x=diff.norm.ppt.z_c,y=fit,color=norm.level)) +
   geom_line(size=1) +
@@ -988,12 +1002,16 @@ ggplot(dat.pred,aes(x=diff.norm.ppt.z_c,y=fit,color=norm.level)) +
 
 dat.pred <- dat.preds[dat.preds$scenario=="tmean",]
 
+dat.pred.simp <- dat.pred[,c("diff.norm.ppt.z_c","diff.norm.def.z_c","def.normal_c","fit","norm.level","lwr","upr")]
+
+dat.pred <- dat.pred[dat.pred$norm.level != "mid",]
+
+
 ggplot(dat.pred,aes(x=diff.norm.tmean.z_c,y=fit,color=norm.level)) +
   geom_line(size=1) +
   geom_ribbon(aes(ymin=lwr,ymax=upr,fill=norm.level),alpha=0.3,color=NA) +
   guides(fill=guide_legend(title="Normal tmean"),color=guide_legend(title="Normal tmean")) +
-  facet_wrap(~sp.grp,scales="free",ncol=5) +
-  scale_y_continuous(limits=c(0,10))
+  facet_wrap(~sp.grp,scales="free",ncol=5)
 
 
 
@@ -1098,7 +1116,7 @@ ggplot(pred.obs.sp,aes(x=obs,y=pred)) +
 d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV > 3),]
 
 
-sp <- "ABCO"
+sp <- "QUKE"
 d.sp.curr <- d.sp[d.sp$species==sp,]
 d <- merge(d.plot,d.sp.curr,all.x=TRUE,by="Regen_Plot")
 vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
@@ -1155,8 +1173,8 @@ d.c$regen.count.old.int <- ceiling(d.c$regen.count.old)
 
 library(brms)
 
-m.nofire <- brm(regen.count.all.int ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + seed_tree_distance_general_c + rad.march_c,family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-m.fire <- brm(regen.count.all.int ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + seed_tree_distance_general_c + rad.march_c + (1|Fire),family="zero_inflated_negbinomial",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+m.nofire <- brm(regen.presab.old.01 ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + seed_tree_distance_general_c + rad.march_c,family="bernoulli",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+m.fire <- brm(regen.presab.old.01 ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + seed_tree_distance_general_c + rad.march_c + (1|Fire),family="bernoulli",data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
 
 
 loos <- loo(m.nofire,m.fire)
@@ -1185,7 +1203,8 @@ library(data.table)
 
 
 
-focal.sp <- c("PIPJ","ABCO","PILA","QUKE") #   "ABMA","QUCH2","ARME") #ABMA, PIPO, QUCH2, 
+focal.sp <- c("PIPO","ABCO","PILA","QUKE") #   "ABMA","QUCH2","ARME") #ABMA, PIPO, QUCH2, 
+focal.sp <- c("PIPO","ABCO","PILA","QUKE","QUCH2","LIDE3","ABMA")
 #focal.sp <- c("PIPO","ABCO","PILA","PSME","QUKE","LIDE3","QUCH2","CADE27")
 #focal.sp <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP")
 focal.cols <- c("Fire","topoclim.cat","species","regen.presab.old","regen.presab.all","adult.ba")
@@ -1200,7 +1219,7 @@ d.sp.simp <- as.data.table(d.sp.simp)
 d.sp.cast <- dcast(d.sp.simp,topoclim.cat + Fire~species,value.var=c("r.old","r.all","a.ba"))
 
 
-regen.var <- "r.all"
+regen.var <- "r.old"
 
 d.all <- merge(d.plot.3,d.sp.cast,by=c("Fire","topoclim.cat"))
 sp.cols <- grep(regen.var,names(d.all))
@@ -1240,13 +1259,13 @@ library(vegan)
 cc1 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + rad.march.highsev,data=d.all)
 
 # all non-anomaly, including species
-cc2 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + rad.march.highsev + a.ba_ABCO + a.ba_PIPJ + a.ba_PILA + a.ba_QUKE,data=d.all)
+cc2 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + rad.march.highsev + a.ba_ABCO + a.ba_PIPO + a.ba_PILA + a.ba_QUKE + a.ba_QUCH2 + a.ba_LIDE3 + a.ba_ABMA,data=d.all)
 
 # non-anamoly and anomaly, excluding species
 cc2b <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + diff.norm.ppt.z.highsev + diff.norm.tmean.z.highsev + rad.march.highsev,data=d.all)
 
 # all including anomaly, including species
-cc3 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + diff.norm.ppt.z.highsev + diff.norm.tmean.z.highsev + rad.march.highsev + a.ba_ABCO + a.ba_PIPJ + a.ba_PILA + a.ba_QUKE,data=d.all)
+cc3 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + diff.norm.ppt.z.highsev + diff.norm.tmean.z.highsev + rad.march.highsev + a.ba_ABCO + a.ba_PIPO + a.ba_PILA + a.ba_QUKE + a.ba_QUCH2 + a.ba_LIDE3 + a.ba_ABMA,data=d.all)
 
 
 cc1
@@ -1258,6 +1277,39 @@ plot(cc1,choices=c(1,2))
 plot(cc2,choices=c(1,2))
 plot(cc2b,choices=c(1,2))
 plot(cc3,choices=c(1,2))
+
+
+cctest <- cca(d.all.sp ~def.normal.highsev + aet.normal.highsev,data=d.all)
+
+#### repeat, but by cover types
+
+
+
+# all non-anomaly, excluding species
+cc1 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + rad.march.highsev,data=d.all)
+
+# all non-anomaly, including species
+cc2 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + rad.march.highsev + a.ba_PINUS.ALLSP + a.ba_SHADE.ALLSP + a.ba_HDWD.ALLSP,data=d.all)
+
+# non-anamoly and anomaly, excluding species
+cc2b <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + diff.norm.ppt.z.highsev + diff.norm.tmean.z.highsev + rad.march.highsev,data=d.all)
+
+# all including anomaly, including species
+cc3 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + diff.norm.ppt.z.highsev + diff.norm.tmean.z.highsev + rad.march.highsev + a.ba_PINUS.ALLSP + a.ba_SHADE.ALLSP + a.ba_HDWD.ALLSP,data=d.all)
+
+
+cc1
+cc2
+cc2b
+cc3
+
+plot(cc1,choices=c(1,2))
+plot(cc2,choices=c(1,2))
+plot(cc2b,choices=c(1,2))
+plot(cc3,choices=c(1,2))
+
+
+
 
 
 

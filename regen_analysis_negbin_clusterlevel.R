@@ -446,16 +446,25 @@ ggplot(d.c,aes(x=diff.norm.ppt.z_c,y=ppt.normal_c,color=Fire,shape=regen.presab.
 library(brms)
 library(loo)
 
-d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV > 3),]
 
-## remove an outlier plot with 20 abco that is preventing model conversion
-d.plot <- d.plot[!(d.plot$Regen_Plot == "CHI1248"),]
 
-## remove another potential outlier plot: extremely high normal precip and high numbers of ABCO way above other plots with similar precip
-d.plot <- d.plot[!(d.plot$Regen_Plot == "BTU1300185"),]
+# d.plot.3
+# d.sp.2
 
-## other potential plots to remove: BTU1300050, CUB1300305
 
+
+# 
+# 
+# d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV > 3),]
+# 
+# ## remove an outlier plot with 20 abco that is preventing model conversion
+# d.plot <- d.plot[!(d.plot$Regen_Plot == "CHI1248"),]
+# 
+# ## remove another potential outlier plot: extremely high normal precip and high numbers of ABCO way above other plots with similar precip
+# d.plot <- d.plot[!(d.plot$Regen_Plot == "BTU1300185"),]
+# 
+# ## other potential plots to remove: BTU1300050, CUB1300305
+# 
 
 sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO","ABMA","CONIF.ALLSP","PSME","PILA","CADE27","PIJE","PIPJ")
 sp.opts <- c("PIPO","ABCO","PSME","PILA","PIPJ") # reduced
@@ -488,62 +497,58 @@ for(sp in sp.opts) { # about 1 hr per species
       
       
       if(sp %in% cover.opts) {
-        d.sp.curr <- d.sp[d.sp$species=="PIPO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
+        d.sp.curr <- d.sp.2[d.sp.2$species=="PIPO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
       } else {
-        d.sp.curr <- d.sp[d.sp$species==sp,]
+        d.sp.curr <- d.sp.2[d.sp.2$species==sp,]
       }
       
-      d <- merge(d.plot,d.sp.curr,all.x=TRUE,by="Regen_Plot")
-      vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
-      vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z", "def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","def.post","aet.post")
+      d <- merge(d.plot.3,d.sp.curr,all.x=TRUE,by=c("topoclim.cat","Fire"))
+      vars.leave <- c("FORB.highsev","SHRUB.highsev","GRASS.highsev","CONIFER.highsev","HARDWOOD.highsev","FIRE_SEV.highsev","fire.year.highsev","firesev.highsev","survey.years.post.highsev","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
+      vars.focal <- c("ppt.normal.highsev","diff.norm.ppt.z.highsev","ppt.normal.sq.highsev","rad.march.highsev","seed_tree_distance_general.highsev","SHRUB.highsev","tmean.post.highsev","tmean.normal.highsev","diff.norm.tmean.z.highsev","diff.norm.tmean.max.z.highsev", "def.normal.highsev","aet.normal.highsev","diff.norm.def.z.highsev","diff.norm.aet.z.highsev","def.post.highsev","aet.post.highsev")
       d <- d[complete.cases(d[,vars.focal]),]
       d.c <- center.df(d,vars.leave)
 
-      d.c$ppt.normal_c.sq <- d.c$ppt.normal_c^2
-      d.c$tmean.normal_c.sq <- d.c$tmean.normal_c^2
+      d.c$ppt.normal.highsev_c.sq <- d.c$ppt.normal.highsev_c^2
+      d.c$tmean.normal.highsev_c.sq <- d.c$tmean.normal.highsev_c^2
       
-      d.c$def.normal_c.sq <- d.c$def.normal_c^2
-      d.c$aet.normal_c.sq <- d.c$aet.normal_c^2
+      d.c$def.normal.highsev_c.sq <- d.c$def.normal.highsev_c^2
+      d.c$aet.normal.highsev_c.sq <- d.c$aet.normal.highsev_c^2
       
       # ####!!!! trick model: make diff.norm into diff.norm.min
-      # d.c$diff.norm.ppt.z_c <- d.c$diff.norm.ppt.min.z_c
-      # d.c$diff.norm.tmean.z_c <- d.c$diff.norm.tmean.max.z_c
+      # d.c$diff.norm.ppt.z.highsev_c <- d.c$diff.norm.ppt.min.z.highsev_c
+      # d.c$diff.norm.tmean.z.highsev_c <- d.c$diff.norm.tmean.max.z.highsev_c
       # #### end trick model
       
       
-      d.c$diff.norm.ppt.z_c.sq <- d.c$diff.norm.ppt.z_c^2
-      d.c$diff.norm.tmean.z_c.sq <- d.c$diff.norm.tmean.z_c^2
+      d.c$diff.norm.ppt.z.highsev_c.sq <- d.c$diff.norm.ppt.z.highsev_c^2
+      d.c$diff.norm.tmean.z.highsev_c.sq <- d.c$diff.norm.tmean.z.highsev_c^2
       
-      d.c$diff.norm.def.z_c.sq <- d.c$diff.norm.def.z_c^2
-      d.c$diff.norm.aet.z_c.sq <- d.c$diff.norm.aet.z_c^2
+      d.c$diff.norm.def.z.highsev_c.sq <- d.c$diff.norm.def.z.highsev_c^2
+      d.c$diff.norm.aet.z.highsev_c.sq <- d.c$diff.norm.aet.z.highsev_c^2
       
-      d.c$ppt.post_c.sq <- d.c$ppt.post_c^2
-      d.c$tmean.post_c.sq <- d.c$tmean.post_c^2
+      d.c$ppt.post.highsev_c.sq <- d.c$ppt.post.highsev_c^2
+      d.c$tmean.post.highsev_c.sq <- d.c$tmean.post.highsev_c^2
       
-      d.c$def.post_c.sq <- d.c$def.post_c^2
-      d.c$aet.post_c.sq <- d.c$aet.post_c^2
-      
-      d.c$regen.presab.all.01 <- ifelse(d.c$regen.presab.all == TRUE,1,0)
-      d.c$regen.presab.old.01 <- ifelse(d.c$regen.presab.old == TRUE,1,0)
-      
+      d.c$def.post.highsev_c.sq <- d.c$def.post.highsev_c^2
+      d.c$aet.post.highsev_c.sq <- d.c$aet.post.highsev_c^2
       
       vars.focal.c <- paste0(vars.focal[-6],"_c")
       pairs(d.c[,vars.focal.c])
       
       ## transform cover so it does not include 0 or 1 (for Beta distrib)
-      d.c$SHRUB.p <- d.c$SHRUB/100
+      d.c$SHRUB.p <- d.c$SHRUB.highsev/100
       d.c$SHRUB.pt <- (d.c$SHRUB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
       
-      d.c$GRASS.p <- d.c$GRASS/100
+      d.c$GRASS.p <- d.c$GRASS.highsev/100
       d.c$GRASS.pt <- (d.c$GRASS.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
       
-      d.c$HARDWOOD.p <- d.c$HARDWOOD/100
+      d.c$HARDWOOD.p <- d.c$HARDWOOD.highsev/100
       d.c$HARDWOOD.pt <- (d.c$HARDWOOD.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
       
-      d.c$FORB.p <- d.c$FORB/100
+      d.c$FORB.p <- d.c$FORB.highsev/100
       d.c$FORB.pt <- (d.c$FORB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
       
-      d.c$CONIFER.p <- d.c$CONIFER/100
+      d.c$CONIFER.p <- d.c$CONIFER.highsev/100
       d.c$CONIFER.pt <- (d.c$CONIFER.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
       
       
@@ -568,41 +573,66 @@ for(sp in sp.opts) { # about 1 hr per species
         
       } else {
 
-        d.c$response.var <- round(d.c$regen.count.old * 3)
+        d.c$response.var <- d.c$regen.count.old
         
-        mod.family <- "zero_inflated_negbinomial"
+        mod.family <- "hurdle_gamma"
         
       }
+      
+      
+      library(VGAM)
+      
+      m.null <- vglm(response.var ~ 1,tobit(Lower=0,Upper=Inf,type.fitted="censored"),data=d.c)
+      m.normal <- vglm(response.var ~ ppt.normal.highsev_c + ppt.normal.highsev_c.sq,tobit(Lower=0,Upper=Inf,type.fitted="censored"),data=d.c)
+      m.anom <- vglm(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq,tobit(Lower=0,Upper=Inf,type.fitted="censored"),data=d.c)
+      
+      
+      
+      
+      AIC(m.null)
+      
+      AIC(m.normal)
+      
+      AIC(m.anom)
+      
+      
+      
+      
+      
+      
+      
+      
+      
       
       m <- list()
       
       m[["n0.a0"]] <- brm(response.var ~ 1 + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nPT.a0"]] <- brm(response.var ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nPT.aPT"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nPT.aPT2"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["pPT"]] <- brm(response.var ~ ppt.post_c + ppt.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nP.a0"]] <- brm(response.var ~ ppt.normal_c + ppt.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nP.aP"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nP.aP2"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["pP"]] <- brm(response.var ~ ppt.post_c + ppt.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nT.a0"]] <- brm(response.var ~ tmean.normal_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nT.aT"]] <- brm(response.var ~ tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nT.aT2"]] <- brm(response.var ~ tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["pT"]] <- brm(response.var ~ tmean.post_c + tmean.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nPT.a0"]] <- brm(response.var ~ ppt.normal.highsev_c + ppt.normal.highsev_c.sq + tmean.normal.highsev_c + tmean.normal.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nPT.aPT"]] <- brm(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq + tmean.normal.highsev_c*diff.norm.tmean.z.highsev_c + tmean.normal.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nPT.aPT2"]] <- brm(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq + tmean.normal.highsev_c*diff.norm.tmean.z.highsev_c + tmean.normal.highsev_c*diff.norm.tmean.z.highsev_c.sq + diff.norm.tmean.z.highsev_c.sq + tmean.normal.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["pPT"]] <- brm(response.var ~ ppt.post.highsev_c + ppt.post.highsev_c.sq + tmean.post.highsev_c + tmean.post.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nP.a0"]] <- brm(response.var ~ ppt.normal.highsev_c + ppt.normal.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nP.aP"]] <- brm(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nP.aP2"]] <- brm(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["pP"]] <- brm(response.var ~ ppt.post.highsev_c + ppt.post.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      #m[["nT.a0"]] <- brm(response.var ~ tmean.normal.highsev_c + tmean.normal.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      #m[["nT.aT"]] <- brm(response.var ~ tmean.normal.highsev_c*diff.norm.tmean.z.highsev_c + tmean.normal.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      #m[["nT.aT2"]] <- brm(response.var ~ tmean.normal.highsev_c*diff.norm.tmean.z.highsev_c + tmean.normal.highsev_c*diff.norm.tmean.z.highsev_c.sq + diff.norm.tmean.z.highsev_c.sq + tmean.normal.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      #m[["pT"]] <- brm(response.var ~ tmean.post.highsev_c + tmean.post.highsev_c.sq + tmean.post.highsev_c + tmean.post.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
       
       m[["n0.a0"]] <- brm(response.var ~ 1 + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nAD.a0"]] <- brm(response.var ~ aet.normal_c + aet.normal_c.sq + def.normal_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nAD.aAD"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq + def.normal_c*diff.norm.def.z_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nAD.aAD2"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq + def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["pAD"]] <- brm(response.var ~ aet.post_c + aet.post_c.sq + def.post_c + def.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nA.a0"]] <- brm(response.var ~ aet.normal_c + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nA.aA"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nA.aA2"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["pA"]] <- brm(response.var ~ aet.post_c + aet.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nD.a0"]] <- brm(response.var ~ def.normal_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nD.aD"]] <- brm(response.var ~ def.normal_c*diff.norm.def.z_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nD.aD2"]] <- brm(response.var ~ def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["pD"]] <- brm(response.var ~ def.post_c + def.post_c.sq + def.post_c + def.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nAD.a0"]] <- brm(response.var ~ aet.normal.highsev_c + aet.normal.highsev_c.sq + def.normal.highsev_c + def.normal.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nAD.aAD"]] <- brm(response.var ~ aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c.sq + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nAD.aAD2"]] <- brm(response.var ~ aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq + aet.normal.highsev_c.sq + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq + def.normal.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["pAD"]] <- brm(response.var ~ aet.post.highsev_c + aet.post.highsev_c.sq + def.post.highsev_c + def.post.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      #m[["nA.a0"]] <- brm(response.var ~ aet.normal.highsev_c + aet.normal.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      #m[["nA.aA"]] <- brm(response.var ~ aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      #m[["nA.aA2"]] <- brm(response.var ~ aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq + aet.normal.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      #m[["pA"]] <- brm(response.var ~ aet.post.highsev_c + aet.post.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nD.a0"]] <- brm(response.var ~ def.normal.highsev_c + def.normal.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nD.aD"]] <- brm(response.var ~ def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["nD.aD2"]] <- brm(response.var ~ def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq + def.normal.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+      m[["pD"]] <- brm(response.var ~ def.post.highsev_c + def.post.highsev_c.sq + def.post.highsev_c + def.post.highsev_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
       
 
       
@@ -729,7 +759,7 @@ for(sp in sp.opts) { # about 1 hr per species
         for(i in 1:nrow(d.c.sp))      {
 
           d.c.sp.row <- d.c.sp[i,]
-          vals.rep[[i]] <- rep(d.c.sp.row[,var],round(d.c.sp.row$regen.count.old*3))
+          vals.rep[[i]] <- rep(d.c.sp.row[,var],round(d.c.sp.row$regen.count.old*300))
         }
       
         vals.rep <- unlist(vals.rep)
@@ -744,7 +774,7 @@ for(sp in sp.opts) { # about 1 hr per species
         for(i in 1:nrow(d.c.sp))      {
 
           d.c.sp.row <- d.c.sp[i,]
-          vals.rep[[i]] <- rep(d.c.sp.row[,var],round(d.c.sp.row$regen.count.old*3))
+          vals.rep[[i]] <- rep(d.c.sp.row[,var],round(d.c.sp.row$regen.count.old*300))
         }
         
         vals.rep <- unlist(vals.rep)
@@ -765,10 +795,10 @@ for(sp in sp.opts) { # about 1 hr per species
       
       ## For tmean.normal_c, get mean value of plots where the species was present, weighted by number of seedligns
 
-      vars <- c("ppt.normal_c","ppt.normal_c.sq","diff.norm.ppt.z_c","diff.norm.ppt.z_c.sq","tmean.normal_c","tmean.normal_c.sq",
-                "diff.norm.tmean.z_c","diff.norm.tmean.z_c.sq",
-                "aet.normal_c","aet.normal_c.sq","diff.norm.ppt.z_c","diff.norm.aet.z_c.sq","def.normal_c","def.normal_c.sq",
-                "diff.norm.def.z_c","diff.norm.def.z_c.sq"
+      vars <- c("ppt.normal.highsev_c","ppt.normal.highsev_c.sq","diff.norm.ppt.z.highsev_c","diff.norm.ppt.z.highsev_c.sq","tmean.normal.highsev_c","tmean.normal.highsev_c.sq",
+                "diff.norm.tmean.z.highsev_c","diff.norm.tmean.z.highsev_c.sq",
+                "aet.normal.highsev_c","aet.normal.highsev_c.sq","diff.norm.ppt.z.highsev_c","diff.norm.aet.z.highsev_c.sq","def.normal.highsev_c","def.normal.highsev_c.sq",
+                "diff.norm.def.z.highsev_c","diff.norm.def.z.highsev_c.sq"
                 )
       
       
@@ -786,46 +816,46 @@ for(sp in sp.opts) { # about 1 hr per species
       diff.norm.seq <- seq(from=-1.5,to=1.5,length.out=100)
       
       newdat.ppt <- data.frame(
-        ppt.normal_c = c(rep(low.val["ppt.normal_c"],100),rep(mid.val["ppt.normal_c"],100),rep(high.val["ppt.normal_c"],100)),
-        ppt.normal_c.sq = c(rep(low.val["ppt.normal_c"]^2,100),rep(mid.val["ppt.normal_c"]^2,100),rep(high.val["ppt.normal_c"]^2,100)),
+        ppt.normal.highsev_c = c(rep(low.val["ppt.normal.highsev_c"],100),rep(mid.val["ppt.normal.highsev_c"],100),rep(high.val["ppt.normal.highsev_c"],100)),
+        ppt.normal.highsev_c.sq = c(rep(low.val["ppt.normal.highsev_c"]^2,100),rep(mid.val["ppt.normal.highsev_c"]^2,100),rep(high.val["ppt.normal.highsev_c"]^2,100)),
         norm.level = c(rep("low",100),rep("mid",100),rep("high",100)),
-        diff.norm.ppt.z_c = rep(diff.norm.seq,3),
-        diff.norm.ppt.z_c.sq = rep(diff.norm.seq^2,3),
-        tmean.normal_c = mid.val["tmean.normal_c"],
-        tmean.normal_c.sq = mid.val["tmean.normal_c"]^2,
-        diff.norm.tmean.z_c = mid.val["diff.norm.tmean.z_c"],
-        diff.norm.tmean.z_c.sq = mid.val["diff.norm.tmean.z_c"]^2,
+        diff.norm.ppt.z.highsev_c = rep(diff.norm.seq,3),
+        diff.norm.ppt.z.highsev_c.sq = rep(diff.norm.seq^2,3),
+        tmean.normal.highsev_c = mid.val["tmean.normal.highsev_c"],
+        tmean.normal.highsev_c.sq = mid.val["tmean.normal.highsev_c"]^2,
+        diff.norm.tmean.z.highsev_c = mid.val["diff.norm.tmean.z.highsev_c"],
+        diff.norm.tmean.z.highsev_c.sq = mid.val["diff.norm.tmean.z.highsev_c"]^2,
         scenario = "ppt",
         
-        aet.normal_c = c(rep(low.val["aet.normal_c"],100),rep(mid.val["aet.normal_c"],100),rep(high.val["aet.normal_c"],100)),
-        aet.normal_c.sq = c(rep(low.val["aet.normal_c"]^2,100),rep(mid.val["aet.normal_c"]^2,100),rep(high.val["aet.normal_c"]^2,100)),
-        diff.norm.aet.z_c = rep(diff.norm.seq,3),
-        diff.norm.aet.z_c.sq = rep(diff.norm.seq^2,3),
-        def.normal_c = mid.val["def.normal_c"],
-        def.normal_c.sq = mid.val["def.normal_c"]^2,
-        diff.norm.def.z_c = mid.val["diff.norm.def.z_c"],
-        diff.norm.def.z_c.sq = mid.val["diff.norm.def.z_c"]^2
+        aet.normal.highsev_c = c(rep(low.val["aet.normal.highsev_c"],100),rep(mid.val["aet.normal.highsev_c"],100),rep(high.val["aet.normal.highsev_c"],100)),
+        aet.normal.highsev_c.sq = c(rep(low.val["aet.normal.highsev_c"]^2,100),rep(mid.val["aet.normal.highsev_c"]^2,100),rep(high.val["aet.normal.highsev_c"]^2,100)),
+        diff.norm.aet.z.highsev_c = rep(diff.norm.seq,3),
+        diff.norm.aet.z.highsev_c.sq = rep(diff.norm.seq^2,3),
+        def.normal.highsev_c = mid.val["def.normal.highsev_c"],
+        def.normal.highsev_c.sq = mid.val["def.normal.highsev_c"]^2,
+        diff.norm.def.z.highsev_c = mid.val["diff.norm.def.z.highsev_c"],
+        diff.norm.def.z.highsev_c.sq = mid.val["diff.norm.def.z.highsev_c"]^2
       )
       newdat.tmean <- data.frame(
-        tmean.normal_c = c(rep(low.val["tmean.normal_c"],100),rep(mid.val["tmean.normal_c"],100),rep(high.val["tmean.normal_c"],100)),
-        tmean.normal_c.sq = c(rep(low.val["tmean.normal_c"]^2,100),rep(mid.val["tmean.normal_c"]^2,100),rep(high.val["tmean.normal_c"]^2,100)),
+        tmean.normal.highsev_c = c(rep(low.val["tmean.normal.highsev_c"],100),rep(mid.val["tmean.normal.highsev_c"],100),rep(high.val["tmean.normal.highsev_c"],100)),
+        tmean.normal.highsev_c.sq = c(rep(low.val["tmean.normal.highsev_c"]^2,100),rep(mid.val["tmean.normal.highsev_c"]^2,100),rep(high.val["tmean.normal.highsev_c"]^2,100)),
         norm.level = c(rep("low",100),rep("mid",100),rep("high",100)),
-        diff.norm.tmean.z_c = rep(diff.norm.seq,3),
-        diff.norm.tmean.z_c.sq = rep(diff.norm.seq^2,3),
-        ppt.normal_c = mid.val["ppt.normal_c"],
-        ppt.normal_c.sq = mid.val["ppt.normal_c"]^2,
-        diff.norm.ppt.z_c = mid.val["diff.norm.ppt.z_c"],
-        diff.norm.ppt.z_c.sq = mid.val["diff.norm.ppt.z_c"]^2,
+        diff.norm.tmean.z.highsev_c = rep(diff.norm.seq,3),
+        diff.norm.tmean.z.highsev_c.sq = rep(diff.norm.seq^2,3),
+        ppt.normal.highsev_c = mid.val["ppt.normal.highsev_c"],
+        ppt.normal.highsev_c.sq = mid.val["ppt.normal.highsev_c"]^2,
+        diff.norm.ppt.z.highsev_c = mid.val["diff.norm.ppt.z.highsev_c"],
+        diff.norm.ppt.z.highsev_c.sq = mid.val["diff.norm.ppt.z.highsev_c"]^2,
         scenario = "tmean",
         
-        def.normal_c = c(rep(low.val["def.normal_c"],100),rep(mid.val["def.normal_c"],100),rep(high.val["def.normal_c"],100)),
-        def.normal_c.sq = c(rep(low.val["def.normal_c"]^2,100),rep(mid.val["def.normal_c"]^2,100),rep(high.val["def.normal_c"]^2,100)),
-        diff.norm.def.z_c = rep(diff.norm.seq,3),
-        diff.norm.def.z_c.sq = rep(diff.norm.seq^2,3),
-        aet.normal_c = mid.val["aet.normal_c"],
-        aet.normal_c.sq = mid.val["aet.normal_c"]^2,
-        diff.norm.aet.z_c = mid.val["diff.norm.aet.z_c"],
-        diff.norm.aet.z_c.sq = mid.val["diff.norm.aet.z_c"]^2
+        def.normal.highsev_c = c(rep(low.val["def.normal.highsev_c"],100),rep(mid.val["def.normal.highsev_c"],100),rep(high.val["def.normal.highsev_c"],100)),
+        def.normal.highsev_c.sq = c(rep(low.val["def.normal.highsev_c"]^2,100),rep(mid.val["def.normal.highsev_c"]^2,100),rep(high.val["def.normal.highsev_c"]^2,100)),
+        diff.norm.def.z.highsev_c = rep(diff.norm.seq,3),
+        diff.norm.def.z.highsev_c.sq = rep(diff.norm.seq^2,3),
+        aet.normal.highsev_c = mid.val["aet.normal.highsev_c"],
+        aet.normal.highsev_c.sq = mid.val["aet.normal.highsev_c"]^2,
+        diff.norm.aet.z.highsev_c = mid.val["diff.norm.aet.z.highsev_c"],
+        diff.norm.aet.z.highsev_c.sq = mid.val["diff.norm.aet.z.highsev_c"]^2
       )
       
       newdat <- rbind(newdat.ppt,newdat.tmean)
@@ -849,54 +879,63 @@ for(sp in sp.opts) { # about 1 hr per species
       
       
       
+      ###### TESTING predict
+      
+      pred <- predictvglm(m.anom,newdat,se.fit=TRUE)
+      
+      pred.df <- data.frame(fit=pred$fitted.values[,1],se=pred$se.fit[,1])
+      pred.df$lwr <- pred.df$fit - 1.96*pred.df$se
+      pred.df$upr <- pred.df$fit + 1.96*pred.df$se
+
+      dat.preds.sp <- cbind(newdat,pred.df,sp)
       
       
       
       
-      
-      
-      
-      m.sp <- m[[best.anomaly.mod]]
-      m.p.sp <- posterior_samples(m.sp,pars="^b")
-      
-      names(m.p.sp) <- sapply(names(m.p.sp),substr,start=3,stop=1000)
-      names(m.p.sp)[1] <- "(Intercept)"
-      
-      mod.vars <- colnames(m.p.sp)
-      
-      newdat.ordered <- newdat[,mod.vars]
-      
-      # for each row of newdat.ordered, multiply data by all coef values, sum across, and compute median and conf int
-      preds <- matrix(nrow=nrow(newdat.ordered),ncol=3)
-      for(i in 1:nrow(newdat.ordered)) {
-        
-        newdat.row <- as.matrix(newdat.ordered[i,])
-        
-        prod <- sweep(m.p.sp,MARGIN=2,newdat.row,`*`)
-        sums <- rowSums(prod)
-        
-        fit <- median(sums)
-        upr <- quantile(sums,probs=0.975)
-        lwr <- quantile(sums,probs=0.025)
-        
-        preds[i,] <- c(fit,lwr,upr)
-        
-      }
-      
-      if(sp %in% cover.opts) {
-        preds <- inv.logit(preds)
-      } else {
-        preds <- exp(preds)
-      }
-      
-      
-      colnames(preds) <- c("fit","lwr","upr")
-      preds <- as.data.frame(preds)
-      
-      sp.grp <- sp
-      dat.preds.sp <- cbind(newdat,preds,sp.grp,best.anomaly.mod)
-      dat.preds <- rbind(dat.preds,dat.preds.sp)
-      
+      # 
+      # 
+      # 
+      # m.sp <- m[[best.anomaly.mod]]
+      # m.p.sp <- posterior_samples(m.sp,pars="^b")
+      # 
+      # names(m.p.sp) <- sapply(names(m.p.sp),substr,start=3,stop=1000)
+      # names(m.p.sp)[1] <- "(Intercept)"
+      # 
+      # mod.vars <- colnames(m.p.sp)
+      # 
+      # newdat.ordered <- newdat[,mod.vars]
+      # 
+      # # for each row of newdat.ordered, multiply data by all coef values, sum across, and compute median and conf int
+      # preds <- matrix(nrow=nrow(newdat.ordered),ncol=3)
+      # for(i in 1:nrow(newdat.ordered)) {
+      #   
+      #   newdat.row <- as.matrix(newdat.ordered[i,])
+      #   
+      #   prod <- sweep(m.p.sp,MARGIN=2,newdat.row,`*`)
+      #   sums <- rowSums(prod)
+      #   
+      #   fit <- median(sums)
+      #   upr <- quantile(sums,probs=0.975)
+      #   lwr <- quantile(sums,probs=0.025)
+      #   
+      #   preds[i,] <- c(fit,lwr,upr)
+      #   
+      # }
+      # 
+      # if(sp %in% cover.opts) {
+      #   preds <- inv.logit(preds)
+      # } else {
+      #   preds <- exp(preds)
+      # }
+      # 
+      # 
+      # colnames(preds) <- c("fit","lwr","upr")
+      # preds <- as.data.frame(preds)
+      # 
+      # sp.grp <- sp
+      # dat.preds.sp <- cbind(newdat,preds,sp.grp,best.anomaly.mod)
+      # dat.preds <- rbind(dat.preds,dat.preds.sp)
+      # 
 
       
       
@@ -973,15 +1012,18 @@ mods.best <- read.csv("../data_model_summaries/mod_output_02/mods_best.csv",head
 
 dat.pred <- dat.preds[dat.preds$scenario=="ppt",]
 
+dat.pred <- dat.pred[dat.pred$norm.level != "mid",]
+
+
 ## troubleshooting
-dat.pred.simp <- dat.pred[,c("diff.norm.ppt.z_c","fit","norm.level","lwr","upr")]
+# dat.pred.simp <- dat.pred[,c("diff.norm.ppt.z_c","fit","norm.level","lwr","upr")]
 
 
-ggplot(dat.pred,aes(x=diff.norm.ppt.z_c,y=fit,color=norm.level)) +
+ggplot(dat.pred,aes(x=diff.norm.ppt.z.highsev_c,y=fit,color=norm.level)) +
   geom_line(size=1) +
   geom_ribbon(aes(ymin=lwr,ymax=upr,fill=norm.level),alpha=0.3,color=NA) +
   guides(fill=guide_legend(title="Normal precip"),color=guide_legend(title="Normal precip")) +
-  facet_wrap(~sp.grp,scales="free",ncol=5)
+  facet_wrap(~sp,scales="free",ncol=5)
 
 
 ## plot predictions over tmean anomaly
