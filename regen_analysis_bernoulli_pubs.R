@@ -311,6 +311,65 @@ print(p)
 dev.off()
 
 
+
+### plot fire-level regen ###
+
+
+
+sp.names <- c(
+  "PIPO"="Ponderosa\npine",
+  "PILA"="Sugar pine",
+  "ABCO"="White fir",    
+  "QUKE"="Black oak",  
+  "QUCH2"="Canyon\nlive oak",
+  "PINUS.ALLSP"="Pines",
+  "SHADE.ALLSP"="Shade tolerant conifers",
+  "COV.SHRUB"="Shrub cover",
+  "COV.GRASS"="Grass cover",
+  "COV.FORB"="Forb cover",
+  "HDWD.ALLSP"="Hardwoods",
+  "PSME" = "Douglas-fir",
+  "ABMA" = "Red fir"
+)
+
+#compute fire-level average regen
+d.sp.wfire <- merge(d.sp,d.plot[,c("Regen_Plot","Fire")],by="Regen_Plot")
+
+d.sp.agg <- aggregate(d.sp.wfire,by=list(d.sp.wfire$Fire,d.sp.wfire$species),FUN=mean)
+
+d.sp.agg$Fire <- d.sp.agg$Group.1
+d.sp.agg$species <- d.sp.agg$Group.2
+
+d.sp.agg$Fire <- factor(d.sp.agg$Fire,c("BAGLEY","CHIPS","RALSTON","BASSETTS","MOONLIGHT","ANTELOPE","HARDING","RICH","BTU LIGHTNING","STRAYLOR","CUB","AMERICAN RIVER","FREDS","POWER"))
+
+d.sp.agg <- d.sp.agg[d.sp.agg$species %in% c("PIPO","ABCO"),]
+
+d.sp.agg <- d.sp.agg[!(d.sp.agg$Fire %in% "RICH"),]
+
+ggplot(d.sp.agg,aes(x=Fire,y=regen.presab.old)) +
+  geom_bar(stat="identity") +
+  facet_grid(species~.,labeller=as_labeller(sp.names)) +
+  #scale_y_continuous(limits=c(0,0.5)) +
+  theme_bw(20) +
+  theme(axis.text.x = element_text(angle=90,hjust=1,vjust=0.5)) +
+  labs(y="Proportion of plots with regeneration")
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ### end plotting ###
 
 
@@ -1307,6 +1366,173 @@ loos.fire$sp <- factor(loos.fire$sp,levels=rev(c("PIPO","PILA","ABCO","QUKE","QU
 
 
 
+  
+  
+  
+  #### 7.1 Plot model random effects ####
+ 
+  sp.names <- c(
+    "PIPO"="Ponderosa pine",
+    "PILA"="Sugar pine",
+    "ABCO"="White fir",    
+    "QUKE"="Black oak",  
+    "QUCH2"="Canyon live oak",
+    "PINUS.ALLSP"="Pines",
+    "SHADE.ALLSP"="Shade\ntolerant\nconifers",
+    "COV.SHRUB"="Shrub cover",
+    "COV.GRASS"="Grass cover",
+    "COV.FORB"="Forb cover",
+    "HDWD.ALLSP"="Hardwoods"
+  )
+  
+  
+  
+  
+  d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV %in% c(4,5)),]
+  
+  ## remove an outlier plot with 20 abco that is preventing model conversion
+  d.plot <- d.plot[!(d.plot$Regen_Plot == "CHI1248"),]
+  
+  ## remove another potential outlier plot: extremely high normal precip and high numbers of ABCO way above other plots with similar precip
+  d.plot <- d.plot[!(d.plot$Regen_Plot == "BTU1300185"),]
+  
+  sp.opts <- c("SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP") # reduced
+  #sp.opts <- c("PIPO","ABCO","PILA","PSME","QUKE")
+  #cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB")
+  #sp.opts <- c(sp.opts,cover.opts)
+  
+  ranef.df <- data.frame()
+  
+  for(sp in sp.opts) {
+    
+    cat("\n\n#####")
+    cat("Running ranef computation for: ",sp,"")
+    cat("#####\n\n")
+    
+    # if(sp %in% cover.opts) {
+    #   d.sp.curr <- d.sp[d.sp$species=="PIPO",]
+    # } else {
+      d.sp.curr <- d.sp[d.sp$species==sp,]
+    # }
+    d <- merge(d.plot,d.sp.curr,all.x=TRUE,by="Regen_Plot")
+    vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
+    vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z")
+    d <- d[complete.cases(d[,vars.focal]),]
+    d.c <- center.df(d,vars.leave)
+    
+    d.c$ppt.normal_c.sq <- d.c$ppt.normal_c^2
+    d.c$tmean.normal_c.sq <- d.c$tmean.normal_c^2
+    
+    # ####!!!! trick model: make diff.norm into diff.norm.min
+    # d.c$diff.norm.ppt.z_c <- d.c$diff.norm.ppt.min.z_c
+    # d.c$diff.norm.tmean.z_c <- d.c$diff.norm.tmean.max.z_c
+    # #### end trick model
+    
+    
+    d.c$diff.norm.ppt.z_c.sq <- d.c$diff.norm.ppt.z_c^2
+    d.c$diff.norm.tmean.z_c.sq <- d.c$diff.norm.tmean.z_c^2
+    
+    d.c$ppt.post_c.sq <- d.c$ppt.post_c^2
+    d.c$tmean.post_c.sq <- d.c$tmean.post_c^2
+    
+    d.c$regen.presab.all.01 <- ifelse(d.c$regen.presab.all == TRUE,1,0)
+    d.c$regen.presab.old.01 <- ifelse(d.c$regen.presab.old == TRUE,1,0)
+    
+    # ## transform cover so it does not include 0 or 1 (for Beta distrib)
+    # d.c$SHRUB.p <- d.c$SHRUB/100
+    # d.c$SHRUB.pt <- (d.c$SHRUB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+    # 
+    # d.c$GRASS.p <- d.c$GRASS/100
+    # d.c$GRASS.pt <- (d.c$GRASS.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+    # 
+    # d.c$HARDWOOD.p <- d.c$HARDWOOD/100
+    # d.c$HARDWOOD.pt <- (d.c$HARDWOOD.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+    # 
+    # d.c$FORB.p <- d.c$FORB/100
+    # d.c$FORB.pt <- (d.c$FORB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+    # 
+    # d.c$CONIFER.p <- d.c$CONIFER/100
+    # d.c$CONIFER.pt <- (d.c$CONIFER.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+    
+    
+    d.c$Fire <- as.factor(d.c$Fire)
+    
+    d.c$regen.count.all.int <- ceiling(d.c$regen.count.all)
+    d.c$regen.count.old.int <- ceiling(d.c$regen.count.old)
+    
+    # if(sp %in% cover.opts) {
+    #   
+    #   sp.cov <- substr(sp,5,100)
+    #   sp.cov <- paste0(sp.cov,".pt")
+    #   
+    #   d.c$cov.response <- d.c[,sp.cov]
+    #   
+    #   d.c$response.var <- d.c$cov.response
+    #   
+    #   mod.family <- "Beta"
+    #   
+    # } else {
+    #   
+      d.c$response.var <- round(d.c$regen.presab.old.01)
+      
+      mod.family <- "bernoulli"
+      
+    # }
+    
+    m.fire <- brm(response.var ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + seed_tree_distance_general_c + rad.march_c + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+    
+
+    post <- posterior_samples(m.fire)
+    
+    post.names <- names(post)
+    
+    ranef.names <- grep("r_Fire[",post.names,fixed=TRUE)
+    post.ranef <- post[,ranef.names]
+    
+    fit <- apply(post.ranef,2,median)
+    int <- apply(post.ranef,2,quantile,probs=c(0.05,0.95))
+    rownames(int) <- c("lwr","upr")
+    
+    ranef.df.sp <- as.data.frame(t(rbind(fit,int)))
+    
+    name.p1 <- unlist(strsplit(row.names(ranef.df.sp),"[",fixed=TRUE))
+    name.p2 <- name.p1[2*(1:nrow(ranef.df.sp))]
+    name.p3 <- unlist(strsplit(name.p2,",",fixed=TRUE))
+    ranef.names <- name.p3[(2*(1:nrow(ranef.df.sp)))-1]
+    ranef.df.sp$Fire <- ranef.names
+    ranef.df.sp$sp <- sp
+    
+    ranef.df <- rbind(ranef.df,ranef.df.sp)  
+    
+  }
+  
+  ranef.df$Fire <- factor(ranef.df$Fire,c("BAGLEY","CHIPS","RALSTON","BASSETTS","MOONLIGHT","ANTELOPE","HARDING","RICH","BTU.LIGHTNING","STRAYLOR","CUB","AMERICAN.RIVER","FREDS","POWER"))
+  
+  ranef.df$sp <- factor(ranef.df$sp,levels=c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP"))
+  
+  ggplot(ranef.df,aes(x=Fire,y=fit,color=sp)) +
+    geom_point(position=position_dodge(width=0.5),size=3) +
+    theme_bw(20) +
+    geom_errorbar(position=position_dodge(width=0.5),aes(ymin=lwr,ymax=upr),width=0.1) +
+    facet_grid(sp~.,scales="free",labeller=as_labeller(sp.names)) +
+    theme(axis.text.x = element_text(angle=90,hjust=1,vjust=0.5)) +
+    guides(color=FALSE) +
+    labs(y="Fire-level intercept")
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
 
 
