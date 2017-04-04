@@ -902,7 +902,7 @@ write.csv(aucs,"norm_anom_aucs_rsqs.csv",row.names=FALSE)
 
 #### Open saved output ####
 
-folder <- "../data_model_summaries/out_03_mean_pptOnly_goodPred/"
+folder <- "../data_model_summaries/out_04_mean_pptOnly_4-5yrSeedlings_noRE/"
 
 dat.preds <- read.csv(paste0(folder,"counterfactual_df.csv"),header=TRUE)
 pred.obs <- read.csv(paste0(folder,"pred_obs.csv"),header=TRUE)
@@ -954,6 +954,10 @@ dat.ppt$variable <- "ppt-aet"
 dat.ppt$anomaly <- dat.ppt$diff.norm.ppt.z_c
 
 dat.ppt$ppt.level <- ifelse(dat.ppt$norm.level == "high","Wet","Dry")
+
+dat.ppt$fit <- ifelse(dat.ppt$sp.grp == "COV.SHRUB",dat.ppt$fit*100,dat.ppt$fit)
+dat.ppt$lwr <- ifelse(dat.ppt$sp.grp == "COV.SHRUB",dat.ppt$lwr*100,dat.ppt$lwr)
+dat.ppt$upr <- ifelse(dat.ppt$sp.grp == "COV.SHRUB",dat.ppt$upr*100,dat.ppt$upr)
 
 ggplot(dat.ppt,aes(x=anomaly,y=fit,color=ppt.level)) +
   geom_line(size=1) +
@@ -1665,6 +1669,53 @@ plot(cc1,choices=c(1,2))
 plot(cc2,choices=c(1,2))
 #plot(cc2b,choices=c(1,2))
 plot(cc3,choices=c(1,2))
+
+
+
+
+
+
+
+
+
+## do a CA and then add env with envfit
+
+
+# all non-anomaly, excluding species
+cc1 <- metaMDS(d.all.sp)
+
+
+p <- envfit(cc1,d.all[,c("ppt.norm","temp.norm","solar.rad")])
+p2 <- envfit(cc1,d.all[,c("ppt.norm","temp.norm","solar.rad","WF","PP","SP","BlkOak","CynOak","Tanoak","RF")])
+p3 <- envfit(cc1,d.all[,c("ppt.norm","temp.norm","solar.rad","WF","PP","SP","BlkOak","CynOak","Tanoak","RF","ppt.anom","temp.anom")])
+
+
+# all non-anomaly, including species
+cc2 <- cca(d.all.sp ~ ppt.norm + temp.norm + solar.rad + WF + PP + SP + BlkOak + CynOak + Tanoak + RF,data=d.all)
+
+# non-anamoly and anomaly, excluding species
+#cc2b <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + diff.norm.ppt.z.highsev + diff.norm.tmean.z.highsev + rad.march.highsev,data=d.all)
+
+# all including anomaly, including species
+cc3 <- cca(d.all.sp ~ ppt.norm + temp.norm + ppt.anom + temp.anom + solar.rad + WF + PP + SP + BlkOak + CynOak + Tanoak + RF,data=d.all)
+
+
+cc1
+cc2
+#cc2b
+cc3
+
+
+
+
+ordiplot(cc1,type="n")
+orditorp(cc1,display="species",col="red",air=0.01)
+orditorp(cc1,display="sites",cex=0.5,air=0.01)
+plot(p2)
+
+
+
+
 
 
 

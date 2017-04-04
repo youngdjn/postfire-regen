@@ -1018,9 +1018,18 @@ dat.ppt$ppt.level <- ifelse(dat.ppt$norm.level == "high","Wet","Dry")
 
 dat.ppt[dat.ppt$norm.level == "high",]$pred <- dat.ppt[dat.ppt$norm.level == "high",]$pred * .96 + 0.02
 
-dat.ppt[dat.ppt$sp.grp == "COV.SHRUB"]
 
-ggplot(dat.ppt,aes(x=anomaly,y=fit,color=ppt.level)) +
+
+dat.ppt$fit <- ifelse(dat.ppt$sp.grp == "COV.SHRUB",dat.ppt$fit*100,dat.ppt$fit)
+dat.ppt$lwr <- ifelse(dat.ppt$sp.grp == "COV.SHRUB",dat.ppt$lwr*100,dat.ppt$lwr)
+dat.ppt$upr <- ifelse(dat.ppt$sp.grp == "COV.SHRUB",dat.ppt$upr*100,dat.ppt$upr)
+dat.ppt$pred.lwr <- ifelse(dat.ppt$sp.grp == "COV.SHRUB",dat.ppt$pred.lwr*100,dat.ppt$pred.lwr)
+dat.ppt$pred.upr <- ifelse(dat.ppt$sp.grp == "COV.SHRUB",dat.ppt$pred.upr*100,dat.ppt$pred.upr)
+
+
+
+
+p <- ggplot(dat.ppt,aes(x=anomaly,y=fit,color=ppt.level)) +
   #geom_ribbon(aes(ymin=pred.lwr,ymax=pred.upr),fill=NA) +
   geom_line(size=1) +
   geom_smooth(aes(y=pred.lwr),linetype="dashed",se=FALSE,size=0.8) +
@@ -1032,7 +1041,9 @@ ggplot(dat.ppt,aes(x=anomaly,y=fit,color=ppt.level)) +
   labs(y="Regeneration probability or cover",x="Precipitation anomaly (z-score)") +
   theme_bw(15)
 
-
+  Cairo(file=paste0("../Figures/FigMain_",Sys.Date(),".png"),width=3500,height=1750,ppi=200,res=200,dpi=200)
+  p
+  dev.off()
 
 ### For plotting responses to any climate variable and bivariate responses, sep file per species ###
 # 
@@ -1633,6 +1644,7 @@ d.sp.simp <- d.sp.2[d.sp.2$species %in% focal.sp,focal.cols]
 names(d.sp.simp)[4:6] <- c("r.old","r.all","a.ba")
 
 d.sp.simp <- as.data.table(d.sp.simp)
+
 d.sp.cast <- dcast(d.sp.simp,topoclim.cat + Fire~species,value.var=c("r.old","r.all","a.ba"))
 
 
@@ -1739,11 +1751,29 @@ cc2
 #cc2b
 cc3
 
-plot(cc1,choices=c(1,2))
+plot(cc1)
 plot(cc2,choices=c(1,2))
 #plot(cc2b,choices=c(1,2))
 plot(cc3,choices=c(1,2))
 
+
+
+
+
+
+##
+library(devtools)
+install_github('fawda123/ggord')
+library(ggord)
+
+png("plot1.png", 800, 300);
+
+
+ggord(cc1, ptslab=TRUE,size=2,addsize=5,txt=5,margins=0) +
+  theme(legend.position = 'top') +
+  theme(plot.margin=unit(c(0,0,0,0),"cm"))
+
+dev.off();
 
 
 
@@ -1794,15 +1824,15 @@ plot(cc3.wet)
 
 
 
-Cairo(file=paste0("../Figures/Fig5_CCA1_",Sys.Date(),".png"),width=1200,height=1200,ppi=200,res=200,dpi=200)
+Cairo(file=paste0("../Figures/Fig5_CCA1_",Sys.Date(),".png"),width=1300,height=1200,ppi=200,res=200,dpi=200)
 plot(cc1,choices=c(1,2))
 dev.off()
 
-Cairo(file=paste0("../Figures/Fig5_CCA2_",Sys.Date(),".png"),width=1200,height=1200,ppi=200,res=200,dpi=200)
+Cairo(file=paste0("../Figures/Fig5_CCA2_",Sys.Date(),".png"),width=1300,height=1200,ppi=200,res=200,dpi=200)
 plot(cc2,choices=c(1,2))
 dev.off()
 
-Cairo(file=paste0("../Figures/Fig5_CCA3_",Sys.Date(),".png"),width=1200,height=1200,ppi=200,res=200,dpi=200)
+Cairo(file=paste0("../Figures/Fig5_CCA3_",Sys.Date(),".png"),width=1300,height=1200,ppi=200,res=200,dpi=200)
 plot(cc3,choices=c(1,2))
 dev.off()
 
@@ -1903,10 +1933,29 @@ d.c$regen.count.old.int <- ceiling(d.c$regen.count.old)
 
 
 
+#### Tobit ####
 
 
 
+d.plot.3
+d.sp.2
 
 
+d.sp <- d.sp.2[d.sp.2$species=="PIPO",]
 
+
+d.mod <- merge(d.plot.3,d.sp.2,by=c("Fire","topoclim.cat"),all.x=TRUE)
+
+
+library(VGAM)
+m <- vglm(regen.count.old~ppt.normal.highsev, tobit(Lower=0, Upper=Inf), data=d.mod)
+
+library(arm)
+
+a <- predict(m)
+
+hist(a[,1])
+
+
+library(betareg)
 
