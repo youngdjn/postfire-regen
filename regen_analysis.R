@@ -62,6 +62,11 @@ control <- c(0,1) # which field-assessed severity values are considered controls
 # E.g., not all levels of a given variable may be available at all levels of another given variables
 # E.g. at high precipitation, maybe there is only north aspects available. Doesn't seem to be the case here, but could potentially be with other variables.
 
+
+## get what average radiation is across all the fires
+avg.rad <- mean(d.plot$rad.march)
+
+
 fires <- unique(d.plot$Fire)
 d.plot$precip.category
 d.plot$rad.category #radiation
@@ -71,15 +76,23 @@ for(fire in fires) {
   ## Precipitation categories
   # determine what the precipitation breakpoints should be (here just using median) -- based on high severity plots only
   breaks <- quantile(d.plot[(d.plot$Fire == fire) & (d.plot$FIRE_SEV %in% high.sev),]$ppt.normal,probs=c(0.5),na.rm=TRUE)
+  
+  #override the precip breaks, so we just have one category per fire
+  breaks <- 0
+  
   # categorize plots based on where they fall between the breakpoints  
   categories <- categorize(d.plot[d.plot$Fire==fire,]$ppt.normal,breaks,name="P")
   # store it into the plot data.frame
   d.plot[d.plot$Fire==fire,"precip.category"] <- categories
   
-  ## Radiation categories #! note straylor cub do not have radiation yet
+  ## Radiation categories
   # determine what the breakpoints should be (here just using median) -- based on high severity plots only
   breaks <- quantile(d.plot[(d.plot$Fire == fire) & (d.plot$FIRE_SEV %in% high.sev),]$rad.march,probs=c(0.5),na.rm=TRUE)
-  # categorize plots based on where they fall between the breakpoints  
+  # categorize plots based on where they fall between the breakpoints
+  
+  #override the per-fire breaks
+  breaks <- avg.rad
+  
   categories <- categorize(d.plot[d.plot$Fire==fire,]$rad.march,breaks,name="R")
   # store it into the plot data.frame
   d.plot[d.plot$Fire==fire,"rad.category"] <- categories
@@ -91,10 +104,10 @@ for(fire in fires) {
 
 ## Create one variable reflecting the all-way factorial combination of topoclimatic categories
 d.plot$topoclim.cat <- paste(d.plot$precip.category,d.plot$rad.category,sep="_")
-
-
-## Make an exception for Harding: only two categories
-d.plot[d.plot$Fire == "HARDING","topoclim.cat"] <- ifelse(d.plot[d.plot$Fire=="HARDING","rad.march"] > 6250,"P.1_R.2","P.1_R.1")
+# 
+# Removed now that only have one precip category
+# ## Make an exception for Harding: only two categories
+# d.plot[d.plot$Fire == "HARDING","topoclim.cat"] <- ifelse(d.plot[d.plot$Fire=="HARDING","rad.march"] > 6250,"P.1_R.2","P.1_R.1")
 
 
 
@@ -107,11 +120,17 @@ d.plot[d.plot$Fire == "HARDING","topoclim.cat"] <- ifelse(d.plot[d.plot$Fire=="H
 ## remove PEAK and PENDOLA
 d.plot <- d.plot[!(d.plot$Fire %in% c("PEAK","PENDOLA","SHOWERS")),]
 
+library(car)
+d.plot$FIRE_SEV.cat <- recode(d.plot$FIRE_SEV,"control='control';high.sev='high.sev';else=NA")
 
-# look at high sev only
-ggplot(d.plot[d.plot$FIRE_SEV %in% high.sev,],aes(x=ppt.normal,y=rad.march,col=topoclim.cat)) +
-  geom_point() +
-  facet_wrap(~Fire,scales="free")
+d.plot.cat <- d.plot
+
+# plot high sev and control
+ggplot(d.plot.precat[!is.na(d.plot.precat$FIRE_SEV.cat),],aes(x=ppt.normal,y=rad.march,col=FIRE_SEV.cat)) +
+  geom_point(size=3) +
+  facet_wrap(~Fire,scales="fixed") +
+  geom_hline(yintercept=avg.rad) +
+  theme_bw(16)
 
 # look at control only
 ggplot(d.plot[d.plot$FIRE_SEV %in% control,],aes(x=ppt.normal,y=rad.march,col=topoclim.cat)) +
@@ -120,11 +139,28 @@ ggplot(d.plot[d.plot$FIRE_SEV %in% control,],aes(x=ppt.normal,y=rad.march,col=to
 
 
 
+## Remove climatic regions that do not have comparable controls and high sev
+## NOTE: this is only necessary and recommended when doing an analysis that involves comparing control adults with high sev regen
+
+d.plot.precat <- d.plot
+d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "BTU LIGHTENING") & (d.plot.precat$ppt.normal > 2000)),]
+d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "BAGLEY") & (d.plot.precat$rad.march < 4000)),]
+d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "CUB") & (d.plot.precat$ppt.normal < 1300)),]
+
+
+# remove plots that are high severity but not surveyed in years 4-5 post-fire
+d.plot.precat <- d.plot.precat[!(d.plot.precat$FIRE_SEV.cat == "high.sev" & !(d.plot.precat$survey.years.post %in% c(4,5))),]
+
+
+
+
+
+
 
 #### 2. Summarize (compute average) regen values (high-sev plots only) and adults (control plots only) by species across all plots in each topoclimatic category in each fire ####
 
 ## assign the trees by species their topoclimatic category and fire name. This also ensures that we only are looking at seedlings for whose plots we are interested (because with this merge operation, seedlings from plots not in d.plot will be dropped)
-d.sp.cat <- merge(d.sp,d.plot[,c("Regen_Plot","topoclim.cat","Fire","FIRE_SEV","survey.years.post")])
+d.sp.cat <- merge(d.sp,d.plot.precat[,c("Regen_Plot","topoclim.cat","Fire","FIRE_SEV","survey.years.post")])
 
 ## preparing to aggregate tree data: get highsev and control plots only, each with only the columns relevant to it
 d.sp.cat.highsev <- d.sp.cat[d.sp.cat$FIRE_SEV %in% high.sev,c("Fire","species","topoclim.cat","seed.tree.sp","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all","survey.years.post")]
@@ -144,17 +180,15 @@ d.sp.agg <- merge(d.sp.agg.highsev,d.sp.agg.control,all.x=TRUE,by=c("species","t
 
 ##preparing to aggregate plot (e.g. climate) data: label plots as highsev or control
 # first remove the variables that are not useful
-d.plot.c <- remove.vars(d.plot,c("Year.of.Fire","Easting","Northing","aspect","Year","precip.category","rad.category"))
+d.plot.c <- remove.vars(d.plot.precat,c("Year.of.Fire","Easting","Northing","aspect","Year","precip.category","rad.category"))
 # label plots as control or high sev
 d.plot.c$type <- ifelse(d.plot.c$FIRE_SEV %in% control,"control",NA)
 d.plot.c$type <- ifelse(d.plot.c$FIRE_SEV %in% high.sev,"highsev",d.plot.c$type)
 # get rid of plots that are neither control nor high sev
 d.plot.c <- d.plot.c[!is.na(d.plot.c$type),]
-# get rid of regen (high sev) plots that are not surveyed 4-5 years post
-d.plot.c <- d.plot.c[(d.plot.c$type == "control") | (d.plot.c$survey.years.post %in% c(4,5)),]
 
 ## aggregate plots by Fire, topoclim category, and type (control or high sev)
-d.plot.agg.mean <- aggregate(remove.vars(d.plot.c,c("Regen_Plot","topoclim.cat","type","fire.abbr","X5yr","Fire")),by=list(d.plot.c$Fire,d.plot.c$topoclim.cat,d.plot.c$type),FUN=mean,na.rm=TRUE)
+d.plot.agg.mean <- aggregate(remove.vars(d.plot.c,c("Regen_Plot","topoclim.cat","type","fire.abbr","X5yr","Fire","FIRE_SEV.cat")),by=list(d.plot.c$Fire,d.plot.c$topoclim.cat,d.plot.c$type),FUN=mean,na.rm=TRUE)
 names(d.plot.agg.mean)[1:3] <- c("Fire","topoclim.cat","type")
 d.plot.agg.tot <- aggregate(d.plot.c["Regen_Plot"],by=list(d.plot.c$Fire,d.plot.c$topoclim.cat,d.plot.c$type),FUN=length)
 names(d.plot.agg.tot) <- c("Fire","topoclim.cat","type","count")
@@ -184,14 +218,10 @@ d.sp.2 <- d.sp.agg
 #### 3. Steps required prior to any analysis ####
 
 # Remove the topoclimatic categories with too few plots in either burned or control
-d.plot.3 <- d.plot.2[which((d.plot.2$count.control > 3) & (d.plot.2$count.highsev > 3)),] #! removed restriction on control count
+d.plot.3 <- d.plot.2[which((d.plot.2$count.control > 3) & (d.plot.2$count.highsev > 3)),]
 
 # Compute additional variables
 d.sp.2$proportion.young <- d.sp.2$regen.count.young / d.sp.2$regen.count.all
-
-
-
-
 
 
 
@@ -961,7 +991,8 @@ write.csv(aucs,"norm_anom_aucs_rsqs.csv",row.names=FALSE)
 
 
 
-#### Open saved output ####
+
+## Open saved output ##
 
 folder <- "../data_model_summaries/out_04_mean_pptOnly_4-5yrSeedlings_noRE/"
 
@@ -1269,6 +1300,10 @@ dev.off()
 
 
 
+
+
+
+
 #### 7. Test how much better a model is with FIRE ####
 
 
@@ -1449,7 +1484,7 @@ loos.fire$sp <- factor(loos.fire$sp,levels=rev(c("PIPO","PILA","ABCO","QUKE","QU
   
   
   
-  #### 7.1 Plot model random effects ####
+#### 7.1 Plot model random effects ####
  
   sp.names <- c(
     "PIPO"="Ponderosa pine",
@@ -1847,7 +1882,7 @@ dev.off()
 
 
 
-#### Mantel test to explain regen species comp with control species comp ####
+#### 9. Mantel test to explain regen species comp with control species comp ####
 
 regen.var <- "r.old"
 control.var <- "a.ba"
@@ -1933,7 +1968,7 @@ d.c$regen.count.old.int <- ceiling(d.c$regen.count.old)
 
 
 
-#### Tobit ####
+#### 10. Cluster-level analysis with tobit and betareg ####
 
 
 
@@ -1941,21 +1976,613 @@ d.plot.3
 d.sp.2
 
 
-d.sp <- d.sp.2[d.sp.2$species=="PIPO",]
-
-
-d.mod <- merge(d.plot.3,d.sp.2,by=c("Fire","topoclim.cat"),all.x=TRUE)
-
 
 library(VGAM)
-m <- vglm(regen.count.old~ppt.normal.highsev, tobit(Lower=0, Upper=Inf), data=d.mod)
+m <- list()
+m[["n0.a0"]] <- betareg(response.var~1, data=d.mod)
+m[["nP.a0"]] <- betareg(response.var ~ ppt.normal.highsev + ppt.normal.highsev.sq  + tmean.normal.highsev + tmean.normal.highsev.sq + seed_tree_distance_general.highsev + rad.march.highsev,data=d.mod)
+m[["nP.aP"]] <- betareg(response.var ~ ppt.normal.highsev*diff.norm.ppt.z.highsev + ppt.normal.highsev.sq   + tmean.normal.highsev + tmean.normal.highsev.sq + seed_tree_distance_general.highsev + rad.march.highsev,data=d.mod)
+m[["nP.aP2"]] <- betareg(response.var ~ ppt.normal.highsev*diff.norm.ppt.z.highsev + ppt.normal.highsev*diff.norm.ppt.z.highsev.sq + diff.norm.ppt.z.highsev.sq + ppt.normal.highsev.sq   + tmean.normal.highsev + tmean.normal.highsev.sq + seed_tree_distance_general.highsev + rad.march.highsev,data=d.mod)
+m[["pP"]] <- betareg(response.var ~ ppt.post.highsev + ppt.post.highsev.sq   + tmean.post.highsev + tmean.post.highsev.sq + seed_tree_distance_general.highsev + rad.march.highsev,data=d.mod)
+m[["nP.a0.nt"]] <- betareg(response.var ~ ppt.normal.highsev + ppt.normal.highsev.sq + seed_tree_distance_general.highsev + rad.march.highsev,data=d.mod)
+m[["nP.aP.nt"]] <- betareg(response.var ~ ppt.normal.highsev*diff.norm.ppt.z.highsev + ppt.normal.highsev.sq + seed_tree_distance_general.highsev + rad.march.highsev,data=d.mod)
+m[["nP.aP2.nt"]] <- betareg(response.var ~ ppt.normal.highsev*diff.norm.ppt.z.highsev + ppt.normal.highsev*diff.norm.ppt.z.highsev.sq + diff.norm.ppt.z.highsev.sq + ppt.normal.highsev.sq + seed_tree_distance_general.highsev + rad.march.highsev,data=d.mod)
+m[["pP.nt"]] <- betareg(response.var ~ ppt.post.highsev + ppt.post.highsev.sq + seed_tree_distance_general.highsev + rad.march.highsev,data=d.mod)
 
-library(arm)
-
-a <- predict(m)
-
-hist(a[,1])
 
 
-library(betareg)
+
+
+
+#sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO","ABMA","CONIF.ALLSP","PSME","PILA","CADE27","PIJE","PIPJ")
+sp.opts <- c("PIPO","ABCO","PILA","SHADE.ALLSP","QUKE","PINUS.ALLSP","QUCH2","HDWD.ALLSP") # reduced
+sp.opts <- c("PIPO","ABCO","PILA","QUKE","QUCH2") # reduced
+
+sp.opts <- c("PIPO","ABCO") # reduced
+#sp.opts <- c("PIPO","ABCO") # reduced
+#sp.opts <- c("SHADE.ALLSP","PSME","QUKE","QUCH2")
+
+
+#cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB","COV.HARDWOOD","COV.CONIFER")
+cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB") # reduced
+cover.opts <- c("COV.SHRUB") # reduced
+cover.opts <- c("COV.SHRUB","COV.GRASS") # reduced
+
+#cover.opts <- NULL
+sp.opts <- c(sp.opts,cover.opts)
+
+m.p <- list()
+
+loos <- list()
+
+dat.preds <- data.frame()
+pred.obs <- data.frame()
+
+d.loos.all <- data.frame()
+d.loo.comps <- data.frame()
+
+mods.best <- data.frame()
+
+rsqs <- data.frame()
+
+for(sp in sp.opts) { # about 1 hr per species
+  
+  cat("\n\n#####")
+  cat("Running model for: ",sp,"")
+  cat("#####\n\n")
+  
+  
+  if(sp %in% cover.opts) {
+    d.sp.curr <- d.sp.2[d.sp.2$species=="PIPO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
+  } else {
+    d.sp.curr <- d.sp.2[d.sp.2$species==sp,]
+  }
+  
+
+  d.mod <- merge(d.plot.3,d.sp.curr,by=c("Fire","topoclim.cat"),all.x=TRUE)
+  
+  d.mod$regen.presab.old.t <- (d.mod$regen.presab.old*(nrow(d.mod)-1) + 0.5) / nrow(d.mod)
+  
+  # d.mod$response.var <- d.mod$regen.presab.old.t
+  # d.mod$ppt.normal.highsev.sq <- d.mod$ppt.normal.highsev^2
+  # d.mod$tmean.normal.highsev.sq <- d.mod$tmean.normal.highsev^2
+  # d.mod$diff.norm.ppt.z.highsev.sq <- d.mod$diff.norm.ppt.z.highsev^2
+  # d.mod$ppt.post.highsev.sq <- d.mod$ppt.post.highsev^2
+  # d.mod$tmean.post.highsev.sq <- d.mod$tmean.post.highsev^2
+  # 
+  # 
+  # 
+  
+  
+  vars.leave <- c("fire.year.highsev","FORB.highsev","SHRUB.highsev","GRASS.highsev","CONIFER.highsev","HARDWOOD.highsev","FIRE_SEV.highsev","fire.year.highsev","firesev.highsev","survey.years.post.highsev","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
+  vars.focal <- c("ppt.normal.highsev","diff.norm.ppt.z.highsev","ppt.normal.sq.highsev","rad.march.highsev","seed_tree_distance_general.highsev","SHRUB.highsev","tmean.post.highsev","tmean.normal.highsev","diff.norm.tmean.z.highsev","diff.norm.tmean.max.z.highsev", "def.normal.highsev","aet.normal.highsev","diff.norm.def.z.highsev","diff.norm.aet.z.highsev","def.post.highsev","aet.post.highsev")
+  d.mod <- d.mod[complete.cases(d.mod[,vars.focal]),]
+  d.c <- center.df(d.mod,vars.leave)
+  
+  d.c$ppt.normal.highsev_c.sq <- d.c$ppt.normal.highsev_c^2
+  d.c$tmean.normal.highsev_c.sq <- d.c$tmean.normal.highsev_c^2
+  
+  d.c$def.normal.highsev_c.sq <- d.c$def.normal.highsev_c^2
+  d.c$aet.normal.highsev_c.sq <- d.c$aet.normal.highsev_c^2
+  
+  # ####!!!! trick model: make diff.norm into diff.norm.min
+  # d.c$diff.norm.ppt.z.highsev_c <- d.c$diff.norm.ppt.min.z.highsev_c
+  # d.c$diff.norm.tmean.z.highsev_c <- d.c$diff.norm.tmean.max.z.highsev_c
+  # d.c$diff.norm.aet.z.highsev_c <- d.c$diff.norm.aet.min.z.highsev_c
+  # d.c$diff.norm.def.z.highsev_c <- d.c$diff.norm.def.max.z.highsev_c
+  # #### end trick model
+  
+  
+  d.c$diff.norm.ppt.z.highsev_c.sq <- d.c$diff.norm.ppt.z.highsev_c^2
+  d.c$diff.norm.tmean.z.highsev_c.sq <- d.c$diff.norm.tmean.z.highsev_c^2
+  
+  d.c$diff.norm.def.z.highsev_c.sq <- d.c$diff.norm.def.z.highsev_c^2
+  d.c$diff.norm.aet.z.highsev_c.sq <- d.c$diff.norm.aet.z.highsev_c^2
+  
+  d.c$ppt.post.highsev_c.sq <- d.c$ppt.post.highsev_c^2
+  d.c$tmean.post.highsev_c.sq <- d.c$tmean.post.highsev_c^2
+  
+  d.c$def.post.highsev_c.sq <- d.c$def.post.highsev_c^2
+  d.c$aet.post.highsev_c.sq <- d.c$aet.post.highsev_c^2
+  
+
+  vars.focal.c <- paste0(vars.focal[-6],"_c")
+  pairs(d.c[,vars.focal.c])
+  
+  ## transform cover so it does not include 0 or 1 (for Beta distrib)
+  d.c$SHRUB.highsev.p <- d.c$SHRUB.highsev/100
+  d.c$SHRUB.highsev.pt <- (d.c$SHRUB.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+  
+  d.c$GRASS.highsev.p <- d.c$GRASS.highsev/100
+  d.c$GRASS.highsev.pt <- (d.c$GRASS.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+  
+  d.c$HARDWOOD.highsev.p <- d.c$HARDWOOD.highsev/100
+  d.c$HARDWOOD.highsev.pt <- (d.c$HARDWOOD.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+  
+  d.c$FORB.highsev.p <- d.c$FORB.highsev/100
+  d.c$FORB.highsev.pt <- (d.c$FORB.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+  
+  d.c$CONIFER.highsev.p <- d.c$CONIFER.highsev/100
+  d.c$CONIFER.highsev.pt <- (d.c$CONIFER.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+  
+  ## transform regen proportion so it does not include 0 or 1
+  d.c$regen.presab.old.t <- (d.c$regen.presab.old*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+  
+  
+  d.c$Fire <- as.factor(d.c$Fire)
+  
+  #d.c <- d.c[!(d.c$Fire == "RICH"),]
+  
+  if(sp %in% cover.opts) {
+    
+    sp.cov <- substr(sp,5,100)
+    sp.cov <- paste0(sp.cov,".highsev.pt")
+    
+    d.c$cov.response <- d.c[,sp.cov]
+    
+    d.c$response.var <- d.c$cov.response
+    
+  } else {
+    
+    d.c$response.var <- d.c$regen.presab.old.t
+    
+  }
+  
+  m <- list()
+  
+  
+  d.c <- d.c[d.c$topoclim.cat == "P.2_R.1",]
+  
+  
+  m[["n0.a0"]] <- betareg(response.var ~ 1,data=d.c)
+  m[["nP.a0"]] <- betareg(response.var ~ ppt.normal.highsev_c + seed_tree_distance_general.highsev_c,data=d.c)
+  m[["nP.aP"]] <- betareg(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + seed_tree_distance_general.highsev_c,data=d.c)
+  m[["nP.aP2"]] <- betareg(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + seed_tree_distance_general.highsev_c,data=d.c)
+  m[["pP"]] <- betareg(response.var ~ ppt.post.highsev_c + seed_tree_distance_general.highsev_c,data=d.c)
+  m[["nP2.a0"]] <- betareg(response.var ~ ppt.normal.highsev_c + ppt.normal.highsev_c.sq + seed_tree_distance_general.highsev_c,data=d.c)
+  m[["nP2.aP"]] <- betareg(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq + seed_tree_distance_general.highsev_c,data=d.c)
+  m[["nP2.aP2"]] <- betareg(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq + seed_tree_distance_general.highsev_c,data=d.c)
+  m[["pP2"]] <- betareg(response.var ~ ppt.post.highsev_c + ppt.post.highsev_c.sq + seed_tree_distance_general.highsev_c,data=d.c)
+
+  ##!!!!!! RESUME next add def, aet, and for all, use min/max aonomaly too in addition to mean anom
+  
+  
+  
+  
+  #get individual loos (will get specific pairs later)
+  
+  d.loos <- data.frame()
+  
+  for(mod in names(m)) {
+    cat(mod," ")
+    loo.mod <- loo(m[[as.character(mod)]])
+    d.mod <- data.frame(sp=sp,mod=mod,LOOIC=loo.mod$looic,SE=loo.mod$se_looic)
+    d.loos <- rbind(d.loos,d.mod)
+    
+  }
+  
+  d.loos$upr <- d.loos$LOOIC + 1.96*d.loos$SE
+  
+  d.loos.all <- rbind(d.loos.all,d.loos)
+  
+  ### Specify model categories
+  
+  ## normal models
+  search <- ".a0"
+  normal.model.names <- d.loos[grep(search,d.loos$mod,fixed=TRUE),]$mod
+  normal.model.names <- normal.model.names[normal.model.names != "n0.a0"] # exclude null model
+  
+  ## anomaly models
+  search <- ".a"
+  anomaly.model.names <- d.loos[grep(search,d.loos$mod,fixed=TRUE),]$mod
+  anomaly.model.names <- anomaly.model.names[!(anomaly.model.names %in% normal.model.names)]
+  anomaly.model.names <- anomaly.model.names[anomaly.model.names != "n0.a0"] # exclude null model
+  
+  ### Find the best normal model
+  
+  d.loos.normal <- d.loos[d.loos$mod %in% normal.model.names,]
+  best.normal.mod <- d.loos.normal[d.loos.normal$upr == min(d.loos.normal$upr,na.rm=TRUE),]$mod[1]
+  
+  ### Compare null to best normal
+  comp.null.normal <- loo(m[["n0.a0"]],m[[as.character(best.normal.mod)]])$ic_diffs__
+  
+  ### Get post corresponding to best normal
+  norm.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
+  norm.post.mod <- sub("n","p",norm.part)
+  
+  ### Compare best normal to corresponding post
+  comp.normal.post <- loo(m[[as.character(best.normal.mod)]],m[[as.character(norm.post.mod)]])$ic_diffs__
+  
+  
+  ### Get anomaly models corresponding to best normal
+  
+  normal.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
+  search <- paste0(normal.part,".")
+  normal.matches <- grepl(search,d.loos$mod,fixed=TRUE)
+  search <- paste0(normal.part,".a0")
+  non.anom.match <- grepl(search,d.loos$mod,fixed=TRUE)
+  normal.anom <- normal.matches & (!non.anom.match)
+  normal.anom.names <- d.loos[normal.anom,]$mod
+  
+  ### Get the best corresponding anomaly model
+  
+  d.loos.anom <- d.loos[d.loos$mod %in% normal.anom.names,]
+  best.normal.anom <- d.loos.anom[d.loos.anom$upr == min(d.loos.anom$upr,na.rm=TRUE),]$mod[1]
+  
+  ### Compare best normal with corresponding best anomaly
+  comp.normal.anom <- loo(m[[as.character(best.normal.mod)]],m[[as.character(best.normal.anom)]])$ic_diffs__
+  
+  
+  ### Get the best anomaly, independent of best normal
+  d.loos.anomaly <- d.loos[d.loos$mod %in% anomaly.model.names,]
+  best.anomaly.mod <- d.loos.anomaly[d.loos.anomaly$upr == min(d.loos.anomaly$upr,na.rm=TRUE),]$mod[1]
+  
+  ### Get the normal corresponding to the best anomaly
+  best.anom.normal.part <- strsplit(as.character(best.anomaly.mod),".",fixed=TRUE)[[1]][1]
+  best.anom.normal <- paste0(best.anom.normal.part,".a0")
+  
+  ### Compare corresponding normal to best anomaly
+  comp.anom.normal <- loo(m[[as.character(best.anom.normal)]],m[[as.character(best.anomaly.mod)]])$ic_diffs__
+  
+  
+  
+  ### Store loos comps
+  d.loo.comps.sp <- rbind(comp.null.normal,comp.normal.post,comp.normal.anom,comp.anom.normal)
+  d.loo.comps.sp <- as.data.frame(d.loo.comps.sp)
+  d.loo.comps.sp$comp <-c("null.normal","normal.post","normal.anom","anom.normal")
+  d.loo.comps.sp$sp <- sp
+  
+  d.loo.comps <- rbind(d.loo.comps,d.loo.comps.sp)
+  
+  
+  ## store what the best ones were!
+  mods.best.sp <- data.frame(best.normal=best.normal.mod,norm.post=norm.post.mod,best.normal.anom=best.normal.anom,best.anomaly=best.anomaly.mod,sp=sp)
+  mods.best <- rbind(mods.best, mods.best.sp)
+  
+  
+  
+  
+  
+  
+  
+  if(sp =="COV.SHRUB") {
+    d.c$regen.count.old <- d.c$SHRUB
+  }
+  if(sp =="COV.GRASS") {
+    d.c$regen.count.old <- d.c$GRASS
+  }
+  
+  
+  
+  
+  ### Function to find the center of a "fixed" predictor variable within the species distribution
+  mid.val.fun <- function(var) {
+    d.c.sp <- d.c[d.c$regen.count.old > 0,]
+    #d.c.sp$prod <- d.c.sp[,var] * d.c.sp$regen.count.old
+    #prod.sum <- sum(d.c.sp$prod)
+    #count.tot <- sum(d.c.sp$regen.count.old)
+    #mid.val <- prod.sum/count.tot
+    
+    mid.val <- mean(d.c.sp[,var])
+    
+    return(mid.val)
+  }
+  
+  low.val.fun <- function(var) {
+    d.c.sp <- d.c[d.c$regen.count.old > 0,]
+    
+    # vals.rep <- list()
+    # for(i in 1:nrow(d.c.sp))      {
+    # 
+    #   d.c.sp.row <- d.c.sp[i,]
+    #   vals.rep[[i]] <- rep(d.c.sp.row[,var],round(d.c.sp.row$regen.count.old*3))
+    # }
+    # 
+    # vals.rep <- unlist(vals.rep)
+    # 
+    # a <- quantile(vals.rep,0.25)
+    
+    a <- quantile(d.c.sp[,var],0.25)
+    
+    return(a)
+  }
+  
+  high.val.fun <- function(var) {
+    
+    d.c.sp <- d.c[d.c$regen.count.old > 0,]        
+    # vals.rep <- list()
+    # for(i in 1:nrow(d.c.sp))      {
+    # 
+    #   d.c.sp.row <- d.c.sp[i,]
+    #   vals.rep[[i]] <- rep(d.c.sp.row[,var],round(d.c.sp.row$regen.count.old*3))
+    # }
+    # 
+    # vals.rep <- unlist(vals.rep)
+    # a <- quantile(vals.rep,0.75)
+    # 
+    a <- quantile(d.c.sp[,var],0.75)
+    
+    return(a)
+  }
+  
+  
+  
+  
+  
+  
+  ### For best anomaly model, store predictions for counterfactual plots
+  
+  ### Make counterfactual predictor sets
+  
+  ### For the variables being held constant, set them at the value where the species is most abundant
+  
+  ## For tmean.normal_c, get mean value of plots where the species was present, weighted by number of seedligns
+  
+  vars <- c("ppt.normal_c","ppt.normal_c.sq","diff.norm.ppt.z_c","diff.norm.ppt.z_c.sq","tmean.normal_c","tmean.normal_c.sq",
+            "diff.norm.tmean.z_c","diff.norm.tmean.z_c.sq",
+            "aet.normal_c","aet.normal_c.sq","diff.norm.aet.z_c","diff.norm.aet.z_c.sq","def.normal_c","def.normal_c.sq",
+            "diff.norm.def.z_c","diff.norm.def.z_c.sq",
+            "seed_tree_distance_general_c","rad.march_c"
+  )
+  
+  
+  
+  mid.val <- sapply(vars,mid.val.fun,USE.NAMES=TRUE)
+  
+  low.val <- sapply(vars,low.val.fun,USE.NAMES=TRUE)
+  names(low.val) <- vars
+  
+  high.val <- sapply(vars,high.val.fun,USE.NAMES=TRUE)
+  names(high.val) <- vars
+  
+  
+  
+  diff.norm.seq <- seq(from=-1.5,to=1.5,length.out=100)
+  
+  newdat.ppt <- data.frame(
+    ppt.normal_c = c(rep(low.val["ppt.normal_c"],100),rep(mid.val["ppt.normal_c"],100),rep(high.val["ppt.normal_c"],100)),
+    ppt.normal_c.sq = c(rep(low.val["ppt.normal_c"]^2,100),rep(mid.val["ppt.normal_c"]^2,100),rep(high.val["ppt.normal_c"]^2,100)),
+    norm.level = c(rep("low",100),rep("mid",100),rep("high",100)),
+    diff.norm.ppt.z_c = rep(diff.norm.seq,3),
+    diff.norm.ppt.z_c.sq = rep(diff.norm.seq^2,3),
+    tmean.normal_c = mid.val["tmean.normal_c"],
+    tmean.normal_c.sq = mid.val["tmean.normal_c"]^2,
+    diff.norm.tmean.z_c = mid.val["diff.norm.tmean.z_c"],
+    diff.norm.tmean.z_c.sq = mid.val["diff.norm.tmean.z_c"]^2,
+    scenario = "ppt",
+    
+    aet.normal_c = c(rep(low.val["aet.normal_c"],100),rep(mid.val["aet.normal_c"],100),rep(high.val["aet.normal_c"],100)),
+    aet.normal_c.sq = c(rep(low.val["aet.normal_c"]^2,100),rep(mid.val["aet.normal_c"]^2,100),rep(high.val["aet.normal_c"]^2,100)),
+    diff.norm.aet.z_c = rep(diff.norm.seq,3),
+    diff.norm.aet.z_c.sq = rep(diff.norm.seq^2,3),
+    def.normal_c = mid.val["def.normal_c"],
+    def.normal_c.sq = mid.val["def.normal_c"]^2,
+    diff.norm.def.z_c = mid.val["diff.norm.def.z_c"],
+    diff.norm.def.z_c.sq = mid.val["diff.norm.def.z_c"]^2,
+    
+    seed_tree_distance_general_c = mid.val["seed_tree_distance_general_c"],
+    rad.march_c = mid.val["rad.march_c"]
+  )
+  newdat.tmean <- data.frame(
+    tmean.normal_c = c(rep(low.val["tmean.normal_c"],100),rep(mid.val["tmean.normal_c"],100),rep(high.val["tmean.normal_c"],100)),
+    tmean.normal_c.sq = c(rep(low.val["tmean.normal_c"]^2,100),rep(mid.val["tmean.normal_c"]^2,100),rep(high.val["tmean.normal_c"]^2,100)),
+    norm.level = c(rep("low",100),rep("mid",100),rep("high",100)),
+    diff.norm.tmean.z_c = rep(diff.norm.seq,3),
+    diff.norm.tmean.z_c.sq = rep(diff.norm.seq^2,3),
+    ppt.normal_c = mid.val["ppt.normal_c"],
+    ppt.normal_c.sq = mid.val["ppt.normal_c"]^2,
+    diff.norm.ppt.z_c = mid.val["diff.norm.ppt.z_c"],
+    diff.norm.ppt.z_c.sq = mid.val["diff.norm.ppt.z_c"]^2,
+    scenario = "tmean",
+    
+    def.normal_c = c(rep(low.val["def.normal_c"],100),rep(mid.val["def.normal_c"],100),rep(high.val["def.normal_c"],100)),
+    def.normal_c.sq = c(rep(low.val["def.normal_c"]^2,100),rep(mid.val["def.normal_c"]^2,100),rep(high.val["def.normal_c"]^2,100)),
+    diff.norm.def.z_c = rep(diff.norm.seq,3),
+    diff.norm.def.z_c.sq = rep(diff.norm.seq^2,3),
+    aet.normal_c = mid.val["aet.normal_c"],
+    aet.normal_c.sq = mid.val["aet.normal_c"]^2,
+    diff.norm.aet.z_c = mid.val["diff.norm.aet.z_c"],
+    diff.norm.aet.z_c.sq = mid.val["diff.norm.aet.z_c"]^2,
+    
+    seed_tree_distance_general_c = mid.val["seed_tree_distance_general_c"],
+    rad.march_c = mid.val["rad.march_c"]
+  )
+  
+  newdat <- rbind(newdat.ppt,newdat.tmean)
+  interact.df <- data.frame("Fake"=rep(NA,nrow(newdat)))
+  for(i in 1:ncol(newdat)) { # for each col
+    for(j in 1:ncol(newdat)) {
+      name.i <- names(newdat)[i]
+      name.j <- names(newdat)[j]
+      name.inter <- paste(name.i,name.j,sep=":")
+      val.inter <- newdat[,i] * newdat[,j]
+      interact.df <- cbind(interact.df,val.inter)
+      names(interact.df)[ncol(interact.df)] <- name.inter
+    }
+  }
+  
+  newdat <- cbind(newdat,interact.df)
+  newdat$"(Intercept)" <- 1 # this is the "predictor" value to multiple the intercept by
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  m.sp <- m[[as.character(best.anomaly.mod)]]
+  m.p.sp <- posterior_samples(m.sp,pars="^b")
+  
+  if(sp %in% cover.opts) {
+    m.phi.sp <- posterior_samples(m.sp,pars="^phi")
+  }
+  
+  names(m.p.sp) <- sapply(names(m.p.sp),substr,start=3,stop=1000)
+  names(m.p.sp)[1] <- "(Intercept)"
+  
+  mod.vars <- colnames(m.p.sp)
+  
+  newdat.ordered <- newdat[,mod.vars]
+  
+  # for each row of newdat.ordered, multiply data by all coef values, sum across, and compute median and conf int
+  preds <- matrix(nrow=nrow(newdat.ordered),ncol=6)
+  for(i in 1:nrow(newdat.ordered)) {
+    
+    newdat.row <- as.matrix(newdat.ordered[i,])
+    
+    prod <- sweep(m.p.sp,MARGIN=2,newdat.row,`*`)
+    sums <- rowSums(prod)
+    
+    fit <- median(sums)
+    upr <- quantile(sums,probs=0.975)
+    lwr <- quantile(sums,probs=0.025)
+    
+    
+    
+    
+    
+    
+    ## also compute prediction interval
+    
+    
+    
+    
+    
+    if(sp %in% cover.opts) {
+      
+      phi <- m.phi.sp
+      phi.resp.scale <- exp(phi)
+      
+      fits <- sums
+      fits.resp.scale <- inv.logit(fits)
+      
+      alpha.param <- fits.resp.scale*phi.resp.scale
+      beta.param <- -fits.resp.scale*phi.resp.scale + phi.resp.scale
+      
+      
+      pred.int.preds <- rbeta(n=length(alpha.param$phi),shape1=alpha.param$phi,shape2=beta.param$phi)
+      pred.int.lwr <- quantile(pred.int.preds,probs=0.025)
+      pred.int.upr <- quantile(pred.int.preds,probs=0.975)
+      
+      pred.lwr <- pred.int.lwr
+      pred.upr <- pred.int.upr
+      pred.int.pred <- NA
+      
+      
+      
+    } else {
+      
+      fit.resp.scale <- inv.logit(fit)
+      pred.int.pred <- rbinom(1,1,fit.resp.scale)
+      pred.lwr <- NA
+      pred.upr <- NA
+      
+    }
+    
+    
+    preds[i,] <- c(fit,lwr,upr,pred.lwr,pred.upr,pred.int.pred)
+    
+    
+    
+  }
+  
+  if(sp %in% cover.opts) {
+    preds[,1:3] <- inv.logit(preds[,1:3])
+  } else {
+    preds[,1:3] <- inv.logit(preds[,1:3])
+  }
+  
+  
+  colnames(preds) <- c("fit","lwr","upr","pred.lwr","pred.upr","pred")
+  preds <- as.data.frame(preds)
+  
+  sp.grp <- sp
+  dat.preds.sp <- cbind(newdat,preds,sp.grp,best.anomaly.mod)
+  dat.preds <- rbind(dat.preds,dat.preds.sp)
+  
+  
+  
+  
+  
+  
+  ### store a predicted vs. observed data frame here: one for the best anomaly model and one for the corresponding normal model ###
+  predicted.normal <- predict(m[[as.character(best.anom.normal)]])[,1]
+  predicted.anomaly <- predict(m[[as.character(best.anomaly.mod)]])[,1]
+  
+  observed <- d.c$response.var
+  
+  
+  pred.obs.normal <- data.frame(pred=predicted.normal,obs=observed,mod="normal",sp=sp)
+  pred.obs.anomaly <- data.frame(pred=predicted.anomaly,obs=observed,mod="anomaly",sp=sp)
+  
+  pred.obs.sp <- rbind(pred.obs.normal,pred.obs.anomaly)
+  
+  # if(sp %in% cover.opts) {
+  #   pred.obs.sp$pred <- inv.logit(pred.obs.sp$pred)
+  # } else {
+  #   #pred.obs.sp$pred <- inv.logit(pred.obs.sp$pred)
+  #   
+  # }
+  
+  pred.obs <- rbind(pred.obs,pred.obs.sp)
+  
+  
+  ## Calculate AUC (for bernoulli) or R-sq (for cover)
+  
+  if(sp %in% cover.opts) {
+    auc.normal <- cor(observed,predicted.normal)^2
+    auc.anomaly <- cor(observed,predicted.anomaly)^2
+  } else {
+    auc.normal <- auc(observed,predicted.normal)
+    auc.anomaly <- auc(observed,predicted.anomaly)
+  }
+  
+  aucs.sp <- data.frame(auc.normal,auc.anomaly,sp)
+  
+  aucs <- rbind(aucs,aucs.sp)
+  
+  
+  
+}
+
+
+
+
+## Save the outputs
+
+write.csv(dat.preds,"counterfactual_df.csv",row.names=FALSE)
+write.csv(pred.obs,"pred_obs.csv",row.names=FALSE)
+write.csv(d.loo.comps,"loo_comps.csv",row.names=FALSE)
+write.csv(d.loos.all,"loos.csv",row.names=FALSE)
+write.csv(mods.best,"mods_best.csv",row.names=FALSE)
+write.csv(aucs,"norm_anom_aucs_rsqs.csv",row.names=FALSE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
