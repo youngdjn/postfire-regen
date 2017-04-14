@@ -2005,8 +2005,8 @@ sp.opts <- c("PIPO","ABCO") # reduced
 
 #cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB","COV.HARDWOOD","COV.CONIFER")
 cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB") # reduced
-cover.opts <- c("COV.SHRUB") # reduced
 cover.opts <- c("COV.SHRUB","COV.GRASS") # reduced
+cover.opts <- c("COV.SHRUB") # reduced
 
 #cover.opts <- NULL
 sp.opts <- c(sp.opts,cover.opts)
@@ -2025,224 +2025,749 @@ mods.best <- data.frame()
 
 rsqs <- data.frame()
 
-for(sp in sp.opts) { # about 1 hr per species
+d.maes <- data.frame()
+d.maes.anoms <- data.frame()
+
+pred.dat <- data.frame()
+
+for(sp in sp.opts) {
+  for(rad.level in 1:2) {
+    
+    cat("\n")
+    cat("Running model for: ",sp,"")
+
+    
+    if(sp %in% cover.opts) {
+      d.sp.curr <- d.sp.2[d.sp.2$species=="PIPO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
+    } else {
+      d.sp.curr <- d.sp.2[d.sp.2$species==sp,]
+    }
+    
   
-  cat("\n\n#####")
-  cat("Running model for: ",sp,"")
-  cat("#####\n\n")
+    d.mod <- merge(d.plot.3,d.sp.curr,by=c("Fire","topoclim.cat"),all.x=TRUE)
+    
+    d.mod$regen.presab.old.t <- (d.mod$regen.presab.old*(nrow(d.mod)-1) + 0.5) / nrow(d.mod)
+    
+    # d.mod$response.var <- d.mod$regen.presab.old.t
+    # d.mod$ppt.normal.highsev.sq <- d.mod$ppt.normal.highsev^2
+    # d.mod$tmean.normal.highsev.sq <- d.mod$tmean.normal.highsev^2
+    # d.mod$diff.norm.ppt.z.highsev.sq <- d.mod$diff.norm.ppt.z.highsev^2
+    # d.mod$ppt.post.highsev.sq <- d.mod$ppt.post.highsev^2
+    # d.mod$tmean.post.highsev.sq <- d.mod$tmean.post.highsev^2
+    # 
+    # 
+    # 
+    
+    
+    vars.leave <- c("fire.year.highsev","FORB.highsev","SHRUB.highsev","GRASS.highsev","CONIFER.highsev","HARDWOOD.highsev","FIRE_SEV.highsev","fire.year.highsev","firesev.highsev","survey.years.post.highsev","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
+    vars.focal <- c("ppt.normal.highsev","diff.norm.ppt.z.highsev","ppt.normal.sq.highsev","rad.march.highsev","seed_tree_distance_general.highsev","SHRUB.highsev","tmean.post.highsev","tmean.normal.highsev","diff.norm.tmean.z.highsev","diff.norm.tmean.max.z.highsev", "def.normal.highsev","aet.normal.highsev","diff.norm.def.z.highsev","diff.norm.aet.z.highsev","def.post.highsev","aet.post.highsev")
+    d.mod <- d.mod[complete.cases(d.mod[,vars.focal]),]
+    d.c <- center.df(d.mod,vars.leave)
+    
+    d.c$ppt.normal.highsev_c.sq <- d.c$ppt.normal.highsev_c^2
+    d.c$tmean.normal.highsev_c.sq <- d.c$tmean.normal.highsev_c^2
+    
+    d.c$def.normal.highsev_c.sq <- d.c$def.normal.highsev_c^2
+    d.c$aet.normal.highsev_c.sq <- d.c$aet.normal.highsev_c^2
+    
+    # ####!!!! trick model: make diff.norm into diff.norm.min
+    # d.c$diff.norm.ppt.z.highsev_c <- d.c$diff.norm.ppt.min.z.highsev_c
+    # d.c$diff.norm.tmean.z.highsev_c <- d.c$diff.norm.tmean.max.z.highsev_c
+    # d.c$diff.norm.aet.z.highsev_c <- d.c$diff.norm.aet.min.z.highsev_c
+    # d.c$diff.norm.def.z.highsev_c <- d.c$diff.norm.def.max.z.highsev_c
+    # #### end trick model
+    
+    
+    d.c$diff.norm.ppt.z.highsev_c.sq <- d.c$diff.norm.ppt.z.highsev_c^2
+    d.c$diff.norm.tmean.z.highsev_c.sq <- d.c$diff.norm.tmean.z.highsev_c^2
+    
+    d.c$diff.norm.def.z.highsev_c.sq <- d.c$diff.norm.def.z.highsev_c^2
+    d.c$diff.norm.aet.z.highsev_c.sq <- d.c$diff.norm.aet.z.highsev_c^2
+    
+    d.c$diff.norm.ppt.min.z.highsev_c.sq <- d.c$diff.norm.ppt.min.z.highsev_c^2
+    d.c$diff.norm.tmean.max.z.highsev_c.sq <- d.c$diff.norm.tmean.max.z.highsev_c^2
+    
+    d.c$diff.norm.def.max.z.highsev_c.sq <- d.c$diff.norm.def.max.z.highsev_c^2
+    d.c$diff.norm.aet.min.z.highsev_c.sq <- d.c$diff.norm.aet.min.z.highsev_c^2
+    
+    
+    
+    d.c$ppt.post.highsev_c.sq <- d.c$ppt.post.highsev_c^2
+    d.c$tmean.post.highsev_c.sq <- d.c$tmean.post.highsev_c^2
+    
+    d.c$def.post.highsev_c.sq <- d.c$def.post.highsev_c^2
+    d.c$aet.post.highsev_c.sq <- d.c$aet.post.highsev_c^2
+    
   
+    vars.focal.c <- paste0(vars.focal[-6],"_c")
+    #pairs(d.c[,vars.focal.c])
+    
+    ## transform cover so it does not include 0 or 1 (for Beta distrib)
+    d.c$SHRUB.highsev.p <- d.c$SHRUB.highsev/100
+    d.c$SHRUB.highsev.pt <- (d.c$SHRUB.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+    
+    d.c$GRASS.highsev.p <- d.c$GRASS.highsev/100
+    d.c$GRASS.highsev.pt <- (d.c$GRASS.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+    
+    d.c$HARDWOOD.highsev.p <- d.c$HARDWOOD.highsev/100
+    d.c$HARDWOOD.highsev.pt <- (d.c$HARDWOOD.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+    
+    d.c$FORB.highsev.p <- d.c$FORB.highsev/100
+    d.c$FORB.highsev.pt <- (d.c$FORB.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+    
+    d.c$CONIFER.highsev.p <- d.c$CONIFER.highsev/100
+    d.c$CONIFER.highsev.pt <- (d.c$CONIFER.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+    
+    ## transform regen proportion so it does not include 0 or 1
+    d.c$regen.presab.old.t <- (d.c$regen.presab.old*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+    
+    
+    d.c$Fire <- as.factor(d.c$Fire)
+    
+    #d.c <- d.c[!(d.c$Fire == "RICH"),]
+    
+    if(sp %in% cover.opts) {
+      
+      sp.cov <- substr(sp,5,100)
+      sp.cov <- paste0(sp.cov,".highsev.pt")
+      
+      d.c$cov.response <- d.c[,sp.cov]
+      
+      d.c$response.var <- d.c$cov.response
+      
+    } else {
+      
+      d.c$response.var <- d.c$regen.presab.old.t
+      
+    }
+    
+    m <- list()
+    
+    
+    if(rad.level==1) {
+      d.c <- d.c[d.c$topoclim.cat == "P.2_R.1",]
+    } else {
+      d.c <- d.c[d.c$topoclim.cat == "P.2_R.2",]
+    }
+    
   
-  if(sp %in% cover.opts) {
-    d.sp.curr <- d.sp.2[d.sp.2$species=="PIPO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
-  } else {
-    d.sp.curr <- d.sp.2[d.sp.2$species==sp,]
+    
+    ## trying a super simple set (no seed tree)
+    
+    formulas <- list()
+    
+    formulas[["n0.a0"]] <- formula(response.var ~ 1)
+    formulas[["n0a.a0"]] <- formula(response.var ~ adult.ba_c)
+    
+    ## PPT
+
+    formulas[["n0a.aP"]] <- formula(response.var ~ adult.ba_c + diff.norm.ppt.z.highsev_c)
+    formulas[["n0.aP"]] <- formula(response.var ~ diff.norm.ppt.z.highsev_c)
+    formulas[["n0a.aP2"]] <- formula(response.var ~ adult.ba_c + diff.norm.ppt.z.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
+    formulas[["n0.aP2"]] <- formula(response.var ~ diff.norm.ppt.z.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
+    
+    formulas[["nPa.a0"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c)
+    formulas[["nPa.aP"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c)
+    formulas[["nPa.aP2"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
+    formulas[["pPa"]] <- formula(response.var ~ adult.ba_c + ppt.post.highsev_c)
+    formulas[["nP2a.a0"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2a.aP"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2a.aP2"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq)
+    formulas[["pP2a"]] <- formula(response.var ~ adult.ba_c + ppt.post.highsev_c + ppt.post.highsev_c.sq)
+    formulas[["nPa.aPni"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c)
+    formulas[["nPa.aP2ni"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
+    formulas[["nP2a.aPni"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2a.aP2ni"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq)
+
+    formulas[["nP.a0"]] <- formula(response.var ~ ppt.normal.highsev_c)
+    formulas[["nP.aP"]] <- formula(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c)
+    formulas[["nP.aP2"]] <- formula(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
+    formulas[["pP"]] <- formula(response.var ~ ppt.post.highsev_c)
+    formulas[["nP2.a0"]] <- formula(response.var ~ ppt.normal.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2.aP"]] <- formula(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2.aP2"]] <- formula(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq)
+    formulas[["pP2"]] <- formula(response.var ~ ppt.post.highsev_c + ppt.post.highsev_c.sq)
+    formulas[["nP.aPni"]] <- formula(response.var ~ ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c)
+    formulas[["nP.aP2ni"]] <- formula(response.var ~ ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
+    formulas[["nP2.aPni"]] <- formula(response.var ~ ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2.aP2ni"]] <- formula(response.var ~ ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq)
+
+
+    ##DEF
+
+    formulas[["n0a.aD"]] <- formula(response.var ~ adult.ba_c + diff.norm.def.z.highsev_c)
+    formulas[["n0a.aD2"]] <- formula(response.var ~ adult.ba_c + diff.norm.def.z.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
+    formulas[["n0.aD"]] <- formula(response.var ~ diff.norm.def.z.highsev_c)
+    formulas[["n0.aD2"]] <- formula(response.var ~ diff.norm.def.z.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
+    
+
+    formulas[["nDa.a0"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c)
+    formulas[["nDa.aD"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c*diff.norm.def.z.highsev_c)
+    formulas[["nDa.aD2"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
+    #formulas[["pDa"]] <- formula(response.var ~ adult.ba_c + def.post.highsev_c)
+    formulas[["nD2a.a0"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2a.aD"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2a.aD2"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq + def.normal.highsev_c.sq)
+    #formulas[["pD2a"]] <- formula(response.var ~ adult.ba_c + def.post.highsev_c + def.post.highsev_c.sq)
+    formulas[["nDa.aDni"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c + diff.norm.def.z.highsev_c)
+    formulas[["nDa.aD2ni"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
+    formulas[["nD2a.aDni"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2a.aD2ni"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq + def.normal.highsev_c.sq)
+
+    formulas[["nD.a0"]] <- formula(response.var ~ def.normal.highsev_c)
+    formulas[["nD.aD"]] <- formula(response.var ~ def.normal.highsev_c*diff.norm.def.z.highsev_c)
+    formulas[["nD.aD2"]] <- formula(response.var ~ def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
+    #formulas[["pD"]] <- formula(response.var ~ def.post.highsev_c)
+    formulas[["nD2.a0"]] <- formula(response.var ~ def.normal.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2.aD"]] <- formula(response.var ~ def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2.aD2"]] <- formula(response.var ~ def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq + def.normal.highsev_c.sq)
+    #formulas[["pP2"]] <- formula(response.var ~ def.post.highsev_c + def.post.highsev_c.sq)
+    formulas[["nD.aDni"]] <- formula(response.var ~ def.normal.highsev_c + diff.norm.def.z.highsev_c)
+    formulas[["nD.aD2ni"]] <- formula(response.var ~ def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
+    formulas[["nD2.aDni"]] <- formula(response.var ~ def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2.aD2ni"]] <- formula(response.var ~ def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq + def.normal.highsev_c.sq)
+
+
+
+    ##AET
+
+    formulas[["n0a.aA"]] <- formula(response.var ~ adult.ba_c + diff.norm.aet.z.highsev_c)
+    formulas[["n0a.aA2"]] <- formula(response.var ~ adult.ba_c + diff.norm.aet.z.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
+
+    formulas[["n0.aA"]] <- formula(response.var ~ diff.norm.aet.z.highsev_c)
+    formulas[["n0.aA2"]] <- formula(response.var ~ diff.norm.aet.z.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
+    
+    formulas[["nAa.a0"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c)
+    formulas[["nAa.aA"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c)
+    formulas[["nAa.aA2"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
+    #formulas[["pDa"]] <- formula(response.var ~ adult.ba_c + def.post.highsev_c)
+    formulas[["nA2a.a0"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2a.aA"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2a.aA2"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq + aet.normal.highsev_c.sq)
+    #formulas[["pD2a"]] <- formula(response.var ~ adult.ba_c + def.post.highsev_c + def.post.highsev_c.sq)
+    formulas[["nAa.aAni"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c)
+    formulas[["nAa.aA2ni"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
+    formulas[["nA2a.aAni"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2a.aA2ni"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq + aet.normal.highsev_c.sq)
+
+    formulas[["nA.a0"]] <- formula(response.var ~ aet.normal.highsev_c)
+    formulas[["nA.aA"]] <- formula(response.var ~ aet.normal.highsev_c*diff.norm.aet.z.highsev_c)
+    formulas[["nA.aA2"]] <- formula(response.var ~ aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
+    #formulas[["pD"]] <- formula(response.var ~ def.post.highsev_c)
+    formulas[["nA2.a0"]] <- formula(response.var ~ aet.normal.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2.aA"]] <- formula(response.var ~ aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2.aA2"]] <- formula(response.var ~ aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq + aet.normal.highsev_c.sq)
+    #formulas[["pP2"]] <- formula(response.var ~ def.post.highsev_c + def.post.highsev_c.sq)
+    formulas[["nA.aAni"]] <- formula(response.var ~ aet.normal.highsev_c + diff.norm.aet.z.highsev_c)
+    formulas[["nA.aA2ni"]] <- formula(response.var ~ aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
+    formulas[["nA2.aAni"]] <- formula(response.var ~ aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2.aA2ni"]] <- formula(response.var ~ aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq + aet.normal.highsev_c.sq)
+
+
+
+
+
+
+    ## PPT
+
+    formulas[["n0a.aPmin"]] <- formula(response.var ~ adult.ba_c + diff.norm.ppt.min.z.highsev_c)
+    formulas[["n0a.aP2min"]] <- formula(response.var ~ adult.ba_c + diff.norm.ppt.min.z.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
+    formulas[["n0.aPmin"]] <- formula(response.var ~ diff.norm.ppt.min.z.highsev_c)
+    formulas[["n0.aP2min"]] <- formula(response.var ~ diff.norm.ppt.min.z.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
+    
+    
+    
+    formulas[["nPa.aPmin"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c)
+    formulas[["nPa.aP2min"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
+    # formulas[["pPa"]] <- formula(response.var ~ adult.ba_c + ppt.post.highsev_c)
+    formulas[["nP2a.aPmin"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2a.aP2min"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq + ppt.normal.highsev_c.sq)
+    # formulas[["pP2a"]] <- formula(response.var ~ adult.ba_c + ppt.post.highsev_c + ppt.post.highsev_c.sq)
+    formulas[["nPa.aPminni"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c)
+    formulas[["nPa.aP2minni"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
+    formulas[["nP2a.aPminni"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2a.aP2minni"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq + ppt.normal.highsev_c.sq)
+
+    formulas[["nP.aPmin"]] <- formula(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c)
+    formulas[["nP.aP2min"]] <- formula(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
+    # formulas[["pP"]] <- formula(response.var ~ ppt.post.highsev_c)
+    formulas[["nP2.aPmin"]] <- formula(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2.aP2min"]] <- formula(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq + ppt.normal.highsev_c.sq)
+    # formulas[["pP2"]] <- formula(response.var ~ ppt.post.highsev_c + ppt.post.highsev_c.sq)
+    formulas[["nP.aPminni"]] <- formula(response.var ~ ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c)
+    formulas[["nP.aP2minni"]] <- formula(response.var ~ ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
+    formulas[["nP2.aPminni"]] <- formula(response.var ~ ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2.aP2minni"]] <- formula(response.var ~ ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq + ppt.normal.highsev_c.sq)
+
+
+    ##DEF
+
+    formulas[["n0a.aDmax"]] <- formula(response.var ~ adult.ba_c + diff.norm.def.max.z.highsev_c)
+    formulas[["n0a.aD2max"]] <- formula(response.var ~ adult.ba_c + diff.norm.def.max.z.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
+
+    formulas[["n0.aDmax"]] <- formula(response.var ~ diff.norm.def.max.z.highsev_c)
+    formulas[["n0.aD2max"]] <- formula(response.var ~ diff.norm.def.max.z.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
+    
+    formulas[["nDa.aDmax"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c)
+    formulas[["nDa.aD2max"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
+    #formulas[["pDa"]] <- formula(response.var ~ adult.ba_c + def.post.highsev_c)
+    formulas[["nD2a.aDmax"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2a.aD2max"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq + def.normal.highsev_c.sq)
+    #formulas[["pD2a"]] <- formula(response.var ~ adult.ba_c + def.post.highsev_c + def.post.highsev_c.sq)
+    formulas[["nDa.aDmaxni"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c)
+    formulas[["nDa.aD2maxni"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
+    formulas[["nD2a.aDmaxni"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2a.aD2maxni"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq + def.normal.highsev_c.sq)
+
+    formulas[["nD.aDmax"]] <- formula(response.var ~ def.normal.highsev_c*diff.norm.def.max.z.highsev_c)
+    formulas[["nD.aD2max"]] <- formula(response.var ~ def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
+    #formulas[["pD"]] <- formula(response.var ~ def.post.highsev_c)
+    formulas[["nD2.aDmax"]] <- formula(response.var ~ def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2.aD2max"]] <- formula(response.var ~ def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq + def.normal.highsev_c.sq)
+    #formulas[["pP2"]] <- formula(response.var ~ def.post.highsev_c + def.post.highsev_c.sq)
+    formulas[["nD.aDmaxni"]] <- formula(response.var ~ def.normal.highsev_c + diff.norm.def.max.z.highsev_c)
+    formulas[["nD.aD2maxni"]] <- formula(response.var ~ def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
+    formulas[["nD2.aDmaxni"]] <- formula(response.var ~ def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2.aD2maxni"]] <- formula(response.var ~ def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq + def.normal.highsev_c.sq)
+
+
+
+    ##AET
+
+    formulas[["n0a.aAmin"]] <- formula(response.var ~ adult.ba_c + diff.norm.aet.min.z.highsev_c)
+    formulas[["n0a.aA2min"]] <- formula(response.var ~ adult.ba_c + diff.norm.aet.min.z.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
+
+    formulas[["n0.aAmin"]] <- formula(response.var ~ diff.norm.aet.min.z.highsev_c)
+    formulas[["n0.aA2min"]] <- formula(response.var ~ diff.norm.aet.min.z.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
+    
+    
+    formulas[["nAa.aAmin"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c)
+    formulas[["nAa.aA2min"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
+    #formulas[["pDa"]] <- formula(response.var ~ adult.ba_c + def.post.highsev_c)
+    formulas[["nA2a.aAmin"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2a.aA2min"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq + aet.normal.highsev_c.sq)
+    #formulas[["pD2a"]] <- formula(response.var ~ adult.ba_c + def.post.highsev_c + def.post.highsev_c.sq)
+    formulas[["nAa.aAminni"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c)
+    formulas[["nAa.aA2minni"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
+    formulas[["nA2a.aAminni"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2a.aA2minni"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq + aet.normal.highsev_c.sq)
+
+    formulas[["nA.aAmin"]] <- formula(response.var ~ aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c)
+    formulas[["nA.aA2min"]] <- formula(response.var ~ aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
+    #formulas[["pD"]] <- formula(response.var ~ def.post.highsev_c)
+    formulas[["nA2.aAmin"]] <- formula(response.var ~ aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2.aA2min"]] <- formula(response.var ~ aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq + aet.normal.highsev_c.sq)
+    #formulas[["pP2"]] <- formula(response.var ~ def.post.highsev_c + def.post.highsev_c.sq)
+    formulas[["nA.aAminni"]] <- formula(response.var ~ aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c)
+    formulas[["nA.aA2minni"]] <- formula(response.var ~ aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
+    formulas[["nA2.aAminni"]] <- formula(response.var ~ aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2.aA2minni"]] <- formula(response.var ~ aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq + aet.normal.highsev_c.sq)
+
+
+    
+    
+    
+    
+    
+    
+  
+    cv.results <- data.frame()
+    
+    for(i in 1:length(formulas)) {
+      
+      formula.name <- names(formulas)[i]
+      cv.result <- cvfun(formulas[[i]],data=d.c)
+      cv.result.named <- data.frame(model=names(formulas)[i],cv.result,stringsAsFactors=FALSE)
+      cv.results <- rbind(cv.results,cv.result.named)
+      
+    }
+    
+    cv.results$model <- as.character(cv.results$model)
+    
+    
+    
+    ### Specify model categories
+    
+    ## normal models
+    search <- ".a0"
+    normal.model.names <- cv.results[grep(search,cv.results$model,fixed=TRUE),]$mod
+    normal.model.names <- normal.model.names[normal.model.names != "n0.a0"] # exclude null model
+    
+    ## anomaly models
+    search <- ".a"
+    null.names <- c("n0.a0","n0a.a0")
+    anomaly.model.names <- cv.results[grep(search,cv.results$model,fixed=TRUE),]$mod
+    anomaly.model.names <- anomaly.model.names[!(anomaly.model.names %in% normal.model.names)]
+    anomaly.model.names <- anomaly.model.names[!(anomaly.model.names %in% null.names)] # exclude null model
+    
+    ### Find the best normal model
+    d.cv.normal <- cv.results[cv.results$model %in% normal.model.names,]
+    best.normal.mod <- d.cv.normal[d.cv.normal$mae == min(d.cv.normal$mae,na.rm=TRUE),]$model[1]
+    
+  
+    ### Get post corresponding to best normal
+    norm.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
+    norm.post.mod <- sub("n","p",norm.part)
+    
+    # ### Compare best normal to corresponding post
+    # comp.normal.post <- loo(m[[as.character(best.normal.mod)]],m[[as.character(norm.post.mod)]])$ic_diffs__
+    # 
+    
+    ### Get anomaly models corresponding to best normal
+    
+    normal.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
+    search <- paste0(normal.part,".")
+    normal.matches <- grepl(search,cv.results$model,fixed=TRUE)
+    search <- paste0(normal.part,".a0")
+    non.anom.match <- grepl(search,cv.results$model,fixed=TRUE)
+    normal.anom <- normal.matches & (!non.anom.match)
+    normal.anom.names <- cv.results[normal.anom,]$model
+    
+    ### Get the best corresponding anomaly model
+    
+    d.cv.anom <- cv.results[cv.results$model %in% normal.anom.names,]
+    best.normal.anom <- d.cv.anom[d.cv.anom$mae == min(d.cv.anom$mae,na.rm=TRUE),]$model[1]
+    
+    ### Get the best anomaly, independent of best normal
+    d.cv.anomaly <- cv.results[cv.results$model %in% anomaly.model.names,]
+    best.anomaly.mod <- d.cv.anomaly[d.cv.anomaly$mae == min(d.cv.anomaly$mae,na.rm=TRUE),]$mod[1]
+    
+    ### Get the normal corresponding to the best anomaly
+    best.anom.normal.part <- strsplit(as.character(best.anomaly.mod),".",fixed=TRUE)[[1]][1]
+    best.anom.normal <- paste0(best.anom.normal.part,".a0")
+    
+    
+    ## get maes of best normal, best anomal, best normal.anom, best.anom.normal
+    best.normal.mae <- cv.results[cv.results$model == best.normal.mod,"mae"]
+    best.normal.anom.mae <- cv.results[cv.results$model == best.normal.anom,"mae"]
+    best.anom.mae <- cv.results[cv.results$model == best.anomaly.mod,"mae"]
+    best.anom.normal.mae <- cv.results[cv.results$model == best.anom.normal,"mae"]
+    
+    
+    
+    ### Store MAEs of the best models
+    d.maes.sp <- data.frame(best.normal.mod,best.normal.anom,best.anomaly.mod,best.anom.normal,
+                            best.normal.mae,best.normal.anom.mae,best.anom.mae,best.anom.normal.mae,sp,rad.level,stringsAsFactors=FALSE)
+  
+    d.maes <- rbind(d.maes,d.maes.sp)
+    
+    
+    
+    
+    
+    
+    ### Get the best implementation of each anomaly term (ppt, aet, def; and max/min or average)
+    
+    ## normal models
+    search <- ".a0"
+    normal.model.names <- cv.results[grep(search,cv.results$model,fixed=TRUE),]$mod
+    normal.model.names <- normal.model.names[normal.model.names != "n0.a0"] # exclude null model
+
+    anom.search.opts <- c(Pmean = "aP2?(ni)?$",
+                     Dmean = "aD2?(ni)?$",
+                     Amean = "aA2?(ni)?$",
+                     Pmin = "aP2?min(ni)?$",
+                     Dmax = "aD2?max(ni)?$",
+                     Amin = "aA2?min(ni)?$"
+                     )
+
+    d.maes.anoms.sp <- data.frame()
+
+
+    for(i in 1:length(anom.search.opts)) {
+
+      anom.name <- names(anom.search.opts)[i]
+      anom.search <- anom.search.opts[i]
+      null.names <- c("n0.a0","n0a.a0")
+      anomaly.model.names <- cv.results[grep(anom.search,cv.results$model,fixed=FALSE),]$model
+      anomaly.model.names <- anomaly.model.names[!(anomaly.model.names %in% normal.model.names)]
+      anomaly.model.names <- anomaly.model.names[!(anomaly.model.names %in% null.names)] # exclude null model
+
+      d.cv.anomaly <- cv.results[cv.results$model %in% anomaly.model.names,]
+      best.anomaly.mod <- d.cv.anomaly[d.cv.anomaly$mae == min(d.cv.anomaly$mae,na.rm=TRUE),]$mod[1]
+
+      best.anom.normal.part <- strsplit(as.character(best.anomaly.mod),".",fixed=TRUE)[[1]][1]
+      best.anom.normal <- paste0(best.anom.normal.part,".a0")
+
+      ## get maes of best normal, best anomal, best normal.anom, best.anom.normal
+      best.anom.mae <- cv.results[cv.results$model == best.anomaly.mod,"mae"]
+      best.anom.normal.mae <- cv.results[cv.results$model == best.anom.normal,"mae"]
+
+
+      ### Store MAEs of the best models
+      d.maes.anoms.sp.anom <- data.frame(best.anomaly.mod,best.anom.normal,
+                              best.anom.mae,best.anom.normal.mae,sp,rad.level,anom.name,stringsAsFactors=FALSE)
+
+      d.maes.anoms.sp <- rbind(d.maes.anoms.sp,d.maes.anoms.sp.anom)
+
+    }
+
+    d.maes.anoms <- rbind(d.maes.anoms,d.maes.anoms.sp)
+
+    
+    # ## Repeat, but by first finding the best normal and then the corresponding best anomaly
+    # 
+    # ## normal models
+    # search <- ".a0"
+    # normal.model.names <- cv.results[grep(search,cv.results$model,fixed=TRUE),]$mod
+    # normal.model.names <- normal.model.names[normal.model.names != "n0.a0"] # exclude null model
+    # 
+    # norm.search.opts <- c(Pmean = "n(P|0)2?a?\\.a0",
+    #                       Dmean = "n(D|0)2?a?\\.a0",
+    #                       Amean = "n(A|0)2?a?\\.a0",
+    #                       Pmin = "n(P|0)2?a?\\.a0",
+    #                       Dmax = "n(D|0)2?a?\\.a0",
+    #                       Amin = "n(A|0)2?a?\\.a0")
+    #                       
+    #   
+    #   
+    # anom.search.opts <- c(Pmean = "aP2?(ni)?$",
+    #                     Dmean = "aD2?(ni)?$",
+    #                     Amean = "aA2?(ni)?$",
+    #                     Pmin = "aP2?min(ni)?$",
+    #                     Dmax = "aD2?max(ni)?$",
+    #                     Amin = "aA2?min(ni)?$"
+    #                     )
+    # 
+    # d.maes.anoms.sp <- data.frame()
+    # 
+    # 
+    # for(i in 1:length(anom.search.opts)) {
+    #   
+    #   anom.name <- names(norm.search.opts)[i]
+    #   norm.search <- norm.search.opts[i]
+    #   anom.search <- anom.search.opts[i]
+    #   null.names <- c("n0.a0","n0a.a0")
+    #   normal.model.names <- cv.results[grep(norm.search,cv.results$model,fixed=FALSE),]$model
+    #   
+    #   d.cv.normal <- cv.results[cv.results$model %in% normal.model.names,]
+    #   best.normal.mod <- d.cv.normal[d.cv.normal$mae == min(d.cv.normal$mae,na.rm=TRUE),]$mod[1]
+    #   
+    #   #what is the best anomaly model for that normal, sticking with whichever anom we have
+    #   best.normal.normal.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
+    #   best.normal.anom.search <- paste0(best.normal.normal.part,"\\.",anom.search)
+    #   anom.model.names <- cv.results[grep(best.normal.anom.search,cv.results$model,fixed=FALSE),]$model
+    #   d.cv.anom <- cv.results[cv.results$model %in% anom.model.names,]
+    #   best.anom.mod <- d.cv.anom[d.cv.anom$mae == min(d.cv.anom$mae,na.rm=TRUE),]$mod[1]
+    #   
+    #   ## get maes of best normal, best anomal, best normal.anom, best.anom.normal
+    #   best.anom.mae <- cv.results[cv.results$model == best.anom.mod,"mae"]
+    #   best.anom.normal.mae <- cv.results[cv.results$model == best.normal.mod,"mae"]
+    #   
+    #   
+    #   ### Store MAEs of the best models
+    #   best.anomaly.mod <- best.anom.mod
+    #   best.anom.normal <- best.normal.mod
+    #   
+    #   
+    #   d.maes.anoms.sp.anom <- data.frame(best.anomaly.mod,best.anom.normal,
+    #                                      best.anom.mae,best.anom.normal.mae,sp,rad.level,anom.name,stringsAsFactors=FALSE)
+    #   
+    #   d.maes.anoms.sp <- rbind(d.maes.anoms.sp,d.maes.anoms.sp.anom)
+    #   
+    # }
+    # 
+    # d.maes.anoms <- rbind(d.maes.anoms,d.maes.anoms.sp)    
+    # 
+    # 
+    # 
+    
+    
+    
+    
+    
+    
+    
+    
+    ## Now for each anom model , make predictions
+    
+    
+    
+    
+    ### Function to find the center of a "fixed" predictor variable within the species distribution
+    mid.val.fun <- function(var) {
+      mid.val <- mean(d.c[,var])
+      return(mid.val)
+    }
+    
+    low.val.fun <- function(var) {
+      a <- quantile(d.c[,var],0.25)
+      #a <- min(d.c[,var])
+      return(a)
+    }
+    
+    high.val.fun <- function(var) {
+      a <- quantile(d.c[,var],0.75)
+      #a <- max(d.c[,var])
+      return(a)
+    }
+    
+    vars <- c("ppt.normal.highsev_c","ppt.normal.highsev_c.sq","diff.norm.ppt.z.highsev_c","diff.norm.ppt.z.highsev_c.sq","tmean.normal.highsev_c","tmean.normal.highsev_c.sq",
+              "diff.norm.tmean.z.highsev_c","diff.norm.tmean.z.highsev_c.sq",
+              "aet.normal.highsev_c","aet.normal.highsev_c.sq","diff.norm.aet.z.highsev_c","diff.norm.aet.z.highsev_c.sq","def.normal.highsev_c","def.normal.highsev_c.sq",
+              "diff.norm.def.z.highsev_c","diff.norm.def.z.highsev_c.sq",
+              "seed_tree_distance_general.highsev_c","rad.march.highsev_c","adult.ba_c"
+    )
+    
+    
+    
+    mid.val <- sapply(vars,mid.val.fun,USE.NAMES=TRUE)
+    
+    low.val <- sapply(vars,low.val.fun,USE.NAMES=TRUE)
+    names(low.val) <- vars
+    
+    high.val <- sapply(vars,high.val.fun,USE.NAMES=TRUE)
+    names(high.val) <- vars
+    
+    
+    
+    diff.norm.seq <- seq(from=-1.5,to=1.5,length.out=100)
+    diff.norm.seq.rev <- rev(diff.norm.seq)
+    
+    newdat <- data.frame(
+      ppt.normal.highsev_c = c(rep(low.val["ppt.normal.highsev_c"],100),rep(mid.val["ppt.normal.highsev_c"],100),rep(high.val["ppt.normal.highsev_c"],100)),
+      ppt.normal.highsev_c.sq = c(rep(low.val["ppt.normal.highsev_c"]^2,100),rep(mid.val["ppt.normal.highsev_c"]^2,100),rep(high.val["ppt.normal.highsev_c"]^2,100)),
+      tmean.normal.highsev_c = c(rep(low.val["tmean.normal.highsev_c"],100),rep(mid.val["tmean.normal.highsev_c"],100),rep(high.val["tmean.normal.highsev_c"],100)),
+      tmean.normal.highsev_c.sq = c(rep(low.val["tmean.normal.highsev_c"]^2,100),rep(mid.val["tmean.normal.highsev_c"]^2,100),rep(high.val["tmean.normal.highsev_c"]^2,100)),
+      def.normal.highsev_c = c(rep(low.val["def.normal.highsev_c"],100),rep(mid.val["def.normal.highsev_c"],100),rep(high.val["def.normal.highsev_c"],100)),
+      def.normal.highsev_c.sq = c(rep(low.val["def.normal.highsev_c"]^2,100),rep(mid.val["def.normal.highsev_c"]^2,100),rep(high.val["def.normal.highsev_c"]^2,100)),
+      aet.normal.highsev_c = c(rep(low.val["aet.normal.highsev_c"],100),rep(mid.val["aet.normal.highsev_c"],100),rep(high.val["aet.normal.highsev_c"],100)),
+      aet.normal.highsev_c.sq = c(rep(low.val["aet.normal.highsev_c"]^2,100),rep(mid.val["aet.normal.highsev_c"]^2,100),rep(high.val["aet.normal.highsev_c"]^2,100)),
+      
+      norm.level = c(rep("low",100),rep("mid",100),rep("high",100)),
+      
+      diff.norm.ppt.z.highsev_c = rep(diff.norm.seq,3),
+      diff.norm.ppt.z.highsev_c.sq = rep(diff.norm.seq^2,3),
+      diff.norm.tmean.z.highsev_c = rep(diff.norm.seq.rev,3),
+      diff.norm.tmean.z.highsev_c.sq = rep(diff.norm.seq.rev,3)^2,
+      diff.norm.aet.z.highsev_c = rep(diff.norm.seq,3),
+      diff.norm.aet.z.highsev_c.sq = rep(diff.norm.seq^2,3),
+      diff.norm.def.z.highsev_c = rep(diff.norm.seq.rev,3),
+      diff.norm.def.z.highsev_c.sq = rep(diff.norm.seq.rev,3)^2,
+      
+      diff.norm.ppt.min.z.highsev_c = rep(diff.norm.seq,3),
+      diff.norm.ppt.min.z.highsev_c.sq = rep(diff.norm.seq^2,3),
+      diff.norm.tmean.max.z.highsev_c = rep(diff.norm.seq.rev,3),
+      diff.norm.tmean.max.z.highsev_c.sq = rep(diff.norm.seq.rev,3)^2,
+      diff.norm.aet.min.z.highsev_c = rep(diff.norm.seq,3),
+      diff.norm.aet.min.z.highsev_c.sq = rep(diff.norm.seq^2,3),
+      diff.norm.def.max.z.highsev_c = rep(diff.norm.seq.rev,3),
+      diff.norm.def.max.z.highsev_c.sq = rep(diff.norm.seq.rev,3)^2,
+      
+      seed_tree_distance_general.highsev_c = mid.val["seed_tree_distance_general.highsev_c"],
+      rad.march.highsev_c = mid.val["rad.march.highsev_c"],
+      adult.ba_c = mid.val["adult.ba_c"]
+      
+    )
+    
+    for(j in 1:nrow(d.maes.anoms.sp)) {
+      
+      d.maes.anoms.sp.row <- d.maes.anoms.sp[j,]
+      best.anom.mod <- d.maes.anoms.sp.row$best.anomaly.mod
+      best.anom.normal.mod <- d.maes.anoms.sp.row$best.anom.normal
+      
+      #fit the anom and normal models
+      mod.anom <- betareg(formulas[[best.anom.mod]],data=d.c)
+      #mod.norm <- betareg(formulas[[best.anom.normal.mod]],data=d.c)
+      
+      
+      ##predict to new data
+      
+      pred.anom <- as.data.frame(predict(mod.anom,newdat,type="quantile",at=c(0.025,0.5,0.975)))
+      #pred.norm <- as.data.frame(predict(mod.norm,newdat,type="quantile",at=c(0.025,0.5,0.975)))
+      
+      names(pred.anom) <- c("pred.low","pred.mid","pred.high")
+      #names(pred.norm) <- c("pred.low","pred.mid","pred.high")
+      
+      pred.anom.dat <- cbind(pred.anom,newdat)
+      pred.anom.dat$type <- "anom"
+      pred.anom.dat$mod <- d.maes.anoms.sp.row$best.anomaly.mod
+      
+      #pred.norm.dat <- cbind(pred.norm,newdat)
+      #pred.norm.dat$type <- "norm"
+      #pred.norm.dat$mod <- d.maes.anoms.sp$best.anom.normal
+      
+      #pred.dat.sp <- rbind(pred.norm.dat,pred.anom.dat)
+      pred.dat.sp <- pred.anom.dat
+      
+      pred.dat.sp$anom <- d.maes.anoms.sp.row$anom.name
+      pred.dat.sp$sp <- d.maes.anoms.sp.row$sp
+      pred.dat.sp$rad.level <- d.maes.anoms.sp.row$rad.level
+      
+      
+      
+      pred.dat <- rbind(pred.dat,pred.dat.sp)  
+    }
+    
   }
+}
   
 
-  d.mod <- merge(d.plot.3,d.sp.curr,by=c("Fire","topoclim.cat"),all.x=TRUE)
-  
-  d.mod$regen.presab.old.t <- (d.mod$regen.presab.old*(nrow(d.mod)-1) + 0.5) / nrow(d.mod)
-  
-  # d.mod$response.var <- d.mod$regen.presab.old.t
-  # d.mod$ppt.normal.highsev.sq <- d.mod$ppt.normal.highsev^2
-  # d.mod$tmean.normal.highsev.sq <- d.mod$tmean.normal.highsev^2
-  # d.mod$diff.norm.ppt.z.highsev.sq <- d.mod$diff.norm.ppt.z.highsev^2
-  # d.mod$ppt.post.highsev.sq <- d.mod$ppt.post.highsev^2
-  # d.mod$tmean.post.highsev.sq <- d.mod$tmean.post.highsev^2
-  # 
-  # 
-  # 
-  
-  
-  vars.leave <- c("fire.year.highsev","FORB.highsev","SHRUB.highsev","GRASS.highsev","CONIFER.highsev","HARDWOOD.highsev","FIRE_SEV.highsev","fire.year.highsev","firesev.highsev","survey.years.post.highsev","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
-  vars.focal <- c("ppt.normal.highsev","diff.norm.ppt.z.highsev","ppt.normal.sq.highsev","rad.march.highsev","seed_tree_distance_general.highsev","SHRUB.highsev","tmean.post.highsev","tmean.normal.highsev","diff.norm.tmean.z.highsev","diff.norm.tmean.max.z.highsev", "def.normal.highsev","aet.normal.highsev","diff.norm.def.z.highsev","diff.norm.aet.z.highsev","def.post.highsev","aet.post.highsev")
-  d.mod <- d.mod[complete.cases(d.mod[,vars.focal]),]
-  d.c <- center.df(d.mod,vars.leave)
-  
-  d.c$ppt.normal.highsev_c.sq <- d.c$ppt.normal.highsev_c^2
-  d.c$tmean.normal.highsev_c.sq <- d.c$tmean.normal.highsev_c^2
-  
-  d.c$def.normal.highsev_c.sq <- d.c$def.normal.highsev_c^2
-  d.c$aet.normal.highsev_c.sq <- d.c$aet.normal.highsev_c^2
-  
-  # ####!!!! trick model: make diff.norm into diff.norm.min
-  # d.c$diff.norm.ppt.z.highsev_c <- d.c$diff.norm.ppt.min.z.highsev_c
-  # d.c$diff.norm.tmean.z.highsev_c <- d.c$diff.norm.tmean.max.z.highsev_c
-  # d.c$diff.norm.aet.z.highsev_c <- d.c$diff.norm.aet.min.z.highsev_c
-  # d.c$diff.norm.def.z.highsev_c <- d.c$diff.norm.def.max.z.highsev_c
-  # #### end trick model
-  
-  
-  d.c$diff.norm.ppt.z.highsev_c.sq <- d.c$diff.norm.ppt.z.highsev_c^2
-  d.c$diff.norm.tmean.z.highsev_c.sq <- d.c$diff.norm.tmean.z.highsev_c^2
-  
-  d.c$diff.norm.def.z.highsev_c.sq <- d.c$diff.norm.def.z.highsev_c^2
-  d.c$diff.norm.aet.z.highsev_c.sq <- d.c$diff.norm.aet.z.highsev_c^2
-  
-  d.c$ppt.post.highsev_c.sq <- d.c$ppt.post.highsev_c^2
-  d.c$tmean.post.highsev_c.sq <- d.c$tmean.post.highsev_c^2
-  
-  d.c$def.post.highsev_c.sq <- d.c$def.post.highsev_c^2
-  d.c$aet.post.highsev_c.sq <- d.c$aet.post.highsev_c^2
-  
 
-  vars.focal.c <- paste0(vars.focal[-6],"_c")
-  pairs(d.c[,vars.focal.c])
-  
-  ## transform cover so it does not include 0 or 1 (for Beta distrib)
-  d.c$SHRUB.highsev.p <- d.c$SHRUB.highsev/100
-  d.c$SHRUB.highsev.pt <- (d.c$SHRUB.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-  
-  d.c$GRASS.highsev.p <- d.c$GRASS.highsev/100
-  d.c$GRASS.highsev.pt <- (d.c$GRASS.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-  
-  d.c$HARDWOOD.highsev.p <- d.c$HARDWOOD.highsev/100
-  d.c$HARDWOOD.highsev.pt <- (d.c$HARDWOOD.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-  
-  d.c$FORB.highsev.p <- d.c$FORB.highsev/100
-  d.c$FORB.highsev.pt <- (d.c$FORB.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-  
-  d.c$CONIFER.highsev.p <- d.c$CONIFER.highsev/100
-  d.c$CONIFER.highsev.pt <- (d.c$CONIFER.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-  
-  ## transform regen proportion so it does not include 0 or 1
-  d.c$regen.presab.old.t <- (d.c$regen.presab.old*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-  
-  
-  d.c$Fire <- as.factor(d.c$Fire)
-  
-  #d.c <- d.c[!(d.c$Fire == "RICH"),]
-  
-  if(sp %in% cover.opts) {
-    
-    sp.cov <- substr(sp,5,100)
-    sp.cov <- paste0(sp.cov,".highsev.pt")
-    
-    d.c$cov.response <- d.c[,sp.cov]
-    
-    d.c$response.var <- d.c$cov.response
-    
-  } else {
-    
-    d.c$response.var <- d.c$regen.presab.old.t
-    
-  }
-  
-  m <- list()
-  
-  
-  d.c <- d.c[d.c$topoclim.cat == "P.2_R.1",]
-  
-  
-  m[["n0.a0"]] <- betareg(response.var ~ 1,data=d.c)
-  m[["nP.a0"]] <- betareg(response.var ~ ppt.normal.highsev_c + seed_tree_distance_general.highsev_c,data=d.c)
-  m[["nP.aP"]] <- betareg(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + seed_tree_distance_general.highsev_c,data=d.c)
-  m[["nP.aP2"]] <- betareg(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + seed_tree_distance_general.highsev_c,data=d.c)
-  m[["pP"]] <- betareg(response.var ~ ppt.post.highsev_c + seed_tree_distance_general.highsev_c,data=d.c)
-  m[["nP2.a0"]] <- betareg(response.var ~ ppt.normal.highsev_c + ppt.normal.highsev_c.sq + seed_tree_distance_general.highsev_c,data=d.c)
-  m[["nP2.aP"]] <- betareg(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq + seed_tree_distance_general.highsev_c,data=d.c)
-  m[["nP2.aP2"]] <- betareg(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq + seed_tree_distance_general.highsev_c,data=d.c)
-  m[["pP2"]] <- betareg(response.var ~ ppt.post.highsev_c + ppt.post.highsev_c.sq + seed_tree_distance_general.highsev_c,data=d.c)
+#### Make plots of counterfactuals ####
 
-  ##!!!!!! RESUME next add def, aet, and for all, use min/max aonomaly too in addition to mean anom
-  
-  
-  
-  
-  #get individual loos (will get specific pairs later)
-  
-  d.loos <- data.frame()
-  
-  for(mod in names(m)) {
-    cat(mod," ")
-    loo.mod <- loo(m[[as.character(mod)]])
-    d.mod <- data.frame(sp=sp,mod=mod,LOOIC=loo.mod$looic,SE=loo.mod$se_looic)
-    d.loos <- rbind(d.loos,d.mod)
+## make a single factor that combines species and rad level
+pred.dat$sp.rad <- paste(pred.dat$sp,pred.dat$rad.level,sep=".")
+
+
+#for each sp-rad combo, find which was the best anomaly, which anomalies were better than their corresponding normals, and plot symbols indicating
+d.maes.anoms$anom.better <- d.maes.anoms$best.anom.mae < d.maes.anoms$best.anom.normal.mae
+d.maes.anoms$anom.improvement <-  d.maes.anoms$best.anom.normal.mae - d.maes.anoms$best.anom.mae
+
+d.maes.anoms$best.of.species <- ""
+d.maes.anoms$most.improved <- ""
+
+for(sp in unique(d.maes.anoms$sp)) {
+  d.maes.anoms.sp <- d.maes.anoms[d.maes.anoms$sp == sp,]
+  for(rad in d.maes.anoms.sp$rad.level) {
+    d.maes.anoms.sp.rad <- d.maes.anoms.sp[d.maes.anoms.sp$rad.level == rad,]
     
+    best.anom <- d.maes.anoms.sp.rad[d.maes.anoms.sp.rad$best.anom.mae == min(d.maes.anoms.sp.rad$best.anom.mae)[1],"anom.name"]
+    d.maes.anoms[(d.maes.anoms$sp==sp) & (d.maes.anoms$rad.level == rad) & (d.maes.anoms$anom.name == best.anom),"best.of.species"] <- "best anom"
+    
+    most.improved <- d.maes.anoms.sp.rad[d.maes.anoms.sp.rad$anom.improvement == max(d.maes.anoms.sp.rad$anom.improvement)[1],"anom.name"]
+    d.maes.anoms[(d.maes.anoms$sp==sp) & (d.maes.anoms$rad.level == rad) & (d.maes.anoms$anom.name == most.improved),"most.improved"] <- "largest improvement"
   }
-  
-  d.loos$upr <- d.loos$LOOIC + 1.96*d.loos$SE
-  
-  d.loos.all <- rbind(d.loos.all,d.loos)
-  
-  ### Specify model categories
-  
-  ## normal models
-  search <- ".a0"
-  normal.model.names <- d.loos[grep(search,d.loos$mod,fixed=TRUE),]$mod
-  normal.model.names <- normal.model.names[normal.model.names != "n0.a0"] # exclude null model
-  
-  ## anomaly models
-  search <- ".a"
-  anomaly.model.names <- d.loos[grep(search,d.loos$mod,fixed=TRUE),]$mod
-  anomaly.model.names <- anomaly.model.names[!(anomaly.model.names %in% normal.model.names)]
-  anomaly.model.names <- anomaly.model.names[anomaly.model.names != "n0.a0"] # exclude null model
-  
-  ### Find the best normal model
-  
-  d.loos.normal <- d.loos[d.loos$mod %in% normal.model.names,]
-  best.normal.mod <- d.loos.normal[d.loos.normal$upr == min(d.loos.normal$upr,na.rm=TRUE),]$mod[1]
-  
-  ### Compare null to best normal
-  comp.null.normal <- loo(m[["n0.a0"]],m[[as.character(best.normal.mod)]])$ic_diffs__
-  
-  ### Get post corresponding to best normal
-  norm.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
-  norm.post.mod <- sub("n","p",norm.part)
-  
-  ### Compare best normal to corresponding post
-  comp.normal.post <- loo(m[[as.character(best.normal.mod)]],m[[as.character(norm.post.mod)]])$ic_diffs__
-  
-  
-  ### Get anomaly models corresponding to best normal
-  
-  normal.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
-  search <- paste0(normal.part,".")
-  normal.matches <- grepl(search,d.loos$mod,fixed=TRUE)
-  search <- paste0(normal.part,".a0")
-  non.anom.match <- grepl(search,d.loos$mod,fixed=TRUE)
-  normal.anom <- normal.matches & (!non.anom.match)
-  normal.anom.names <- d.loos[normal.anom,]$mod
-  
-  ### Get the best corresponding anomaly model
-  
-  d.loos.anom <- d.loos[d.loos$mod %in% normal.anom.names,]
-  best.normal.anom <- d.loos.anom[d.loos.anom$upr == min(d.loos.anom$upr,na.rm=TRUE),]$mod[1]
-  
-  ### Compare best normal with corresponding best anomaly
-  comp.normal.anom <- loo(m[[as.character(best.normal.mod)]],m[[as.character(best.normal.anom)]])$ic_diffs__
-  
-  
-  ### Get the best anomaly, independent of best normal
-  d.loos.anomaly <- d.loos[d.loos$mod %in% anomaly.model.names,]
-  best.anomaly.mod <- d.loos.anomaly[d.loos.anomaly$upr == min(d.loos.anomaly$upr,na.rm=TRUE),]$mod[1]
-  
-  ### Get the normal corresponding to the best anomaly
-  best.anom.normal.part <- strsplit(as.character(best.anomaly.mod),".",fixed=TRUE)[[1]][1]
-  best.anom.normal <- paste0(best.anom.normal.part,".a0")
-  
-  ### Compare corresponding normal to best anomaly
-  comp.anom.normal <- loo(m[[as.character(best.anom.normal)]],m[[as.character(best.anomaly.mod)]])$ic_diffs__
-  
-  
-  
-  ### Store loos comps
-  d.loo.comps.sp <- rbind(comp.null.normal,comp.normal.post,comp.normal.anom,comp.anom.normal)
-  d.loo.comps.sp <- as.data.frame(d.loo.comps.sp)
-  d.loo.comps.sp$comp <-c("null.normal","normal.post","normal.anom","anom.normal")
-  d.loo.comps.sp$sp <- sp
-  
-  d.loo.comps <- rbind(d.loo.comps,d.loo.comps.sp)
-  
-  
-  ## store what the best ones were!
-  mods.best.sp <- data.frame(best.normal=best.normal.mod,norm.post=norm.post.mod,best.normal.anom=best.normal.anom,best.anomaly=best.anomaly.mod,sp=sp)
-  mods.best <- rbind(mods.best, mods.best.sp)
-  
-  
-  
-  
-  
+}
+
+d.maes.anoms.short <- d.maes.anoms[,c("sp","rad.level","anom.name","anom.better","anom.improvement","best.of.species","most.improved")]
+
+pred.dat.comb <- merge(pred.dat,d.maes.anoms.short,all.x=TRUE,by.x=c("sp","rad.level","anom"),by.y=c("sp","rad.level","anom.name"))
+pred.dat.comb$anom.improvement <- round(pred.dat.comb$anom.improvement,2)
+pred.dat.comb[pred.dat.comb$anom.improvement < 0 , "anom.improvement"] <- NA
+
+## get rid of mid
+pred.dat.plotting <- pred.dat.comb[pred.dat.comb$norm.level %in% c("low","high"),]
+
+ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z.highsev_c,y=pred.mid,color=norm.level,fill=norm.level)) +
+  geom_point() +
+  geom_ribbon(aes(ymin=pred.low,ymax=pred.high),alpha=0.3,color=NA) +
+  facet_grid(anom~sp.rad) +
+  geom_text(aes(0,1,label=best.of.species),size=3,color="black") +
+  geom_text(aes(0,0.9,label=most.improved),size=3,color="black") +
+  geom_text(aes(0,0.8,label=anom.improvement),size=3,color="black")
+
+
+
+
+
+
+
+
+
+
+
+
+## fit for shrub cover
+
+##make predictions for differing defmax, defmean, ideally also flexible for all anomaly terms assuming there's only one anomaly per prediction
+
+##make sure shrub looks similar whether using precip vs. deficit max.
+
+
+##show predicted vs. observed with and without anom term
+
+##for best normal model, fit residuals
   
   
   if(sp =="COV.SHRUB") {

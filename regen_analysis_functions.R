@@ -26,6 +26,59 @@ remove.vars <- function(df,vars.remove) {
 
 
 
+
+cvfun <- function(formula,data) {
+  
+  errs <- NULL
+  
+  for(i in 1:nrow(data)) {
+    
+    data.train <- data[-i,]
+    data.val <- data[i,]
+    
+    m <- betareg(formula,data=data.train)
+    
+    if(m$converged == FALSE) {
+      message <- paste0("No convergence for ",sp," ",formula.name)
+      print(message)
+    }
+    
+    
+    m.pred <- predict(m,newdat=data.val)
+    obs <- data.val$response.var
+    
+    if((m.pred > 0.999)) { # if predicted probability identical to 1, rescale to the largest possible observed value (transformed)
+      n.pts <- nrow(data.train)+nrow(data.val)
+      one.t <- (1*(n.pts-1) + 0.5) / n.pts
+      m.pred <- one.t
+    }
+    
+    if((m.pred < 0.001)) { # if predicted probability identical to 0, rescale to the largest possible observed value (transformed)
+      n.pts <- nrow(data.train)+nrow(data.val)
+      zero.t <- (0*(n.pts-1) + 0.5) / n.pts
+      m.pred <- one.t
+    }
+    
+    err <- (logit(m.pred)-logit(obs))
+    
+    errs[i] <- err
+    
+  }
+  
+  
+  
+  
+  mae <- mean(abs(errs))
+  stderr <- sd(abs(errs))/(sqrt(length(errs)))
+  
+  ret <- data.frame(mae,stderr)
+  return(ret)
+  
+}
+
+
+
+
 center.df <- function(df,leave.cols) {
   df.names <- names(df)
   new.df <- data.frame(SID=1:nrow(df))
