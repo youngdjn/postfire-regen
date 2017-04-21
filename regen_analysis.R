@@ -3,6 +3,7 @@ setwd("~/UC Davis/Research Projects/Post-fire regen/Dev/postfire-regen")
 library(ggplot2)
 library(brms)
 library(pROC)
+library(betareg)
 
 
 source("regen_analysis_functions.R")
@@ -228,6 +229,24 @@ d.sp.2$proportion.young <- d.sp.2$regen.count.young / d.sp.2$regen.count.all
 
 
 
+
+### Plot histogram of seed tree distance ####
+
+d.plot.highsev <- d.plot[d.plot$FIRE_SEV %in% c(4,5),]
+
+ggplot(d.plot.highsev,aes(seed_tree_distance_general)) +
+  geom_histogram() +
+  facet_wrap(~Fire)
+
+library(plyr)
+
+a <- ddply(d.plot.highsev,~Fire,summarise,mean=mean(seed_tree_distance_general),sd=sd(seed_tree_distance_general))
+
+ggplot(a,aes(x=Fire,y=mean)) +
+  geom_point() +
+  geom_errorbar(ymax=a$mean+a$sd,ymin=a$mean-a$sd) +
+  scale_y_continuous(limits=c(0,50))
+  
 
 
 #### 6. Plot-level analysis with BRMS ####
@@ -517,10 +536,8 @@ for(sp in sp.opts) { # about 1 hr per species
         
         sp.cov <- substr(sp,5,100)
         sp.cov <- paste0(sp.cov,".pt")
-        
-        d.c$cov.response <- d.c[,sp.cov]
   
-        d.c$response.var <- d.c$cov.response
+        d.c$response.var <- d.c[,sp.cov]
         
         mod.family <- "Beta"
         
@@ -1794,6 +1811,28 @@ plot(cc3,choices=c(1,2))
 
 
 
+vars.focal.nmds <- c("NormalPrecip","NormalTemp","PrecipAnom","TempAnom","SolarRadiation","WF","PP","SP","BlkOak","CynOak","Tanoak","RF")
+d.focal.nmds <- d.all[,vars.focal.nmds]
+
+
+a <- metaMDS(d.all.sp)
+b <- envfit(a,d.focal.nmds)
+
+
+plot(a,type="t")
+plot(b)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ##
@@ -1995,8 +2034,8 @@ m[["pP.nt"]] <- betareg(response.var ~ ppt.post.highsev + ppt.post.highsev.sq + 
 
 
 #sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO","ABMA","CONIF.ALLSP","PSME","PILA","CADE27","PIJE","PIPJ")
-sp.opts <- c("PIPO","ABCO","PILA","SHADE.ALLSP","QUKE","PINUS.ALLSP","QUCH2","HDWD.ALLSP") # reduced
-sp.opts <- c("PIPO","ABCO","PILA","QUKE","QUCH2") # reduced
+sp.opts <- c("PIPO","ABCO","PILA","SHADE.ALLSP","QUKE","PINUS.ALLSP","QUCH2","HDWD.ALLSP","PSME") # reduced
+sp.opts <- c("PIPO","ABCO","PILA","QUKE","QUCH2","PSME") # reduced
 
 sp.opts <- c("PIPO","ABCO") # reduced
 #sp.opts <- c("PIPO","ABCO") # reduced
@@ -2030,8 +2069,12 @@ d.maes.anoms <- data.frame()
 
 pred.dat <- data.frame()
 
+fit.dat <- data.frame()
+
+rad.levels <- c(1,2)
+
 for(sp in sp.opts) {
-  for(rad.level in 1:2) {
+  for(rad.level in rad.levels) {
     
     cat("\n")
     cat("Running model for: ",sp,"")
@@ -2130,10 +2173,7 @@ for(sp in sp.opts) {
       
       sp.cov <- substr(sp,5,100)
       sp.cov <- paste0(sp.cov,".highsev.pt")
-      
-      d.c$cov.response <- d.c[,sp.cov]
-      
-      d.c$response.var <- d.c$cov.response
+      d.c$response.var <- d.c[,sp.cov]
       
     } else {
       
@@ -2458,119 +2498,126 @@ for(sp in sp.opts) {
     
     ### Get the best implementation of each anomaly term (ppt, aet, def; and max/min or average)
     
-    ## normal models
-    search <- ".a0"
-    normal.model.names <- cv.results[grep(search,cv.results$model,fixed=TRUE),]$mod
-    normal.model.names <- normal.model.names[normal.model.names != "n0.a0"] # exclude null model
-
-    anom.search.opts <- c(Pmean = "aP2?(ni)?$",
-                     Dmean = "aD2?(ni)?$",
-                     Amean = "aA2?(ni)?$",
-                     Pmin = "aP2?min(ni)?$",
-                     Dmax = "aD2?max(ni)?$",
-                     Amin = "aA2?min(ni)?$"
-                     )
-
-    d.maes.anoms.sp <- data.frame()
-
-
-    for(i in 1:length(anom.search.opts)) {
-
-      anom.name <- names(anom.search.opts)[i]
-      anom.search <- anom.search.opts[i]
-      null.names <- c("n0.a0","n0a.a0")
-      anomaly.model.names <- cv.results[grep(anom.search,cv.results$model,fixed=FALSE),]$model
-      anomaly.model.names <- anomaly.model.names[!(anomaly.model.names %in% normal.model.names)]
-      anomaly.model.names <- anomaly.model.names[!(anomaly.model.names %in% null.names)] # exclude null model
-
-      d.cv.anomaly <- cv.results[cv.results$model %in% anomaly.model.names,]
-      best.anomaly.mod <- d.cv.anomaly[d.cv.anomaly$mae == min(d.cv.anomaly$mae,na.rm=TRUE),]$mod[1]
-
-      best.anom.normal.part <- strsplit(as.character(best.anomaly.mod),".",fixed=TRUE)[[1]][1]
-      best.anom.normal <- paste0(best.anom.normal.part,".a0")
-
-      ## get maes of best normal, best anomal, best normal.anom, best.anom.normal
-      best.anom.mae <- cv.results[cv.results$model == best.anomaly.mod,"mae"]
-      best.anom.normal.mae <- cv.results[cv.results$model == best.anom.normal,"mae"]
-
-
-      ### Store MAEs of the best models
-      d.maes.anoms.sp.anom <- data.frame(best.anomaly.mod,best.anom.normal,
-                              best.anom.mae,best.anom.normal.mae,sp,rad.level,anom.name,stringsAsFactors=FALSE)
-
-      d.maes.anoms.sp <- rbind(d.maes.anoms.sp,d.maes.anoms.sp.anom)
-
-    }
-
-    d.maes.anoms <- rbind(d.maes.anoms,d.maes.anoms.sp)
-
-    
-    # ## Repeat, but by first finding the best normal and then the corresponding best anomaly
-    # 
     # ## normal models
     # search <- ".a0"
     # normal.model.names <- cv.results[grep(search,cv.results$model,fixed=TRUE),]$mod
     # normal.model.names <- normal.model.names[normal.model.names != "n0.a0"] # exclude null model
     # 
-    # norm.search.opts <- c(Pmean = "n(P|0)2?a?\\.a0",
-    #                       Dmean = "n(D|0)2?a?\\.a0",
-    #                       Amean = "n(A|0)2?a?\\.a0",
-    #                       Pmin = "n(P|0)2?a?\\.a0",
-    #                       Dmax = "n(D|0)2?a?\\.a0",
-    #                       Amin = "n(A|0)2?a?\\.a0")
-    #                       
-    #   
-    #   
     # anom.search.opts <- c(Pmean = "aP2?(ni)?$",
-    #                     Dmean = "aD2?(ni)?$",
-    #                     Amean = "aA2?(ni)?$",
-    #                     Pmin = "aP2?min(ni)?$",
-    #                     Dmax = "aD2?max(ni)?$",
-    #                     Amin = "aA2?min(ni)?$"
-    #                     )
+    #                  Dmean = "aD2?(ni)?$",
+    #                  Amean = "aA2?(ni)?$",
+    #                  Pmin = "aP2?min(ni)?$",
+    #                  Dmax = "aD2?max(ni)?$",
+    #                  Amin = "aA2?min(ni)?$"
+    #                  )
     # 
     # d.maes.anoms.sp <- data.frame()
     # 
     # 
     # for(i in 1:length(anom.search.opts)) {
-    #   
-    #   anom.name <- names(norm.search.opts)[i]
-    #   norm.search <- norm.search.opts[i]
+    # 
+    #   anom.name <- names(anom.search.opts)[i]
     #   anom.search <- anom.search.opts[i]
     #   null.names <- c("n0.a0","n0a.a0")
-    #   normal.model.names <- cv.results[grep(norm.search,cv.results$model,fixed=FALSE),]$model
-    #   
-    #   d.cv.normal <- cv.results[cv.results$model %in% normal.model.names,]
-    #   best.normal.mod <- d.cv.normal[d.cv.normal$mae == min(d.cv.normal$mae,na.rm=TRUE),]$mod[1]
-    #   
-    #   #what is the best anomaly model for that normal, sticking with whichever anom we have
-    #   best.normal.normal.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
-    #   best.normal.anom.search <- paste0(best.normal.normal.part,"\\.",anom.search)
-    #   anom.model.names <- cv.results[grep(best.normal.anom.search,cv.results$model,fixed=FALSE),]$model
-    #   d.cv.anom <- cv.results[cv.results$model %in% anom.model.names,]
-    #   best.anom.mod <- d.cv.anom[d.cv.anom$mae == min(d.cv.anom$mae,na.rm=TRUE),]$mod[1]
-    #   
+    #   anomaly.model.names <- cv.results[grep(anom.search,cv.results$model,fixed=FALSE),]$model
+    #   anomaly.model.names <- anomaly.model.names[!(anomaly.model.names %in% normal.model.names)]
+    #   anomaly.model.names <- anomaly.model.names[!(anomaly.model.names %in% null.names)] # exclude null model
+    # 
+    #   d.cv.anomaly <- cv.results[cv.results$model %in% anomaly.model.names,]
+    #   best.anomaly.mod <- d.cv.anomaly[d.cv.anomaly$mae == min(d.cv.anomaly$mae,na.rm=TRUE),]$mod[1]
+    # 
+    #   best.anom.normal.part <- strsplit(as.character(best.anomaly.mod),".",fixed=TRUE)[[1]][1]
+    #   best.anom.normal <- paste0(best.anom.normal.part,".a0")
+    # 
     #   ## get maes of best normal, best anomal, best normal.anom, best.anom.normal
-    #   best.anom.mae <- cv.results[cv.results$model == best.anom.mod,"mae"]
-    #   best.anom.normal.mae <- cv.results[cv.results$model == best.normal.mod,"mae"]
-    #   
-    #   
+    #   best.anom.mae <- cv.results[cv.results$model == best.anomaly.mod,"mae"]
+    #   best.anom.normal.mae <- cv.results[cv.results$model == best.anom.normal,"mae"]
+    # 
+    # 
     #   ### Store MAEs of the best models
-    #   best.anomaly.mod <- best.anom.mod
-    #   best.anom.normal <- best.normal.mod
-    #   
-    #   
     #   d.maes.anoms.sp.anom <- data.frame(best.anomaly.mod,best.anom.normal,
-    #                                      best.anom.mae,best.anom.normal.mae,sp,rad.level,anom.name,stringsAsFactors=FALSE)
-    #   
+    #                           best.anom.mae,best.anom.normal.mae,sp,rad.level,anom.name,stringsAsFactors=FALSE)
+    # 
     #   d.maes.anoms.sp <- rbind(d.maes.anoms.sp,d.maes.anoms.sp.anom)
-    #   
+    # 
     # }
     # 
-    # d.maes.anoms <- rbind(d.maes.anoms,d.maes.anoms.sp)    
-    # 
-    # 
-    # 
+    # d.maes.anoms <- rbind(d.maes.anoms,d.maes.anoms.sp)
+
+
+    ## Repeat, but by first finding the best normal and then the corresponding best anomaly
+
+    ## normal models
+    search <- ".a0"
+    normal.model.names <- cv.results[grep(search,cv.results$model,fixed=TRUE),]$mod
+    normal.model.names <- normal.model.names[normal.model.names != "n0.a0"] # exclude null model
+
+    if(sp %in% cover.opts) { # don't allow a normal with adults in it if this is a cover model
+      norm.search.opts <- c(Pmean = "n(P|0)2?\\.a0",
+                            Dmean = "n(D|0)2?\\.a0",
+                            Amean = "n(A|0)2?\\.a0",
+                            Pmin = "n(P|0)2?\\.a0",
+                            Dmax = "n(D|0)2?\\.a0",
+                            Amin = "n(A|0)2?\\.a0")
+    } else {
+      norm.search.opts <- c(Pmean = "n(P|0)2?a?\\.a0",
+                            Dmean = "n(D|0)2?a?\\.a0",
+                            Amean = "n(A|0)2?a?\\.a0",
+                            Pmin = "n(P|0)2?a?\\.a0",
+                            Dmax = "n(D|0)2?a?\\.a0",
+                            Amin = "n(A|0)2?a?\\.a0")
+    }
+
+    anom.search.opts <- c(Pmean = "aP2?(ni)?$",
+                        Dmean = "aD2?(ni)?$",
+                        Amean = "aA2?(ni)?$",
+                        Pmin = "aP2?min(ni)?$",
+                        Dmax = "aD2?max(ni)?$",
+                        Amin = "aA2?min(ni)?$"
+                        )
+
+    d.maes.anoms.sp <- data.frame()
+
+
+for(i in 1:length(anom.search.opts)) {
+
+  anom.name <- names(norm.search.opts)[i]
+  norm.search <- norm.search.opts[i]
+  anom.search <- anom.search.opts[i]
+  null.names <- c("n0.a0","n0a.a0")
+  normal.model.names <- cv.results[grep(norm.search,cv.results$model,fixed=FALSE),]$model
+
+  d.cv.normal <- cv.results[cv.results$model %in% normal.model.names,]
+  best.normal.mod <- d.cv.normal[d.cv.normal$mae == min(d.cv.normal$mae,na.rm=TRUE),]$mod[1]
+
+  #what is the best anomaly model for that normal, sticking with whichever anom we have
+  best.normal.normal.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
+  best.normal.anom.search <- paste0(best.normal.normal.part,"\\.",anom.search)
+  anom.model.names <- cv.results[grep(best.normal.anom.search,cv.results$model,fixed=FALSE),]$model
+  d.cv.anom <- cv.results[cv.results$model %in% anom.model.names,]
+  best.anom.mod <- d.cv.anom[d.cv.anom$mae == min(d.cv.anom$mae,na.rm=TRUE),]$mod[1]
+
+  ## get maes of best normal, best anomal, best normal.anom, best.anom.normal
+  best.anom.mae <- cv.results[cv.results$model == best.anom.mod,"mae"]
+  best.anom.normal.mae <- cv.results[cv.results$model == best.normal.mod,"mae"]
+
+
+  ### Store MAEs of the best models
+  best.anomaly.mod <- best.anom.mod
+  best.anom.normal <- best.normal.mod
+
+
+  d.maes.anoms.sp.anom <- data.frame(best.anomaly.mod,best.anom.normal,
+                                     best.anom.mae,best.anom.normal.mae,sp,rad.level,anom.name,stringsAsFactors=FALSE)
+
+  d.maes.anoms.sp <- rbind(d.maes.anoms.sp,d.maes.anoms.sp.anom)
+
+    }
+
+    d.maes.anoms <- rbind(d.maes.anoms,d.maes.anoms.sp)
+
+
+
     
     
     
@@ -2668,27 +2715,27 @@ for(sp in sp.opts) {
       
       #fit the anom and normal models
       mod.anom <- betareg(formulas[[best.anom.mod]],data=d.c)
-      #mod.norm <- betareg(formulas[[best.anom.normal.mod]],data=d.c)
+      mod.norm <- betareg(formulas[[best.anom.normal.mod]],data=d.c)
       
       
       ##predict to new data
       
       pred.anom <- as.data.frame(predict(mod.anom,newdat,type="quantile",at=c(0.025,0.5,0.975)))
-      #pred.norm <- as.data.frame(predict(mod.norm,newdat,type="quantile",at=c(0.025,0.5,0.975)))
+      pred.norm <- as.data.frame(predict(mod.norm,newdat,type="quantile",at=c(0.025,0.5,0.975)))
       
       names(pred.anom) <- c("pred.low","pred.mid","pred.high")
-      #names(pred.norm) <- c("pred.low","pred.mid","pred.high")
+      names(pred.norm) <- c("pred.low","pred.mid","pred.high")
       
       pred.anom.dat <- cbind(pred.anom,newdat)
       pred.anom.dat$type <- "anom"
       pred.anom.dat$mod <- d.maes.anoms.sp.row$best.anomaly.mod
       
-      #pred.norm.dat <- cbind(pred.norm,newdat)
-      #pred.norm.dat$type <- "norm"
-      #pred.norm.dat$mod <- d.maes.anoms.sp$best.anom.normal
+      pred.norm.dat <- cbind(pred.norm,newdat)
+      pred.norm.dat$type <- "norm"
+      pred.norm.dat$mod <- d.maes.anoms.sp.row$best.anom.normal
       
-      #pred.dat.sp <- rbind(pred.norm.dat,pred.anom.dat)
-      pred.dat.sp <- pred.anom.dat
+      pred.dat.sp <- rbind(pred.norm.dat,pred.anom.dat)
+      #pred.dat.sp <- pred.anom.dat
       
       pred.dat.sp$anom <- d.maes.anoms.sp.row$anom.name
       pred.dat.sp$sp <- d.maes.anoms.sp.row$sp
@@ -2697,6 +2744,30 @@ for(sp in sp.opts) {
       
       
       pred.dat <- rbind(pred.dat,pred.dat.sp)  
+      
+      
+      
+      ## get fitted and observed
+      fit.anom <- as.data.frame(predict(mod.anom))
+      fit.norm <- as.data.frame(predict(mod.norm))
+      names(fit.anom) <- names(fit.norm) <- c("fitted")
+      fit.anom$type <- "anom"
+      fit.norm$type <- "norm"
+      
+      fit.anom.dat <- cbind(fit.anom,d.c)
+      fit.norm.dat <- cbind(fit.norm,d.c)
+      
+      fit.dat.sp <- rbind(fit.anom.dat,fit.norm.dat)
+      fit.dat.sp$anom <- d.maes.anoms.sp.row$anom.name
+      fit.dat.sp$sp <- sp
+      fit.dat.sp$rad.level <- rad.level
+      
+      fit.dat <- rbind(fit.dat,fit.dat.sp)
+      
+      
+      
+      
+      
     }
     
   }
@@ -2704,7 +2775,7 @@ for(sp in sp.opts) {
   
 
 
-#### Make plots of counterfactuals ####
+#### Prep for plots etc ####
 
 ## make a single factor that combines species and rad level
 pred.dat$sp.rad <- paste(pred.dat$sp,pred.dat$rad.level,sep=".")
@@ -2723,10 +2794,10 @@ for(sp in unique(d.maes.anoms$sp)) {
     d.maes.anoms.sp.rad <- d.maes.anoms.sp[d.maes.anoms.sp$rad.level == rad,]
     
     best.anom <- d.maes.anoms.sp.rad[d.maes.anoms.sp.rad$best.anom.mae == min(d.maes.anoms.sp.rad$best.anom.mae)[1],"anom.name"]
-    d.maes.anoms[(d.maes.anoms$sp==sp) & (d.maes.anoms$rad.level == rad) & (d.maes.anoms$anom.name == best.anom),"best.of.species"] <- "best anom"
+    d.maes.anoms[(d.maes.anoms$sp==sp) & (d.maes.anoms$rad.level == rad) & (d.maes.anoms$anom.name == best.anom),"best.of.species"] <- ""# "best anom"
     
     most.improved <- d.maes.anoms.sp.rad[d.maes.anoms.sp.rad$anom.improvement == max(d.maes.anoms.sp.rad$anom.improvement)[1],"anom.name"]
-    d.maes.anoms[(d.maes.anoms$sp==sp) & (d.maes.anoms$rad.level == rad) & (d.maes.anoms$anom.name == most.improved),"most.improved"] <- "largest improvement"
+    d.maes.anoms[(d.maes.anoms$sp==sp) & (d.maes.anoms$rad.level == rad) & (d.maes.anoms$anom.name == most.improved),"most.improved"] <- ""# "largest improvement"
   }
 }
 
@@ -2736,8 +2807,17 @@ pred.dat.comb <- merge(pred.dat,d.maes.anoms.short,all.x=TRUE,by.x=c("sp","rad.l
 pred.dat.comb$anom.improvement <- round(pred.dat.comb$anom.improvement,2)
 pred.dat.comb[pred.dat.comb$anom.improvement < 0 , "anom.improvement"] <- NA
 
-## get rid of mid
+
+#### Compute total MAE across all species, to see which is the best ####
+d.mae.agg <- aggregate(d.maes.anoms[,c("best.anom.mae","best.anom.normal.mae","anom.improvement")],by=list(d.maes.anoms$anom.name),FUN=mean)
+
+
+
+#### Plot counterfactuals ####
+
+## get rid of mid and get rid of normal predictions
 pred.dat.plotting <- pred.dat.comb[pred.dat.comb$norm.level %in% c("low","high"),]
+pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$type == "anom",]
 
 ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z.highsev_c,y=pred.mid,color=norm.level,fill=norm.level)) +
   geom_point() +
@@ -2746,6 +2826,129 @@ ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z.highsev_c,y=pred.mid,color=norm.l
   geom_text(aes(0,1,label=best.of.species),size=3,color="black") +
   geom_text(aes(0,0.9,label=most.improved),size=3,color="black") +
   geom_text(aes(0,0.8,label=anom.improvement),size=3,color="black")
+
+
+
+
+
+#### For each species and rad group, plot fitted vs. observed, for normal and anom side by side ####
+
+fit.dat$resid <- fit.dat$response.var-fit.dat$fitted
+
+
+
+
+## AET min only
+fit.dat.aet <- fit.dat[fit.dat$anom == "Amin",]
+
+
+
+fit.obs.plots <- list()
+
+for(sp in unique(fit.dat$sp)) {
+  for(rad.level in unique(fit.dat$rad.level)) {
+    
+    fit.dat.sp <- fit.dat.aet[fit.dat.aet$sp == sp & fit.dat.aet$rad.level == rad.level,]
+    
+    fit.dat.sp$type <- factor(fit.dat.sp$type,levels=c("norm","anom"))
+    
+    # dummy points
+    max.xy <- max(c(fit.dat.sp$response.var,fit.dat.sp$fitted))
+    dummy <- data.frame(response.var=c(0,max.xy),fitted=c(0,max.xy))
+    
+    plot.name <- paste0(sp,".",rad.level)
+    
+    fit.obs.plots[[plot.name]] <- ggplot(fit.dat.sp,aes(x=response.var,y=fitted)) +
+      geom_point() +
+      facet_grid(.~type) +
+      geom_abline(slope=1,intercept=0) +
+      geom_point(data=dummy,alpha=0) +
+      labs(x="Observed",y="Fitted",title=plot.name) +
+      theme_bw() +
+      theme(plot.title=element_text(hjust=0.5))
+    
+  }
+}
+
+library(gridExtra)
+n <- length(fit.obs.plots)
+nCol <- 2
+do.call("grid.arrange",c(fit.obs.plots,ncol=nCol))
+
+
+
+
+#### Plot residuals by fire ####
+fit.dat.plot <- fit.dat[fit.dat$type=="norm",]
+fit.dat.plot <- fit.dat.plot[fit.dat.plot$anom == "Pmin",]
+
+fit.dat.plot$rad.level <- as.factor(fit.dat.plot$rad.level)
+
+fit.dat.plot$Fire <- factor(fit.dat.plot$Fire,c("BAGLEY","CHIPS","RALSTON","BASSETTS","MOONLIGHT","ANTELOPE","HARDING","RICH","BTU LIGHTENING","STRAYLOR","CUB","AMERICAN RIVER","FREDS","POWER"))
+
+
+ggplot(fit.dat.plot,aes(x=Fire,y=resid,fill=rad.level)) +
+  geom_bar(stat="identity",position="dodge",width=0.5) +
+  facet_grid(sp~.) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle=90,hjust=1))
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

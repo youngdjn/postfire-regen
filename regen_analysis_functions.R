@@ -56,7 +56,7 @@ cvfun <- function(formula,data) {
     if((m.pred < 0.001)) { # if predicted probability identical to 0, rescale to the largest possible observed value (transformed)
       n.pts <- nrow(data.train)+nrow(data.val)
       zero.t <- (0*(n.pts-1) + 0.5) / n.pts
-      m.pred <- one.t
+      m.pred <- zero.t
     }
     
     err <- (logit(m.pred)-logit(obs))
