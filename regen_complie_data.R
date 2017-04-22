@@ -369,6 +369,8 @@ temp.800m <- sapply(X = temp.800m.rast,FUN = extract.single, plots = plots) # ta
 
 plots.clim <- data.frame(Regen_Plot=plots$Regen_Plot,temp.800m,ppt.4km,ppt.800m)
 plots.clim <- plots.clim[complete.cases(plots.clim),]
+
+
 write.csv(plots.clim,"../data_intermediate_processing_local/plot_climate_monthly.csv",row.names=FALSE)
 
 
@@ -492,10 +494,27 @@ water.year.summary.normal <- cbind(tmin.avg.normal.annual,tmax.avg.normal.annual
 colnames(water.year.summary.normal) <- c("tmin.normal.ann","tmax.normal.ann","tmean.normal.ann","tmean.normal.JJA","tmean.normal.DJF","ppt.normal.ann","snow.normal.ann","rain.normal.ann")
 water.year.summary <- data.frame(Regen_Plot=plots.clim$Regen_Plot,water.year.summary.annual,water.year.summary.normal)
 
+
+
+
+###!!! add water balance values ###
+
+plots.wb <- read.csv("../data_water_balance/plots_wb.csv",header=TRUE)
+water.years <- years[-1]
+
+plots.wb <- plots.wb[plots.wb$year.ending %in% water.years,]
+
+plots.wb.def <- cast(plots.wb,ID ~ year.ending,value="def")
+names(plots.wb.def)[-1] <- paste0("def.",names(plots.wb.def[-1]))
+
+plots.wb.aet <- cast(plots.wb,ID ~ year.ending,value="aet")
+names(plots.wb.aet)[-1] <- paste0("aet.",names(plots.wb.aet[-1]))
+
+
+water.year.summary <- merge(water.year.summary,plots.wb.def,by.x="Regen_Plot",by.y="ID",all.x=TRUE)
+water.year.summary <- merge(water.year.summary,plots.wb.aet,by.x="Regen_Plot",by.y="ID",all.x=TRUE)
+
 write.csv(water.year.summary,"../data_intermediate_processing_local/plot_climate_water_year.csv",row.names=FALSE)
-
-
-
 
 
 
@@ -748,15 +767,15 @@ plot.3.regen <- read.csv("data_intermediate/speciesXplot_level.csv",header=TRUE,
 plot.clim.seedtree <- read.csv("data_intermediate/plot_level.csv",header=TRUE,stringsAsFactors=FALSE)
 
 
-clim.vars <- c("SHRUB","rad.march","ppt.normal","ppt.post","ppt.post.min","diff.norm.ppt.z","diff.norm.ppt.min.z", "seed_tree_distance_general")
+clim.vars <- c("SHRUB","rad.march","ppt.normal","ppt.post","ppt.post.min","diff.norm.ppt.z","diff.norm.ppt.min.z", "seed_tree_distance_general","def.post","diff.norm.def.z","def.normal")
 
 pairs(plot.clim.seedtree[,clim.vars])
 
-plot.3.regen.conifer <- plot.3.regen[plot.3.regen$species=="HDWD.ALLSP",]
+plot.3.regen.conifer <- plot.3.regen[plot.3.regen$species=="CONIF.ALLSP",]
 
 check.df <- merge(plot.clim.seedtree,plot.3.regen.conifer,by="Regen_Plot",all.x=TRUE)
 
-all.vars <- c("SHRUB", "rad.march", "ppt.normal", "ppt.post", "ppt.post.min", "diff.norm.ppt.z", "diff.norm.ppt.min.z", "seed_tree_distance_general","regen.count.all")
+all.vars <- c("SHRUB", "rad.march", "ppt.normal", "ppt.post", "ppt.post.min", "diff.norm.ppt.z", "diff.norm.ppt.min.z", "seed_tree_distance_general","regen.count.all","def.post","diff.norm.def.z","def.normal")
 pairs(check.df[,all.vars])
 
 check.df.abbrev <- check.df[,c("Regen_Plot","seed_tree_distance_general","regen.count.all","SHRUB","diff.norm.ppt.z")]
