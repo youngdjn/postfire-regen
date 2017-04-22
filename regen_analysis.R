@@ -2196,6 +2196,9 @@ for(sp in sp.opts) {
     
     formulas <- list()
     
+    
+    #### No seed tree ####
+    
     formulas[["n0.a0"]] <- formula(response.var ~ 1)
     formulas[["n0a.a0"]] <- formula(response.var ~ adult.ba_c)
     
@@ -2403,7 +2406,215 @@ for(sp in sp.opts) {
     formulas[["nA2.aAminni"]] <- formula(response.var ~ aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c.sq)
     formulas[["nA2.aA2minni"]] <- formula(response.var ~ aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq + aet.normal.highsev_c.sq)
 
-
+    #### With seed tree ####
+    
+    formulas[["n0s.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + 1)
+    formulas[["n0as.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c)
+    
+    ## PPT
+    
+    formulas[["n0as.aP"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.ppt.z.highsev_c)
+    formulas[["n0s.aP"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.ppt.z.highsev_c)
+    formulas[["n0as.aP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.ppt.z.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
+    formulas[["n0s.aP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.ppt.z.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
+    
+    formulas[["nPas.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c)
+    formulas[["nPas.aP"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c)
+    formulas[["nPas.aP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
+    #formulas[["pPa"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.post.highsev_c)
+    formulas[["nP2as.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2as.aP"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2as.aP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq)
+    #formulas[["pP2a"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.post.highsev_c + ppt.post.highsev_c.sq)
+    formulas[["nPas.aPni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c)
+    formulas[["nPas.aP2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
+    formulas[["nP2as.aPni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2as.aP2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq)
+    
+    formulas[["nPs.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c)
+    formulas[["nPs.aP"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c)
+    formulas[["nPs.aP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
+    #formulas[["pPs"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.post.highsev_c)
+    formulas[["nP2s.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2s.aP"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2s.aP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq)
+    #formulas[["pP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.post.highsev_c + ppt.post.highsev_c.sq)
+    formulas[["nPs.aPni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c)
+    formulas[["nPs.aP2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
+    formulas[["nP2s.aPni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2s.aP2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq)
+    
+    
+    ##DEF
+    
+    formulas[["n0as.aD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.def.z.highsev_c)
+    formulas[["n0as.aD2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.def.z.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
+    formulas[["n0s.aD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.def.z.highsev_c)
+    formulas[["n0s.aD2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.def.z.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
+    
+    
+    formulas[["nDas.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c)
+    formulas[["nDas.aD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c*diff.norm.def.z.highsev_c)
+    formulas[["nDas.aD2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
+    #formulas[["pDa"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.post.highsev_c)
+    formulas[["nD2as.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2as.aD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2as.aD2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq + def.normal.highsev_c.sq)
+    #formulas[["pD2a"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.post.highsev_c + def.post.highsev_c.sq)
+    formulas[["nDas.aDni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c + diff.norm.def.z.highsev_c)
+    formulas[["nDas.aD2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
+    formulas[["nD2as.aDni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2as.aD2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq + def.normal.highsev_c.sq)
+    
+    formulas[["nDs.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c)
+    formulas[["nDs.aD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c)
+    formulas[["nDs.aD2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
+    #formulas[["pD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.post.highsev_c)
+    formulas[["nD2s.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2s.aD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2s.aD2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq + def.normal.highsev_c.sq)
+    #formulas[["pP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.post.highsev_c + def.post.highsev_c.sq)
+    formulas[["nDs.aDni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c)
+    formulas[["nDs.aD2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
+    formulas[["nD2s.aDni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2s.aD2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq + def.normal.highsev_c.sq)
+    
+    
+    
+    ##AET
+    
+    formulas[["n0as.aA"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.aet.z.highsev_c)
+    formulas[["n0as.aA2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.aet.z.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
+    
+    formulas[["n0s.aA"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.aet.z.highsev_c)
+    formulas[["n0s.aA2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.aet.z.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
+    
+    formulas[["nAas.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c)
+    formulas[["nAas.aA"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c)
+    formulas[["nAas.aA2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
+    #formulas[["pDa"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.post.highsev_c)
+    formulas[["nA2as.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2as.aA"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2as.aA2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq + aet.normal.highsev_c.sq)
+    #formulas[["pD2a"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.post.highsev_c + def.post.highsev_c.sq)
+    formulas[["nAas.aAni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c)
+    formulas[["nAas.aA2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
+    formulas[["nA2as.aAni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2as.aA2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq + aet.normal.highsev_c.sq)
+    
+    formulas[["nAs.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c)
+    formulas[["nAs.aA"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c)
+    formulas[["nAs.aA2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
+    #formulas[["pD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.post.highsev_c)
+    formulas[["nA2s.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2s.aA"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2s.aA2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq + aet.normal.highsev_c.sq)
+    #formulas[["pP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.post.highsev_c + def.post.highsev_c.sq)
+    formulas[["nAs.aAni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c)
+    formulas[["nAs.aA2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
+    formulas[["nA2s.aAni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2s.aA2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq + aet.normal.highsev_c.sq)
+    
+    
+    
+    
+    
+    
+    ## PPT
+    
+    formulas[["n0as.aPmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.ppt.min.z.highsev_c)
+    formulas[["n0as.aP2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.ppt.min.z.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
+    formulas[["n0s.aPmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.ppt.min.z.highsev_c)
+    formulas[["n0s.aP2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.ppt.min.z.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
+    
+    
+    
+    formulas[["nPas.aPmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c)
+    formulas[["nPas.aP2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
+    # formulas[["pPa"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.post.highsev_c)
+    formulas[["nP2as.aPmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2as.aP2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq + ppt.normal.highsev_c.sq)
+    # formulas[["pP2a"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.post.highsev_c + ppt.post.highsev_c.sq)
+    formulas[["nPas.aPminni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c)
+    formulas[["nPas.aP2minni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
+    formulas[["nP2as.aPminni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2as.aP2minni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq + ppt.normal.highsev_c.sq)
+    
+    formulas[["nPs.aPmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c)
+    formulas[["nPs.aP2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
+    # formulas[["pP"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.post.highsev_c)
+    formulas[["nP2s.aPmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2s.aP2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq + ppt.normal.highsev_c.sq)
+    # formulas[["pP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.post.highsev_c + ppt.post.highsev_c.sq)
+    formulas[["nPs.aPminni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c)
+    formulas[["nPs.aP2minni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
+    formulas[["nP2s.aPminni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c.sq)
+    formulas[["nP2s.aP2minni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq + ppt.normal.highsev_c.sq)
+    
+    
+    ##DEF
+    
+    formulas[["n0as.aDmax"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.def.max.z.highsev_c)
+    formulas[["n0as.aD2max"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.def.max.z.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
+    
+    formulas[["n0s.aDmax"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.def.max.z.highsev_c)
+    formulas[["n0s.aD2max"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.def.max.z.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
+    
+    formulas[["nDas.aDmax"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c)
+    formulas[["nDas.aD2max"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
+    #formulas[["pDa"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.post.highsev_c)
+    formulas[["nD2as.aDmax"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2as.aD2max"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq + def.normal.highsev_c.sq)
+    #formulas[["pD2a"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.post.highsev_c + def.post.highsev_c.sq)
+    formulas[["nDas.aDmaxni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c)
+    formulas[["nDas.aD2maxni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
+    formulas[["nD2as.aDmaxni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2as.aD2maxni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq + def.normal.highsev_c.sq)
+    
+    formulas[["nDs.aDmax"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c)
+    formulas[["nDs.aD2max"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
+    #formulas[["pD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.post.highsev_c)
+    formulas[["nD2s.aDmax"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2s.aD2max"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq + def.normal.highsev_c.sq)
+    #formulas[["pP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.post.highsev_c + def.post.highsev_c.sq)
+    formulas[["nDs.aDmaxni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c)
+    formulas[["nDs.aD2maxni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
+    formulas[["nD2s.aDmaxni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c.sq)
+    formulas[["nD2s.aD2maxni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq + def.normal.highsev_c.sq)
+    
+    
+    
+    ##AET
+    
+    formulas[["n0as.aAmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.aet.min.z.highsev_c)
+    formulas[["n0as.aA2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.aet.min.z.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
+    
+    formulas[["n0s.aAmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.aet.min.z.highsev_c)
+    formulas[["n0s.aA2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.aet.min.z.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
+    
+    
+    formulas[["nAas.aAmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c)
+    formulas[["nAas.aA2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
+    #formulas[["pDa"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.post.highsev_c)
+    formulas[["nA2as.aAmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2as.aA2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq + aet.normal.highsev_c.sq)
+    #formulas[["pD2a"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.post.highsev_c + def.post.highsev_c.sq)
+    formulas[["nAas.aAminni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c)
+    formulas[["nAas.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
+    formulas[["nA2as.aAminni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2as.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq + aet.normal.highsev_c.sq)
+    
+    formulas[["nAs.aAmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c)
+    formulas[["nAs.aA2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
+    #formulas[["pD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.post.highsev_c)
+    formulas[["nA2s.aAmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2s.aA2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq + aet.normal.highsev_c.sq)
+    #formulas[["pP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.post.highsev_c + def.post.highsev_c.sq)
+    formulas[["nAs.aAminni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c)
+    formulas[["nAs.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
+    formulas[["nA2s.aAminni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c.sq)
+    formulas[["nA2s.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq + aet.normal.highsev_c.sq)
+    
     
     
     
@@ -2435,7 +2646,7 @@ for(sp in sp.opts) {
     
     ## anomaly models
     search <- ".a"
-    null.names <- c("n0.a0","n0a.a0")
+    null.names <- c("n0.a0","n0a.a0","n0s.a0","n0sa.a0")
     anomaly.model.names <- cv.results[grep(search,cv.results$model,fixed=TRUE),]$mod
     anomaly.model.names <- anomaly.model.names[!(anomaly.model.names %in% normal.model.names)]
     anomaly.model.names <- anomaly.model.names[!(anomaly.model.names %in% null.names)] # exclude null model
@@ -2560,12 +2771,12 @@ for(sp in sp.opts) {
                             Dmax = "n(D|0)2?\\.a0",
                             Amin = "n(A|0)2?\\.a0")
     } else {
-      norm.search.opts <- c(Pmean = "n(P|0)2?a?\\.a0",
-                            Dmean = "n(D|0)2?a?\\.a0",
-                            Amean = "n(A|0)2?a?\\.a0",
-                            Pmin = "n(P|0)2?a?\\.a0",
-                            Dmax = "n(D|0)2?a?\\.a0",
-                            Amin = "n(A|0)2?a?\\.a0")
+      norm.search.opts <- c(Pmean = "n(P|0)2?a?s?\\.a0",
+                            Dmean = "n(D|0)2?a?s?\\.a0",
+                            Amean = "n(A|0)2?a?s?\\.a0",
+                            Pmin = "n(P|0)2?a?s?\\.a0",
+                            Dmax = "n(D|0)2?a?s?\\.a0",
+                            Amin = "n(A|0)2?a?s?\\.a0")
     }
 
     anom.search.opts <- c(Pmean = "aP2?(ni)?$",
@@ -2578,39 +2789,39 @@ for(sp in sp.opts) {
 
     d.maes.anoms.sp <- data.frame()
 
-
-for(i in 1:length(anom.search.opts)) {
-
-  anom.name <- names(norm.search.opts)[i]
-  norm.search <- norm.search.opts[i]
-  anom.search <- anom.search.opts[i]
-  null.names <- c("n0.a0","n0a.a0")
-  normal.model.names <- cv.results[grep(norm.search,cv.results$model,fixed=FALSE),]$model
-
-  d.cv.normal <- cv.results[cv.results$model %in% normal.model.names,]
-  best.normal.mod <- d.cv.normal[d.cv.normal$mae == min(d.cv.normal$mae,na.rm=TRUE),]$mod[1]
-
-  #what is the best anomaly model for that normal, sticking with whichever anom we have
-  best.normal.normal.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
-  best.normal.anom.search <- paste0(best.normal.normal.part,"\\.",anom.search)
-  anom.model.names <- cv.results[grep(best.normal.anom.search,cv.results$model,fixed=FALSE),]$model
-  d.cv.anom <- cv.results[cv.results$model %in% anom.model.names,]
-  best.anom.mod <- d.cv.anom[d.cv.anom$mae == min(d.cv.anom$mae,na.rm=TRUE),]$mod[1]
-
-  ## get maes of best normal, best anomal, best normal.anom, best.anom.normal
-  best.anom.mae <- cv.results[cv.results$model == best.anom.mod,"mae"]
-  best.anom.normal.mae <- cv.results[cv.results$model == best.normal.mod,"mae"]
-
-
-  ### Store MAEs of the best models
-  best.anomaly.mod <- best.anom.mod
-  best.anom.normal <- best.normal.mod
-
-
-  d.maes.anoms.sp.anom <- data.frame(best.anomaly.mod,best.anom.normal,
-                                     best.anom.mae,best.anom.normal.mae,sp,rad.level,anom.name,stringsAsFactors=FALSE)
-
-  d.maes.anoms.sp <- rbind(d.maes.anoms.sp,d.maes.anoms.sp.anom)
+  
+  for(i in 1:length(anom.search.opts)) {
+  
+    anom.name <- names(norm.search.opts)[i]
+    norm.search <- norm.search.opts[i]
+    anom.search <- anom.search.opts[i]
+    null.names <- c("n0.a0","n0a.a0")
+    normal.model.names <- cv.results[grep(norm.search,cv.results$model,fixed=FALSE),]$model
+  
+    d.cv.normal <- cv.results[cv.results$model %in% normal.model.names,]
+    best.normal.mod <- d.cv.normal[d.cv.normal$mae == min(d.cv.normal$mae,na.rm=TRUE),]$mod[1]
+  
+    #what is the best anomaly model for that normal, sticking with whichever anom we have
+    best.normal.normal.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
+    best.normal.anom.search <- paste0(best.normal.normal.part,"\\.",anom.search)
+    anom.model.names <- cv.results[grep(best.normal.anom.search,cv.results$model,fixed=FALSE),]$model
+    d.cv.anom <- cv.results[cv.results$model %in% anom.model.names,]
+    best.anom.mod <- d.cv.anom[d.cv.anom$mae == min(d.cv.anom$mae,na.rm=TRUE),]$mod[1]
+  
+    ## get maes of best normal, best anomal, best normal.anom, best.anom.normal
+    best.anom.mae <- cv.results[cv.results$model == best.anom.mod,"mae"]
+    best.anom.normal.mae <- cv.results[cv.results$model == best.normal.mod,"mae"]
+  
+  
+    ### Store MAEs of the best models
+    best.anomaly.mod <- best.anom.mod
+    best.anom.normal <- best.normal.mod
+  
+  
+    d.maes.anoms.sp.anom <- data.frame(best.anomaly.mod,best.anom.normal,
+                                       best.anom.mae,best.anom.normal.mae,sp,rad.level,anom.name,stringsAsFactors=FALSE)
+  
+    d.maes.anoms.sp <- rbind(d.maes.anoms.sp,d.maes.anoms.sp.anom)
 
     }
 
