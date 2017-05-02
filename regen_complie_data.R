@@ -319,6 +319,36 @@ for(year in years) {
 }
 
 
+### MODIS snow cover monthly-by-yearly ###
+
+snow.yr.mo <- list()
+
+snow.brick <- brick("C:/Users/DYoung/Documents/UC Davis/GIS/Snowpack/n5eil01u.ecs.nsidc.org/MOST/snow_monthly_regen/snow_monthly_regen.grd")
+
+for(year in years) {
+  for(month in 1:12) {
+    layer.index <- paste("snow",year,mo.chr[month],sep=".")
+    snow.yr.mo[[layer.index]] <- snow.brick[[layer.index]]
+  }
+}
+
+## get monthly normal out of this
+
+snow.normal.mo <- list()
+for(month in mo.chr) {
+  
+  mo.search <- paste0(month,"$")
+  month.indices <- grep(mo.search,names(snow.yr.mo))
+  month.layers <- snow.yr.mo[month.indices]
+  layer.name <- paste0("snow.normal.",month)
+  snow.normal.mo[[layer.name]] <- mean(brick(month.layers),na.rm=TRUE)
+
+}
+
+
+
+
+
 ### TopoWx tmin and tmax monthly normal ###
 
 tmax.normal.mo <- list()
@@ -360,15 +390,19 @@ for(month in 1:12) {
 temp.800m.rast <- unlist(list(tmin.yr.mo,tmax.yr.mo,tmin.normal.mo,tmax.normal.mo))
 ppt.4km.rast <- unlist(list(ppt.yr.mo))
 ppt.800m.rast <- unlist(list(ppt.normal.mo))
+snow.5km.rast <- unlist(list(snow.yr.mo,snow.normal.mo))
+
 
 
 ### Extract climate values for points ###
 ppt.4km <- sapply(X = ppt.4km.rast,FUN = extract.single, plots = plots) # takes ~1 min
 ppt.800m <- sapply(X = ppt.800m.rast,FUN = extract.single, plots = plots)
 temp.800m <- sapply(X = temp.800m.rast,FUN = extract.single, plots = plots) # takes ~10 min
+snow.5km <- sapply(X = snow.5km.rast,FUN = extract.single, plots = plots) # takes ~10 sec
 
-plots.clim <- data.frame(Regen_Plot=plots$Regen_Plot,temp.800m,ppt.4km,ppt.800m)
-plots.clim <- plots.clim[complete.cases(plots.clim),]
+
+plots.clim <- data.frame(Regen_Plot=plots$Regen_Plot,temp.800m,ppt.4km,ppt.800m,snow.5km)
+#plots.clim <- plots.clim[complete.cases(plots.clim),]
 
 
 write.csv(plots.clim,"../data_intermediate_processing_local/plot_climate_monthly.csv",row.names=FALSE)
@@ -400,14 +434,18 @@ all.mo.yr <- c(first.year.mo.yr,inter.mos.mo.yr,last.year.mo.yr)
 all.mo.yr.tmin <- paste("tmin",all.mo.yr,sep=".")
 all.mo.yr.tmax <- paste("tmax",all.mo.yr,sep=".")
 all.mo.yr.ppt <- paste("ppt",all.mo.yr,sep=".")
+all.mo.yr.snow <- paste("snow",all.mo.yr,sep=".")
 
 tmin.col.nums <- sapply(all.mo.yr.tmin,function(x) {grep(x,names(plots.clim))})
 tmax.col.nums <- sapply(all.mo.yr.tmax,function(x) {grep(x,names(plots.clim))})
 ppt.col.nums <- sapply(all.mo.yr.ppt,function(x) {grep(x,names(plots.clim))})
+snow.col.nums <- sapply(all.mo.yr.snow,function(x) {grep(x,names(plots.clim))})
 
 tmin.col.nums.mat <- matrix(tmin.col.nums,ncol=12,byrow=TRUE)
 tmax.col.nums.mat <- matrix(tmax.col.nums,ncol=12,byrow=TRUE)
 ppt.col.nums.mat <- matrix(ppt.col.nums,ncol=12,byrow=TRUE)
+snow.col.nums.mat <- matrix(snow.col.nums,ncol=12,byrow=TRUE)
+
 
 water.year.summary.annual <- matrix(nrow=nrow(plots.clim),ncol=0)
 for (i in 1:n.water.years) {
@@ -424,22 +462,26 @@ for (i in 1:n.water.years) {
   
   ppt.col.nums.year <- ppt.col.nums.mat[i,]
   ppt.cols.year <- plots.clim[,ppt.col.nums.year]
+
+  snow.col.nums.year <- snow.col.nums.mat[i,]
+  snow.cols.year <- plots.clim[,snow.col.nums.year]  
+  snow <- snow.cols.year
   
-  ### snow: for each plot, sum ppt from sept (col 1) to may (col 9) for months when avg temp was <=0
-  snow <- ppt.cols.year
-  snow[tmean.cols.year > 0] <- 0 # no snow if temp is > 0
-  
-  ### rain: for each plot, sum ppt from jan (col 5) to aug (col 12) for months when avg temp was >0
-  rain <- ppt.cols.year
-  rain[tmean.cols.year <= 0] <- 0
+  # ### snow: for each plot, sum ppt from sept (col 1) to may (col 9) for months when avg temp was <=0
+  # snow <- ppt.cols.year
+  # snow[tmean.cols.year > 0] <- 0 # no snow if temp is > 0
+  # 
+  # ### rain: for each plot, sum ppt from jan (col 5) to aug (col 12) for months when avg temp was >0
+  # rain <- ppt.cols.year
+  # rain[tmean.cols.year <= 0] <- 0
 
   tmin.avg.year <- apply(tmin.cols.year,1,mean)
   tmax.avg.year <- apply(tmax.cols.year,1,mean)
   
   ppt.tot.year <- apply(ppt.cols.year,1,sum)
   
-  snow.tot.year <- apply(snow[c(1:8,12)],1,sum)
-  rain.tot.year <- apply(rain[4:11],1,sum)
+  snow.tot.year <- apply(snow[c(4:11)],1,sum)
+  #rain.tot.year <- apply(rain[4:11],1,sum)
   
   tmean.avg.year <- (tmin.avg.year+tmax.avg.year)/2
   
@@ -449,10 +491,10 @@ for (i in 1:n.water.years) {
   tmean.avg.DJF <- apply(tmean.cols.year[,3:5],1,mean)
 
   ### merge into DF
-  colname.prefixes <- c("tmin","tmax","tmean","tmean.JJA","tmean.DJF","ppt","snow","rain")
+  colname.prefixes <- c("tmin","tmax","tmean","tmean.JJA","tmean.DJF","ppt","snow") #,"rain")
   colnames <- paste(colname.prefixes,water.year.ending,sep=".")
   
-  clim.year <- cbind(tmin.avg.year,tmax.avg.year,tmean.avg.year,tmean.avg.JJA,tmean.avg.DJF,ppt.tot.year,snow.tot.year,rain.tot.year)
+  clim.year <- cbind(tmin.avg.year,tmax.avg.year,tmean.avg.year,tmean.avg.JJA,tmean.avg.DJF,ppt.tot.year,snow.tot.year) #,rain.tot.year)
   colnames(clim.year) <- colnames
   
   water.year.summary.annual <- cbind(water.year.summary.annual,clim.year)
@@ -463,20 +505,22 @@ for (i in 1:n.water.years) {
 tmin.col.nums <- grep("tmin.normal",names(plots.clim))
 tmax.col.nums <- grep("tmax.normal",names(plots.clim))
 ppt.col.nums <- grep("ppt.normal",names(plots.clim))
+snow.col.nums <- grep("snow.normal",names(plots.clim))
 
 tmin.cols <- plots.clim[,tmin.col.nums]
 tmax.cols <- plots.clim[,tmax.col.nums]
 ppt.cols <- plots.clim[,ppt.col.nums]
+snow.cols <- plots.clim[,snow.col.nums]
 
 tmean.cols <- (tmin.cols + tmax.cols)/2
 
-### snow: for each plot, sum ppt from nov (col 3) to may (col 9)
-snow <- ppt.cols
-snow[tmean.cols > 0] <- 0 # no snow if temp is > 0
+### snow: for each plot, sum snow from nov (col 3) to may (col 9)
+snow <- snow.cols
 
-### rain: for each plot, sum ppt from jan (col 5) to aug (col 12) for months when avg temp was >0
-rain <- ppt.cols
-rain[tmean.cols <= 0] <- 0
+
+# ### rain: for each plot, sum ppt from jan (col 5) to aug (col 12) for months when avg temp was >0
+# rain <- ppt.cols
+# rain[tmean.cols <= 0] <- 0
 
 tmin.avg.normal.annual <- apply(tmin.cols,1,mean)
 tmax.avg.normal.annual <- apply(tmax.cols,1,mean)
@@ -487,11 +531,11 @@ tmean.avg.normal.DJF <- apply(tmean.cols[,c(12,1,2)],1,mean)
 tmean.avg.normal.JJA <- apply(tmean.cols[,6:8],1,mean)
 
 ppt.tot.normal.annual <- apply(ppt.cols,1,sum)
-snow.tot.normal.annual <- apply(snow[,c(11,12,1,2,3,4,5)],1,sum)
-rain.tot.normal.annual <- apply(rain[,c(3,4,5,6,7,8,9)],1,sum)
+snow.tot.normal.annual <- apply(snow[,1:7],1,sum)
+# rain.tot.normal.annual <- apply(rain[,c(3,4,5,6,7,8,9)],1,sum)
 
-water.year.summary.normal <- cbind(tmin.avg.normal.annual,tmax.avg.normal.annual,tmean.avg.normal.annual,tmean.avg.normal.JJA,tmean.avg.normal.DJF,ppt.tot.normal.annual,snow.tot.normal.annual,rain.tot.normal.annual)
-colnames(water.year.summary.normal) <- c("tmin.normal.ann","tmax.normal.ann","tmean.normal.ann","tmean.normal.JJA","tmean.normal.DJF","ppt.normal.ann","snow.normal.ann","rain.normal.ann")
+water.year.summary.normal <- cbind(tmin.avg.normal.annual,tmax.avg.normal.annual,tmean.avg.normal.annual,tmean.avg.normal.JJA,tmean.avg.normal.DJF,ppt.tot.normal.annual,snow.tot.normal.annual) #,rain.tot.normal.annual)
+colnames(water.year.summary.normal) <- c("tmin.normal.ann","tmax.normal.ann","tmean.normal.ann","tmean.normal.JJA","tmean.normal.DJF","ppt.normal.ann","snow.normal.ann") #,"rain.normal.ann")
 water.year.summary <- data.frame(Regen_Plot=plots.clim$Regen_Plot,water.year.summary.annual,water.year.summary.normal)
 
 
