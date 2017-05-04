@@ -79,6 +79,101 @@ cvfun <- function(formula,data) {
 
 
 
+
+
+
+#plot-level cross-validation (withholding an entire fire at a time)
+cvfun.fire <- function(formula,data) {
+  
+  errs <- NULL
+  
+  for(i in 1:length(unique(data$Fire))) {
+    
+    Fire <- unique(data$Fire)[i]
+    
+    data.train <- data[data$Fire != Fire,]
+    data.val <- data[data$Fire == Fire,]
+    
+
+
+    
+    if(sp %in% cover.opts) {
+      
+      m <- betareg(formula,data=data.train)
+      
+      if(m$converged == FALSE) {
+        message <- paste0("No convergence for ",sp," ",formula.name)
+        print(message)
+      }
+      
+      m.pred <- predict(m,newdat=data.val)
+      obs <- data.val$response.var
+      
+      # if predicted probability identical to 1, rescale to the largest possible observed value (transformed)
+        n.pts <- nrow(data.train)+nrow(data.val)
+        one.t <- (1*(n.pts-1) + 0.5) / n.pts
+        m.pred[m.pred > 0.999] <- one.t
+      
+      # if predicted probability identical to 0, rescale to the largest possible observed value (transformed)
+        n.pts <- nrow(data.train)+nrow(data.val)
+        zero.t <- (0*(n.pts-1) + 0.5) / n.pts
+        m.pred[m.pred < 0.001] <- zero.t
+      
+      
+      err <- mean(abs(logit(m.pred)-logit(obs)))
+
+      
+    } else { # it is not a cover response
+      
+      m <- glm(formula,data=data.train,family="binomial")
+      
+      if(m$converged == FALSE) {
+        message <- paste0("No convergence for ",sp," ",formula.name)
+        print(message)
+      }
+      
+      m.fit <- predict(m,type="response")
+      comp <- getCompSpecAndSens(data.train$response.var,m.fit)
+      
+      m.pred <- predict(m,newdat=data.val,type="response")
+      m.pred.presab <- ifelse(m.pred > comp,1,0)
+      
+      obs <- data.val$response.var
+      
+      err <- 1-mean(m.pred.presab == obs)
+      
+      
+    }
+    
+
+
+    
+    
+    errs[i] <- err
+    
+  }
+  
+  
+  
+  
+  mae <- mean(abs(errs))
+  stderr <- sd(abs(errs))/(sqrt(length(errs)))
+  
+  ret <- data.frame(mae,stderr)
+  return(ret)
+  
+}
+
+
+
+
+
+
+
+
+
+
+
 center.df <- function(df,leave.cols) {
   df.names <- names(df)
   new.df <- data.frame(SID=1:nrow(df))
@@ -101,3 +196,53 @@ center.df <- function(df,leave.cols) {
 inv.logit <- function(x) {
   exp(x)/(1+exp(x))
 }
+
+
+
+
+
+
+getCompSpecAndSens <- function(obs, fit)
+{
+  ascend <- order(fit)
+  
+  hosmer <- matrix(c(obs[ascend], fit[ascend]), ncol=2)
+  #plot(hosmer, pch=16, col="#00000010")
+  
+  obs.pos <- which(hosmer[,1] == 1)
+  obs.neg <- which(hosmer[,1] == 0)
+  
+  cutoffs <- seq(0, 1, .01)
+  sens <- spec <- rep(NA, length(cutoffs))
+  
+  for(i in 1:length(cutoffs))
+  {
+    pred.pos <- which(hosmer[,2] >= cutoffs[i])
+    pred.neg <- which(hosmer[,2] < cutoffs[i])
+    
+    oppp <- length(which(obs.pos %in% pred.pos))
+    onpp <- length(which(obs.neg %in% pred.pos))
+    oppn <- length(which(obs.pos %in% pred.neg))
+    onpn <- length(which(obs.neg %in% pred.neg))
+    
+    sens[i] <- oppp / (oppp + oppn)
+    spec[i] <- onpn / (onpp + onpn)
+    
+    # cat(paste("\ncutoff: ", cutoffs[i], "\n", sep=""))
+    # cat(paste("\t\top\ton\n\tpp\t", oppp, "\t", onpp, "\n\tpn\t", oppn, "\t", onpn, "\n", sep=""))
+    # cat(paste("\tsensitivity: ", sens[i], "\n\tspecificity: ", spec[i], "\n", sep=""))
+  }
+  
+  compens <- which(spec > sens)[1]
+  comp.cutoff <- (cutoffs[compens - 1] + cutoffs[compens]) / 2
+  comp.spec <- (spec[compens - 1] + spec[compens]) / 2
+  comp.sens <- (sens[compens - 1] + sens[compens]) / 2
+  #return(list(comp.cutoff=comp.cutoff, comp.spec=comp.spec, comp.sens=comp.sens))
+  return(comp.cutoff)
+}
+
+
+
+
+
+
