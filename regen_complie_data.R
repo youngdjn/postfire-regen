@@ -543,6 +543,8 @@ water.year.summary <- data.frame(Regen_Plot=plots.clim$Regen_Plot,water.year.sum
 
 ###!!! add water balance values ###
 
+library(reshape)
+
 plots.wb <- read.csv("../data_water_balance/plots_wb.csv",header=TRUE)
 water.years <- years[-1]
 

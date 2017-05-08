@@ -151,7 +151,7 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
     #                             rain.plot[1],rain.plot[2],rain.plot[3],rain.plot[4],
     #                             snow.normal,rain.normal, tot.neg.ppt.anom)
     
-    clim.plot.out <- data.frame(Regen_Plot=plot.id,tmean.post=tmean.post.mean,ppt.post=ppt.post.mean,def.post=def.post.mean,aet.post=aet.post.mean,ppt.post.min=ppt.post.min,def.post.max,aet.post.min,tmean.normal=tmean.normal,ppt.normal=ppt.normal,def.normal,aet.normal,perc.norm.ppt=perc.norm.ppt,perc.norm.ppt.min=perc.norm.ppt.min,diff.norm.ppt,diff.norm.ppt.min,diff.norm.tmean=diff.norm.tmean,
+    clim.plot.out <- data.frame(Regen_Plot=plot.id,tmean.post=tmean.post.mean,ppt.post=ppt.post.mean,def.post=def.post.mean,aet.post=aet.post.mean,snow.post=snow.post.mean,ppt.post.min=ppt.post.min,def.post.max,aet.post.min,tmean.normal=tmean.normal,ppt.normal=ppt.normal,def.normal,aet.normal,perc.norm.ppt=perc.norm.ppt,perc.norm.ppt.min=perc.norm.ppt.min,diff.norm.ppt,diff.norm.ppt.min,diff.norm.tmean=diff.norm.tmean,
                                 diff.norm.ppt.z,diff.norm.ppt.min.z,diff.norm.tmean.z,diff.norm.tmean.max.z,
                                 diff.norm.def.z,diff.norm.def.max.z,diff.norm.aet.z,diff.norm.aet.min.z,
                                 diff.norm.tmean.JJA.mean.z, diff.norm.tmean.DJF.mean.z,
