@@ -51,7 +51,7 @@ d.sp$regen.presab.all <- ifelse(d.sp$regen.count.all > 0,TRUE,FALSE)
 #! TEMPORARY: if there was no radiation data, set it equal to 0
 d.plot$rad.march <- ifelse(is.na(d.plot$rad.march),0,d.plot$rad.march)
 
-high.sev <- c(4,5) # which field-assessed severity values are considered high severity
+high.sev <- c(2,3) # which field-assessed severity values are considered high severity
 control <- c(0,1) # which field-assessed severity values are considered controls
 
 
@@ -149,7 +149,6 @@ d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "BTU LIGHTENING") & (d.p
 d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "BAGLEY") & (d.plot.precat$rad.march < 4000)),]
 d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "CUB") & (d.plot.precat$ppt.normal < 1300)),]
 
-
 # remove plots that are high severity but not surveyed in years 4-5 post-fire
 d.plot.precat <- d.plot.precat[!(d.plot.precat$FIRE_SEV.cat == "high.sev" & !(d.plot.precat$survey.years.post %in% c(4,5))),]
 
@@ -220,7 +219,7 @@ d.sp.2 <- d.sp.agg
 #### 3. Steps required prior to any analysis ####
 
 # Remove the topoclimatic categories with too few plots in either burned or control
-d.plot.3 <- d.plot.2[which((d.plot.2$count.control > 3) & (d.plot.2$count.highsev > 3)),]
+d.plot.3 <- d.plot.2[which((d.plot.2$count.control > 4) & (d.plot.2$count.highsev > 0)),]
 
 # Compute additional variables
 d.sp.2$proportion.young <- d.sp.2$regen.count.young / d.sp.2$regen.count.all
@@ -544,7 +543,7 @@ for(sp in sp.opts) { # about 1 hr per species
         
       } else {
 
-        d.c$response.var <- round(d.c$regen.presab.old.01)
+        d.c$response.var <- round(d.c$regen.presab.all.01)
         
         mod.family <- "bernoulli"
         
@@ -1328,7 +1327,7 @@ dev.off()
 
 
 
-d.plot.3 <- d.plot.3[d.plot.3$count.control > 3 & d.plot.3$count.highsev > 3,]
+d.plot.3 <- d.plot.3[d.plot.3$count.control > 4 & d.plot.3$count.highsev > 0,]
 
 
 
@@ -1342,7 +1341,7 @@ library(loo)
 
 d.plot <- d.plot.c
 
-d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV %in% c(4,5)),]
+d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV %in% c(2,3)),]
 
 ## remove an outlier plot with 20 abco that is preventing model conversion
 d.plot <- d.plot[!(d.plot$Regen_Plot == "CHI1248"),]
@@ -1363,6 +1362,7 @@ d.plot <- d.plot[!is.na(d.plot$Fire),]
 #sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO","ABMA","CONIF.ALLSP","PSME","PILA","CADE27","PIJE","PIPJ")
 sp.opts <- c("PIPO","ABCO","PILA","SHADE.ALLSP","QUKE","PINUS.ALLSP","QUCH2","HDWD.ALLSP","PSME") # reduced
 sp.opts <- c("PIPO","ABCO","PILA","QUKE","QUCH2","PSME") # reduced
+#sp.opts <- c("PIPO","ABCO","PILA","PSME","CADE27","QUKE","QUCH2") # reduced
 
 #sp.opts <- c("PIPO","ABCO") # reduced
 #sp.opts <- c("PIPO","ABCO") # reduced
@@ -1399,6 +1399,7 @@ d.maes.anoms <- data.frame()
 dry.fires <- c("STRAYLOR","HARDING","ANTELOPE","MOONLIGHT")
 d.plot <- d.plot[!(d.plot$Fire %in% dry.fires),]
 
+d.plot <- d.plot[!is.na(d.plot$diff.norm.snow.z),]
 
 for(sp in sp.opts) {
   
@@ -2347,30 +2348,54 @@ for(sp in sp.opts) {
     best.anom.mod <- d.maes.anoms.sp.row$best.anomaly.mod
     best.anom.normal.mod <- d.maes.anoms.sp.row$best.anom.normal
     
+
+    ##predict to new data
+    
     if(sp %in% cover.opts) {
     
-      #fit the anom and normal models
-      mod.anom <- betareg(formulas[[best.anom.mod]],data=d.c)
-      mod.norm <- betareg(formulas[[best.anom.normal.mod]],data=d.c)
-    
+      
+      nboot <- 30
+      nobs <- nrow(d.c)
+      npred <- nrow(newdat)
+      preds.anom.boot <- matrix(nrow=npred,ncol=nboot)
+      preds.norm.boot <- matrix(nrow=npred,ncol=nboot)
+      
+      for(k in 1:nboot) {
+      
+        ## use bootstrapping to fit betareg models to get CIs
+        d.c.boot <- d.c[sample(nobs,size=nobs,replace=TRUE),]
+        
+        #fit the anom and normal models
+        mod.anom <- betareg(formulas[[best.anom.mod]],data=d.c.boot)
+        mod.norm <- betareg(formulas[[best.anom.normal.mod]],data=d.c.boot)
+        
+        #predict the median
+        pred.anom <-predict(mod.anom,newdat,type="response")
+        pred.norm <- predict(mod.norm,newdat,type="response")
+        
+        preds.anom.boot[,k] <- pred.anom
+        preds.norm.boot[,k] <- pred.norm
+      
+      }
+      
+      pred.anom.mid <- apply(preds.anom.boot,1,quantile,probs=0.5)
+      pred.anom.lwr <- apply(preds.anom.boot,1,quantile,probs=0.025)
+      pred.anom.upr <- apply(preds.anom.boot,1,quantile,probs=0.975)
+      
+      pred.anom <- data.frame(pred.low=pred.anom.lwr,pred.mid=pred.anom.mid,pred.high=pred.anom.upr)
+      
+      pred.norm.mid <- apply(preds.norm.boot,1,quantile,probs=0.5)
+      pred.norm.lwr <- apply(preds.norm.boot,1,quantile,probs=0.025)
+      pred.norm.upr <- apply(preds.norm.boot,1,quantile,probs=0.975)
+      
+      pred.norm <- data.frame(pred.low=pred.norm.lwr,pred.mid=pred.norm.mid,pred.high=pred.norm.upr)
+      
+
     } else {
       
       #fit the anom and normal models
       mod.anom <- glm(formulas[[best.anom.mod]],data=d.c,family="binomial")
       mod.norm <- glm(formulas[[best.anom.normal.mod]],data=d.c,family="binomial")
-      
-    }
-    
-    
-    
-    ##predict to new data
-    
-    if(sp %in% cover.opts) {
-    
-      pred.anom <- as.data.frame(predict(mod.anom,newdat,type="quantile",at=c(0.025,0.5,0.975)))
-      pred.norm <- as.data.frame(predict(mod.norm,newdat,type="quantile",at=c(0.025,0.5,0.975)))
-    
-    } else {
       
       p <- predict(mod.anom,newdat,type="link",se.fit=TRUE)
       low <- p$fit - 1.96*p$se
@@ -2505,7 +2530,7 @@ d.maes.anoms$post.v.norm[d.maes.anoms$post.v.norm < 0] <- NA
 
 # positive means post has lower error
 post.table <- cast(d.maes.anoms,anom.name~sp,value='post.v.norm')
-
+post.table
 
 
 
@@ -2604,7 +2629,7 @@ library(party)
 
 
 
-sp <- "COV.SHRUB"
+sp <- "SHADE.ALLSP"
 
 
 
@@ -2750,6 +2775,12 @@ d.c$response.var <- as.factor(d.c$response.var)
 a <- ctree(response.var ~ ppt.normal_c + tmean.normal_c + snow.normal_c + aet.normal_c + def.normal_c +
              diff.norm.ppt.z_c + diff.norm.tmean.z_c + diff.norm.snow.z_c + diff.norm.aet.z_c + diff.norm.def.z_c +
              seed_tree_distance_general_c + adult.ba.agg_c, data=d.c)
+
+
+a <- ctree(response.var ~ def.normal_c +
+             diff.norm.def.z_c +
+             seed_tree_distance_general_c + adult.ba.agg_c + rad.march_c, data=d.c)
+
 
 #control=ctree_control(testtype=c("Univariate"),mincriterion=0.80)
 

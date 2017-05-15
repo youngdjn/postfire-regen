@@ -210,8 +210,9 @@ plot$BA.Live1 <- plot$BA_live_count * plot$BAF
 
 #populate seedling unk_yr column with values for CADE and all hardwoods
 seedl.count.columns <- grep("yr$",names(seedl))
-hardwoods <- c("QUKE","QUCH2","ARME","LIDE3","CHCH","QUGA4","ACMA","CEMO2","CONU4","POTR5","QUBE5","QUJO3","QUWI","UMCA")
-not.ageable <- c("CADE27",hardwoods)
+hardwoods<- c("QUKE","QUCH2","ARME","LIDE3","CHCH","QUGA4","ACMA","CEMO2","CONU4","POTR5","QUBE5","QUJO3","QUWI","UMCA")
+#not.ageable <- c("CADE27",hardwoods)
+not.ageable <- c(hardwoods)
 seedl$Count_total <- rowSums(seedl[,seedl.count.columns],na.rm=TRUE) #this includes unk_yr (incase some of the seedlings were considered ageable and others not)
 seedl[seedl$Species %in% not.ageable,"unk_yr"] <- seedl$Count_total[seedl$Species %in% not.ageable]
 seedl.known.age.count.cols <- seedl.count.columns[1:(length(seedl.count.columns)-1)]
@@ -672,6 +673,7 @@ names(resprout.ag) <- c("species","Regen_Plot",count.yrs)
 regen <- rbind.fill(seedl.ag,sap.ag)
 regen <- rbind.fill(regen,resprout.ag) # add in resprout table (comment out here if desired)
 regen.ag <- aggregate(regen[,3:ncol(regen)],by=list(species=regen$species,Regen_Plot=regen$Regen_Plot),FUN=sum,na.rm=TRUE)
+# for hardwoods, unk_yr is for seedlings/saplings and 5yr is for resprouts
 
 ### aggregate surviving tree table by plot and species
 surviving.trees <- surviving.trees[surviving.trees$DBH > 7.5,] # exclude small trees (it seems sometimes crews put smaller trees as saplings instead of surviving trees)
