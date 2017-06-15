@@ -133,7 +133,21 @@ cvfun.fire <- function(formula,data) {
       }
       
       m.fit <- predict(m,type="response")
-      comp <- getCompSpecAndSens(data.train$response.var,m.fit)
+      
+      ## find the cutoff to use for presence/absence, based on the proportion of plots that had presence in the training dataset
+      prop.present <- mean(data.train$response.var)
+      
+      #sort plots by predicted probability
+      m.fit.sort <- sort(m.fit,decreasing=TRUE)
+      
+      #what number of them should be presences?
+      num.present <- round(prop.present*nrow(data.train))
+      
+      #what is the probability at that point? use it as the cutoff
+      cutoff <- m.fit.sort[num.present]
+      
+      # comp <- getCompSpecAndSens(data.train$response.var,m.fit)
+      comp <- cutoff
       
       m.pred <- predict(m,newdat=data.val,type="response")
       m.pred.presab <- ifelse(m.pred > comp,1,0)

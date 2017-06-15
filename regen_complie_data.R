@@ -132,7 +132,16 @@ plot.comb <- plot.comb[,! (names(plot.comb) %in% c("Year.of.Fire","Fire"))]
 #merge in the fire name and year
 plot.comb <- merge(plot.comb,fire.years,all.x=TRUE)
 
-#! there are a few plots with no coordinates--need to add
+
+# swapped coords for CUB0409
+plot.comb[which(plot.comb$Regen_Plot == "CUB0409"),c("Longitude","Latitude")] <- plot.comb[which(plot.comb$Regen_Plot == "CUB0409"),c("Latitude","Longitude")]
+
+
+
+
+#there are a few plots with no coordinates written by field crew--add them
+plot.comb[plot.comb$Regen_Plot == "CUB0294",c("Longitude","Latitude")] <- c(121.45444,40.21851)
+plot.comb[plot.comb$Regen_Plot == "CUB0407",c("Longitude","Latitude")] <- c(121.43747,40.17117)
 
 
 ## Change lat/long to easting/northing (for all but power)
@@ -156,8 +165,61 @@ plot.comb <- rbind.fill(plot.comb.lat,plot.comb.utm)
 plot.comb <- plot.comb[,!(names(plot.comb) %in% c("Latitude","Longitude"))]
 
 
-#! when a 2016 plot had a shrub that was actually a hardwood, fake it so it counts as a hardwood (make fake hardwood column that is counted when calculating hardwood presence but not count)
-#! exclude 2016 plots from hardwood count: not 0 but NA, not part of analysis
+### We now have all 2016 plots in plot.comb
+plot.comb.notes <- plot.comb[,c("Regen_Plot","NOTES")]
+
+
+### Change undecertain or incorrect species names based on photos taken by crew
+
+plot.comb[which(toupper(plot.comb$dominant_shrub_1) == "SYMO?"),"dominant_shrub_1"] <- "SYMO"
+
+plot.comb[which(toupper(plot.comb$dominant_shrub_1) == "MANZANITA?"),"dominant_shrub_1"] <- "LIDE3"
+plot.comb[which(toupper(plot.comb$dominant_shrub_2) == "MANZANITA?"),"dominant_shrub_2"] <- "LIDE3"
+plot.comb[which(toupper(plot.comb$dominant_shrub_3) == "MANZANITA?"),"dominant_shrub_3"] <- "LIDE3"
+
+plot.comb[which(toupper(plot.comb$dominant_shrub_1) == "SYRO?"),"dominant_shrub_1"] <- "SYRO"
+plot.comb[which(toupper(plot.comb$dominant_shrub_2) == "SYRO?"),"dominant_shrub_2"] <- "SYRO"
+plot.comb[which(toupper(plot.comb$dominant_shrub_3) == "SYRO?"),"dominant_shrub_3"] <- "SYRO"
+
+plot.comb[which(toupper(plot.comb$dominant_shrub_1) == "PREM?"),"dominant_shrub_1"] <- "SALIX"
+plot.comb[which(toupper(plot.comb$dominant_shrub_2) == "PREM?"),"dominant_shrub_2"] <- "SALIX"
+plot.comb[which(toupper(plot.comb$dominant_shrub_3) == "PREM?"),"dominant_shrub_3"] <- "SALIX"
+
+should.be.ceve <- c("CEIN","CEIN3","CENI")
+plot.comb[which(toupper(plot.comb$dominant_shrub_1) %in% should.be.ceve & plot.comb$Fire == "CUB"),"dominant_shrub_1"] <- "CEVE"
+plot.comb[which(toupper(plot.comb$dominant_shrub_2) %in% should.be.ceve & plot.comb$Fire == "CUB"),"dominant_shrub_2"] <- "CEVE"
+plot.comb[which(toupper(plot.comb$dominant_shrub_3) %in% should.be.ceve & plot.comb$Fire == "CUB"),"dominant_shrub_3"] <- "CEVE"
+
+sap.comb[which(sap.comb$Species == "COSE?"),"Species"] <- "CONU"
+resprout.comb[which(resprout.comb$Species == "COSE?"),"Species"] <- "CONU"
+seedl.comb[which(seedl.comb$Species == "COSE?"),"Species"] <- "CONU"
+
+plot.comb[which(plot.comb$Regen_Plot == "CUB0404"),"dominant_shrub_1"] <- "ARNE"
+
+resprout.comb[which(resprout.comb$Species=="QUKE" & resprout.comb$Regen_Plot == "BAG1360"),"Species"] <- "QUCH2"
+
+plot.comb[which(toupper(plot.comb$dominant_shrub_1) == "SCRUB OAK?"),"dominant_shrub_1"] <- "LIDE3"
+plot.comb[which(toupper(plot.comb$dominant_shrub_2) == "SCRUB OAK?"),"dominant_shrub_2"] <- "LIDE3"
+plot.comb[which(toupper(plot.comb$dominant_shrub_3) == "sCRUB OAK?"),"dominant_shrub_3"] <- "LIDE3"
+
+plot.comb[which(toupper(plot.comb$dominant_shrub_1) == "BEAQ?"),"dominant_shrub_1"] <- "QUCH2"
+plot.comb[which(toupper(plot.comb$dominant_shrub_2) == "BEAQ?"),"dominant_shrub_2"] <- "QUCH2"
+plot.comb[which(toupper(plot.comb$dominant_shrub_3) == "BEAQ?"),"dominant_shrub_3"] <- "QUCH2"
+
+plot.comb[which(plot.comb$Regen_Plot == "PIT0207"),"dominant_shrub_1"] <- "ARME"
+
+plot.comb[which(toupper(plot.comb$dominant_shrub_1) == "ARVI?"),"dominant_shrub_1"] <- "QUVA"
+plot.comb[which(toupper(plot.comb$dominant_shrub_2) == "ARVI?"),"dominant_shrub_2"] <- "QUVA"
+plot.comb[which(toupper(plot.comb$dominant_shrub_3) == "ARVI?"),"dominant_shrub_3"] <- "QUVA"
+
+plot.comb[which(plot.comb$Regen_Plot == "CUB0404"),"dominant_shrub_1"] <- "ARNE"
+
+# LIDE3 as "shrub" in BAG1719,1683 and QUCH2 in BAG1537 is irrelevant even though LIDE3,QUCH2 is not a shrub because shrub cover was low to ground so it would not have been measured as a tree.
+
+
+
+#! when a 2016 plot had a shrub that was actually a hardwood, fake it so it counts as a hardwood PRESENCE (make fake hardwood column that is counted when calculating hardwood presence but not count)
+#! exclude 2016 plots from hardwood COUNT: not 0 but NA, not part of analysis
 
 
 plot.welch <- read.csv("../data_survey/Welch/Plot_data.txt",stringsAsFactors=FALSE)
@@ -180,9 +242,6 @@ plot.welch <- merge(plot.welch,seed.tree.welch.nearest,all.x=TRUE)
 
 
 
-#! need to remove managed plots
-
-
 ## Merge Welch plots with 2016 plots
 
 plot <- rbind.fill(plot.welch,plot.comb)
@@ -193,9 +252,9 @@ surviving.trees <- rbind.fill(surviving.trees.welch,surviving.trees.comb)
 seed.tree <- seed.tree.welch
 
 
-# Fix species names to have numbers: once tables merged, sort by species name to identify where.
-from <- c("JU","AB","CADE","CONU","LIDE","QUCH")
-to <- c("JUNIPERUS","ABIES","CADE27","CONU4","LIDE3","QUCH2")
+# Fix species names to have numbers. Also fix an incorrectly-named species
+from <- c("JU","AB","CADE","CONU","LIDE","QUCH","NODE","COSE","PRVI?","ACGI")
+to <- c("JUNIPERUS","ABIES","CADE27","CONU4","LIDE3","QUCH2","LIDE3","CONU","PRVI","ACMA")
 
 
 surviving.trees$Species <- mapvalues(surviving.trees$Species,from=from,to=to)
@@ -203,6 +262,23 @@ sapling$Species <- mapvalues(sapling$Species,from=from,to=to)
 seedl$Species <- mapvalues(seedl$Species,from=from,to=to)
 resprout$Species <- mapvalues(resprout$Species,from=from,to=to)
 seed.tree$Species <- mapvalues(seed.tree$Species,from=from,to=to)
+
+
+## there is a surviving tree called CAPIM? in PIT0164. No notes. Don't know what it is. Must drop plot.
+plot <- plot[plot$Regen_Plot != "PIT0164",]
+
+
+## add two resprouts that were incorrectly considered "shrubs" by the crew
+
+resprout.add <- data.frame(ID=c(10001,10002),Regen_Plot=c("BAG1382","PIT0207"),COUNT.TOTAL=c(1000,1000),Species=c("LIDE3","ARME"),X5yr=c(1000,1000),._sprouts=c(1000,1000),DBH..cm.=c(1000,1000),talst_age=c(5,5),tallest_ht_cm=c(50,50),tallest_lastyr_cm=c(10,10))
+resprout <- rbind.fill(resprout,resprout.add)
+
+
+
+
+
+
+
 
 # Calculate live BA
 plot$BA.Live1 <- plot$BA_live_count * plot$BAF
@@ -797,11 +873,6 @@ plot.clim.seedtree$FORB <- plot.clim.seedtree$FORBE
 plot.clim.seedtree <- remove.vars(plot.clim.seedtree,"FORBE")
 
 
-
-##!! check each individual plot for outliers.
-
-
-
 ### write plot-level and species-level output files
 write.csv(plot.clim.seedtree,"data_intermediate/plot_level.csv",row.names=FALSE)
 write.csv(plot.3.regen,"data_intermediate/speciesXplot_level.csv",row.names=FALSE)
@@ -810,6 +881,15 @@ write.csv(plot.3.regen,"data_intermediate/speciesXplot_level.csv",row.names=FALS
 
 
 #### Outlier check ####
+
+
+#test to see if CADE27 is really essentially only present in low sev plots
+
+test <- merge(plot.tree.sp,plot.clim.seedtree[,c("Regen_Plot","FIRE_SEV")])
+
+
+
+
 
 plot.3.regen <- read.csv("data_intermediate/speciesXplot_level.csv",header=TRUE,stringsAsFactors=FALSE)
 plot.clim.seedtree <- read.csv("data_intermediate/plot_level.csv",header=TRUE,stringsAsFactors=FALSE)

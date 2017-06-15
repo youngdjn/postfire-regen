@@ -14,6 +14,13 @@ source("regen_analysis_functions.R")
 d.plot <- read.csv("data_intermediate/plot_level.csv",header=T,stringsAsFactors=FALSE)
 d.sp <- read.csv("data_intermediate/speciesXplot_level.csv",header=T,stringsAsFactors=FALSE)
 
+
+
+## Look for plots with incomplete data specified in the comments
+plots.exceptions <- grepl("#.*(INCOMPLETE|INCORRECT)",d.plot$NOTES)
+d.plot <- d.plot[!plots.exceptions,]
+
+
 # only keep the necessary columns
 d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general","seed_tree_distance_conifer","seed_tree_distance_hardwood","diff.norm.ppt.z","diff.norm.ppt.min.z","tmean.post","ppt.post","ppt.post.min","perc.norm.ppt","perc.norm.ppt.min","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z","def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","diff.norm.def.max.z","diff.norm.aet.min.z","def.post","aet.post","def.post.max","aet.post.min","snow.post.min","snow.normal","snow.post","diff.norm.snow.z","diff.norm.snow.min.z")]
 
@@ -27,6 +34,8 @@ d.plot <- d.plot[d.plot$Regen_Plot != "SHR0900015",]
 plots.exclude <- read.csv("data_intermediate/plots_exclude.csv",header=T,stringsAsFactors=FALSE)
 plot.ids.exclude <- plots.exclude[plots.exclude$Exclude != "",]$Regen_Plot
 d.plot <- d.plot[!(d.plot$Regen_Plot %in% plot.ids.exclude),]
+
+
 
 
 # ## Removed this code: because most of the time NA means seed source not visible, and excluding all plots >50 m from seed source
@@ -51,7 +60,7 @@ d.sp$regen.presab.all <- ifelse(d.sp$regen.count.all > 0,TRUE,FALSE)
 #! TEMPORARY: if there was no radiation data, set it equal to 0
 d.plot$rad.march <- ifelse(is.na(d.plot$rad.march),0,d.plot$rad.march)
 
-high.sev <- c(2,3) # which field-assessed severity values are considered high severity
+high.sev <- c(4,5) # which field-assessed severity values are considered high severity
 control <- c(0,1) # which field-assessed severity values are considered controls
 
 
@@ -79,8 +88,12 @@ for(fire in fires) {
   # determine what the precipitation breakpoints should be (here just using median) -- based on high severity plots only
   breaks <- quantile(d.plot[(d.plot$Fire == fire) & (d.plot$FIRE_SEV %in% high.sev),]$ppt.normal,probs=c(0.5),na.rm=TRUE)
   
-  # #override the precip breaks, so we just have one category per fire
-  # breaks <- 0
+  
+  # for some fires with a small range of precip, override the precip breaks, so we just have one category per fire
+  fires.small.precip.range <- c("AMERICAN RIVER","ANTELOPE","BAGLEY","BASSETTS","BTU LIGHTENING","HARDING","STRAYLOR")
+  if(fire %in% fires.small.precip.range) {
+    breaks <- 0
+  }
   
   # categorize plots based on where they fall between the breakpoints  
   categories <- categorize(d.plot[d.plot$Fire==fire,]$ppt.normal,breaks,name="P")
@@ -135,9 +148,16 @@ ggplot(d.plot.precat[!is.na(d.plot.precat$FIRE_SEV.cat),],aes(x=ppt.normal,y=rad
   theme_bw(16)
 
 # look at control only
-ggplot(d.plot[d.plot$FIRE_SEV %in% control,],aes(x=ppt.normal,y=rad.march,col=topoclim.cat)) +
+ggplot(d.plot.precat[d.plot.precat$FIRE_SEV %in% control,],aes(x=ppt.normal,y=rad.march,col=topoclim.cat)) +
   geom_point() +
-  facet_wrap(~Fire,scales="free")
+  facet_wrap(~Fire,scales="free") +
+  theme_bw(16)
+
+# look at high sev only
+ggplot(d.plot.precat[d.plot.precat$FIRE_SEV %in% high.sev,],aes(x=ppt.normal,y=rad.march,col=topoclim.cat)) +
+  geom_point() +
+  facet_wrap(~Fire,scales="free") +
+  theme_bw(16)
 
 
 
@@ -1341,7 +1361,7 @@ library(loo)
 
 d.plot <- d.plot.c
 
-d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV %in% c(2,3)),]
+d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV %in% c(4,5)),]
 
 ## remove an outlier plot with 20 abco that is preventing model conversion
 d.plot <- d.plot[!(d.plot$Regen_Plot == "CHI1248"),]
@@ -1395,9 +1415,9 @@ pred.dat <- data.frame()
 fit.dat <- data.frame()
 d.maes.anoms <- data.frame()
 
-#Remove Dry fires
-dry.fires <- c("STRAYLOR","HARDING","ANTELOPE","MOONLIGHT")
-d.plot <- d.plot[!(d.plot$Fire %in% dry.fires),]
+# #Remove Dry fires
+# dry.fires <- c("STRAYLOR","HARDING","ANTELOPE","MOONLIGHT")
+# d.plot <- d.plot[!(d.plot$Fire %in% dry.fires),]
 
 d.plot <- d.plot[!is.na(d.plot$diff.norm.snow.z),]
 
