@@ -174,7 +174,7 @@ d.plot.precat <- d.plot.precat[!(d.plot.precat$FIRE_SEV.cat == "high.sev" & !(d.
 
 
 
-
+write.csv(d.plot.precat,"../../all_plots.csv",row.names=FALSE)
 
 
 
@@ -1415,9 +1415,9 @@ pred.dat <- data.frame()
 fit.dat <- data.frame()
 d.maes.anoms <- data.frame()
 
-# #Remove Dry fires
-# dry.fires <- c("STRAYLOR","HARDING","ANTELOPE","MOONLIGHT")
-# d.plot <- d.plot[!(d.plot$Fire %in% dry.fires),]
+#Remove Dry fires
+dry.fires <- c("STRAYLOR","HARDING","ANTELOPE","MOONLIGHT")
+d.plot <- d.plot[!(d.plot$Fire %in% dry.fires),]
 
 d.plot <- d.plot[!is.na(d.plot$diff.norm.snow.z),]
 

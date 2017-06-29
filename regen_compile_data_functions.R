@@ -192,9 +192,9 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl
     if(regen.ages == "young") {
       years.regen <- 1:2
     } else if(regen.ages == "old") {
-      years.regen <- plot.survey.years.post - 2:-2 # the third-to-last and last year of the plot before it was surveyed (also the year after it was surveyed, in case of mis-aging)
+      years.regen <- plot.survey.years.post - 2:-2 # the second-to-last and last year of the plot before it was surveyed (also the year after it was surveyed, in case of mis-aging)
     } else if(regen.ages == "all") {
-      years.regen <- 1:(plot.survey.years.post+1) #+1 in case a seedling was over-aged by one year
+      years.regen <- 1:(plot.survey.years.post+2) #+2 in case a seedling was over-aged by one-2 years
     }
 
   }
@@ -235,9 +235,9 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl
     if(regen.ages=="young") {
       regen.nyears <- length(regen.row.cols)
     } else if(regen.ages=="old") {
-      regen.nyears <- length(regen.row.cols) -1 #-1 because added an extra year in case seedlings were over-aged, but in realiy they only came from the the years between the fire and the survey
+      regen.nyears <- length(regen.row.cols) -2 #-2 because added extra years in case seedlings were over-aged, but in realiy they only came from the the years between the fire and the survey
     } else if(regen.ages=="all") {
-      regen.nyears <- length(regen.row.cols) -1 #-1 because added an extra year in case seedlings were over-aged, but in realiy they only came from the the years between the fire and the survey
+      regen.nyears <- length(regen.row.cols) -2 #-2 because added extra years in case seedlings were over-aged, but in realiy they only came from the the years between the fire and the survey
     }
       
     

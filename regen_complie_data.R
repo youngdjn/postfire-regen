@@ -110,6 +110,9 @@ plot.comb$seed_tree_distance_general <- pmin(plot.comb$seed_tree_distance_conife
 
 # set survey year
 plot.comb$Date <- "8/10/2016 0:00:00" # it's all 2016; the day doesn't matter
+# except the new plots surveyed in 2017
+surveyed.2017 <- c("CHI2220","CHI2428","CHI2216","CHI2475")
+plot.comb[plot.comb$Regen_Plot %in% surveyed.2017,"Date"] <- "6/21/2017 0:00:00"
 
 
 # Find when only one quadrant was surveyed for seedlings, and multiply counts by 4 when true
@@ -228,6 +231,22 @@ seedl.welch <- read.csv("../data_survey/Welch/tree_regen.txt",stringsAsFactors=F
 resprout.welch <- read.csv("../data_survey/Welch/Resprouts.txt",stringsAsFactors=FALSE)
 surviving.trees.welch <- read.csv("../data_survey/Welch/surviving_trees.txt",stringsAsFactors=FALSE)
 seed.tree.welch <- read.csv("../data_survey/Welch/seed_tree.txt",stringsAsFactors=FALSE)
+shrub.welch <- read.csv("../data_survey/Welch/shrub_regen.txt",stringsAsFactors=FALSE)
+
+## From Welch plots, get modal height of the dominant shrub species and store it in the plot table
+
+shrub.plots <- unique(shrub.welch$Regen_Plot)
+for(shrub.plot in shrub.plots) {
+  
+  plot.shrubs <- shrub.welch[shrub.welch$Regen_Plot == shrub.plot,]
+  max.cov <- max(plot.shrubs$Cover)
+  max.cov.row <- row.names(plot.shrubs)[which(plot.shrubs$Cover == max.cov)[1]]
+  dom.ht <- plot.shrubs[max.cov.row,]$modal_ht_cm
+  
+  plot.welch[plot.welch$Regen_Plot == shrub.plot,"dominant_shrub_ht_cm"] <- dom.ht
+  
+}
+
 
 
 
@@ -252,7 +271,7 @@ surviving.trees <- rbind.fill(surviving.trees.welch,surviving.trees.comb)
 seed.tree <- seed.tree.welch
 
 
-# Fix species names to have numbers. Also fix an incorrectly-named species
+# Fix species names to use USDA PLANTS codes. Also fix an incorrectly-named species
 from <- c("JU","AB","CADE","CONU","LIDE","QUCH","NODE","COSE","PRVI?","ACGI")
 to <- c("JUNIPERUS","ABIES","CADE27","CONU4","LIDE3","QUCH2","LIDE3","CONU","PRVI","ACMA")
 
@@ -264,19 +283,13 @@ resprout$Species <- mapvalues(resprout$Species,from=from,to=to)
 seed.tree$Species <- mapvalues(seed.tree$Species,from=from,to=to)
 
 
-## there is a surviving tree called CAPIM? in PIT0164. No notes. Don't know what it is. Must drop plot.
+## there is a surviving tree called "CAPIM?" in PIT0164. No notes. Don't know what it is. Must drop plot.
 plot <- plot[plot$Regen_Plot != "PIT0164",]
 
 
 ## add two resprouts that were incorrectly considered "shrubs" by the crew
-
-resprout.add <- data.frame(ID=c(10001,10002),Regen_Plot=c("BAG1382","PIT0207"),COUNT.TOTAL=c(1000,1000),Species=c("LIDE3","ARME"),X5yr=c(1000,1000),._sprouts=c(1000,1000),DBH..cm.=c(1000,1000),talst_age=c(5,5),tallest_ht_cm=c(50,50),tallest_lastyr_cm=c(10,10))
+resprout.add <- data.frame(ID=c(10001,10002),Regen_Plot=c("BAG1382","PIT0207"),COUNT.TOTAL=c(1000,1000),Species=c("LIDE3","ARME"),X5yr=c(1000,1000),._sprouts=c(1000,1000),DBH..cm.=c(1000,1000),talst_age=c(5,5),tallest_ht_cm=c(137,NA),tallest_lastyr_cm=c(NA,NA))
 resprout <- rbind.fill(resprout,resprout.add)
-
-
-
-
-
 
 
 
@@ -284,7 +297,7 @@ resprout <- rbind.fill(resprout,resprout.add)
 plot$BA.Live1 <- plot$BA_live_count * plot$BAF
 
 
-#populate seedling unk_yr column with values for CADE and all hardwoods
+#populate seedling unk_yr column with values for all hardwoods (but NOT CADE)
 seedl.count.columns <- grep("yr$",names(seedl))
 hardwoods<- c("QUKE","QUCH2","ARME","LIDE3","CHCH","QUGA4","ACMA","CEMO2","CONU4","POTR5","QUBE5","QUJO3","QUWI","UMCA")
 #not.ageable <- c("CADE27",hardwoods)
@@ -310,7 +323,7 @@ write.csv(seed.tree,"../data_survey/Compiled/seed_tree.csv",row.names=FALSE)
 
 
 
-#### 0.5 Operations that apply to all eteps below #####
+#### 0.5 Operations that apply to all steps below #####
 
 
 
@@ -769,8 +782,6 @@ write.csv(regen.ag,"../data_intermediate_processing_local/tree_summarized_sp.csv
 
 
 
-
-
 #### 5. Integrate all plot and species data ####
 
 ### Read in raw data files (direct from DB export)
@@ -857,6 +868,21 @@ plot.3.regen <- merge(plot.3.regen.pre,plot.3.regen.all)
 seed.tree.sp <- aggregate(seed.tree$Dist_m,by=list(seed.tree$Regen_Plot,seed.tree$Species),FUN=min)
 names(seed.tree.sp) <- c("Regen_Plot","species","seed.tree.sp")
 plot.3.regen <- merge(plot.3.regen,seed.tree.sp,all.x=TRUE)
+
+
+### add the tallest seedling of each species
+
+## append seedling and resprout heights
+seedl.ht <- seedl[,c("Regen_Plot","Species","tallest_ht_cm")]
+respr.ht <- resprout[,c("Regen_Plot","Species","tallest_ht_cm")]
+regen.ht <- rbind(seedl.ht,respr.ht)
+
+# in case there are multiple seedling entries per species-plot combination, aggregate
+regen.ht.agg <- aggregate(regen.ht$tallest_ht_cm,by=list(regen.ht$Regen_Plot,regen.ht$Species),FUN=max)
+names(regen.ht.agg) <- c("Regen_Plot","species","tallest_ht_cm")
+
+# merge it in
+plot.3.regen <- merge(plot.3.regen,regen.ht.agg,all.x=TRUE)
 # species table ready for export
 
 
