@@ -97,13 +97,22 @@ cvfun.fire <- function(formula,data) {
 
 
     
-    if(sp %in% cover.opts) {
+    if(sp %in% c(cover.opts,prop.opts)) {
       
-      m <- betareg(formula,data=data.train)
+      
+      data.train <- data.train[!is.na(data.train$response.var),]
+      
+      m <- try(betareg(formula,data=data.train),silent=TRUE)
+      if(class(m) == "try-error") {
+        message <- paste0("Model error for ",sp," ",formula.name)
+        print(message)
+        next()
+      }
       
       if(m$converged == FALSE) {
         message <- paste0("No convergence for ",sp," ",formula.name)
         print(message)
+        next()
       }
       
       m.pred <- predict(m,newdat=data.val)
@@ -120,22 +129,41 @@ cvfun.fire <- function(formula,data) {
         m.pred[m.pred < 0.001] <- zero.t
       
       
-      err <- mean(abs(logit(m.pred)-logit(obs)))
+      err <- mean(abs(logit(m.pred)-logit(obs)),na.rm=TRUE)
 
       
-    } else { # it is not a cover response
+    } else if (sp %in% htabs.opts) { # we're looking at absolute height
+      
+      
+      m <- glm(formula,data=data.train,family="gaussian")
+      
+      if(m$converged == FALSE) {
+        message <- paste0("No convergence for ",sp," ",formula.name)
+        print(message)
+        next()
+      }
+      
+      m.pred <- predict(m,newdat=data.val)
+      obs <- data.val$response.var
+      
+      err <- mean(abs(m.pred-obs),na.rm=TRUE)  #! if we end up using a transformation like log we'll need to log these too
+      
+      
+      
+    } else { # it is not a cover or height response
       
       m <- glm(formula,data=data.train,family="binomial")
       
       if(m$converged == FALSE) {
         message <- paste0("No convergence for ",sp," ",formula.name)
         print(message)
+        next()
       }
       
       m.fit <- predict(m,type="response")
       
       ## find the cutoff to use for presence/absence, based on the proportion of plots that had presence in the training dataset
-      prop.present <- mean(data.train$response.var)
+      prop.present <- mean(data.train$response.var,na.rm=TRUE)
       
       #sort plots by predicted probability
       m.fit.sort <- sort(m.fit,decreasing=TRUE)
@@ -154,7 +182,7 @@ cvfun.fire <- function(formula,data) {
       
       obs <- data.val$response.var
       
-      err <- 1-mean(m.pred.presab == obs)
+      err <- 1-mean(m.pred.presab == obs,na.rm=TRUE)
       
       
     }
@@ -169,6 +197,9 @@ cvfun.fire <- function(formula,data) {
   
   
   
+  if(length(errs) < 3) {  #super high number if not enought of the fires converged
+    errs <- c(9999,9999,9999)
+  }
   
   mae <- mean(abs(errs))
   stderr <- sd(abs(errs))/(sqrt(length(errs)))

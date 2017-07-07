@@ -881,6 +881,24 @@ regen.ht <- rbind(seedl.ht,respr.ht)
 regen.ht.agg <- aggregate(regen.ht$tallest_ht_cm,by=list(regen.ht$Regen_Plot,regen.ht$Species),FUN=max)
 names(regen.ht.agg) <- c("Regen_Plot","species","tallest_ht_cm")
 
+## Now do it for species groups
+pinus <- c("PIPO","PIJE","PILA","PIAT","PICO","PINUS","PISA")
+regen.ht.pinus <- regen.ht[regen.ht$Species %in% pinus,]
+regen.ht.pinus.agg <- aggregate(regen.ht.pinus$tallest_ht_cm,by=list(regen.ht.pinus$Regen_Plot),FUN=max)
+names(regen.ht.pinus.agg) <- c("Regen_Plot","tallest_ht_cm")
+regen.ht.pinus.agg$species <- "PINUS.ALLSP"
+
+shade <- c("ABCO","CADE27","ABIES","TAXUS","TOCA","ABMA")
+regen.ht.shade <- regen.ht[regen.ht$Species %in% shade,]
+regen.ht.shade.agg <- aggregate(regen.ht.shade$tallest_ht_cm,by=list(regen.ht.shade$Regen_Plot),FUN=max)
+names(regen.ht.shade.agg) <- c("Regen_Plot","tallest_ht_cm")
+regen.ht.shade.agg$species <- "SHADE.ALLSP"
+
+## Append
+regen.ht.agg <- rbind.fill(regen.ht.agg,regen.ht.pinus.agg,regen.ht.shade.agg)
+
+
+
 # merge it in
 plot.3.regen <- merge(plot.3.regen,regen.ht.agg,all.x=TRUE)
 # species table ready for export
