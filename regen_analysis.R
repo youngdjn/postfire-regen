@@ -1375,7 +1375,7 @@ d.plot <- d.plot[!is.na(d.plot$Fire),]
 
 #sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO","ABMA","CONIF.ALLSP","PSME","PILA","CADE27","PIJE","PIPJ")
 sp.opts <- c("PIPO","ABCO","PILA","SHADE.ALLSP","QUKE","PINUS.ALLSP","QUCH2","HDWD.ALLSP","PSME") # reduced
-sp.opts <- c("PIPO","ABCO","PILA","QUKE","QUCH2","PSME") # reduced
+sp.opts <- c("PIPO","ABCO","PILA","QUKE","QUCH2","PSME","PINUS.ALLSP","SHADE.ALLSP") # reduced
 #sp.opts <- c("PIPO","ABCO","PILA","PSME","CADE27","QUKE","QUCH2") # reduced
 
 sp.opts <- c("PIPO","ABCO","PINUS.ALLSP","SHADE.ALLSP") # reduced
@@ -1390,9 +1390,9 @@ cover.opts <- c("COV.SHRUB") # reduced
 cover.opts <- c("COV.SHRUB","COV.GRASS") # reduced
 
 ht.opts <- c("HT.PINUS.ALLSP","HT.SHADE.ALLSP","HT.PIPO","HT.ABCO")
-ht.opts <- c("HT.PINUS.ALLSP")
+ht.opts <- c("HT.PINUS.ALLSP","HT.PIPO")
 
-htabs.opts <- c("HTABS.PIPO","HTABS.SHRUB")
+htabs.opts <- c("HTABS.PIPO","HTABS.PINUS.ALLSP","HTABS.SHRUB")
 
 prop.opts <- c("PROP.PINUS")
 
@@ -2492,13 +2492,13 @@ for(sp in sp.opts) {
       low <- p$fit - 1.96*p$se
       high <- p$fit + 1.96*p$se
       high[high>400] <- 400
-      pred.anom <- data.frame(pred.low=inv.logit(low),pred.mid=inv.logit(p$fit),pred.high=inv.logit(high))
+      pred.anom <- data.frame(pred.low=(low),pred.mid=(p$fit),pred.high=(high))
       
       p <- predict(mod.norm,newdat,type="link",se.fit=TRUE)
       low <- p$fit - 1.96*p$se
       high <- p$fit + 1.96*p$se
       high[high>400] <- 400
-      pred.norm <- data.frame(pred.low=inv.logit(low),pred.mid=inv.logit(p$fit),pred.high=inv.logit(high))
+      pred.norm <- data.frame(pred.low=(low),pred.mid=(p$fit),pred.high=(high))
       
     } else {
       
@@ -2571,7 +2571,6 @@ for(sp in sp.opts) {
   }
   
 }
-
 
 
 #### Prep for plots etc ####
