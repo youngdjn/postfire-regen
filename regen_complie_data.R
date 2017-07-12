@@ -631,7 +631,7 @@ water.year.summary <- data.frame(Regen_Plot=plots.clim$Regen_Plot,water.year.sum
 
 
 
-###!!! add water balance values ###
+### add water balance values ###
 
 library(reshape)
 
@@ -917,8 +917,35 @@ plot.clim.seedtree$FORB <- plot.clim.seedtree$FORBE
 plot.clim.seedtree <- remove.vars(plot.clim.seedtree,"FORBE")
 
 
+### Bring in dominant vegetation for Welch
+dom.veg.welch <- read.csv("../data_survey/Welch/DominantVegetation.txt",stringsAsFactors=FALSE)
+
+dom.veg.df <- data.frame()
+
+for(plt.name in unique(dom.veg.welch$Regen_Plot)) {
+  
+  dom.veg.plt <- dom.veg.welch[dom.veg.welch$Regen_Plot == plt.name,]
+  dom.veg.plt.string <- paste(dom.veg.plt$Species,collapse=" ")
+  dom.veg.plt.df <- data.frame(Regen_Plot = plt.name,dom.veg = dom.veg.plt.string)
+  dom.veg.df <- rbind(dom.veg.df,dom.veg.plt.df)
+  
+}
+
+plot.clim.seedtree.2 <- merge(plot.clim.seedtree,dom.veg.df,all.x=TRUE,by="Regen_Plot")
+
+
+## Bring in dominant vegetation for other plots
+plot.clim.seedtree.2$dom.veg.2016 <- paste(plot.clim.seedtree.2$dominant_tree_1,plot.clim.seedtree.2$dominant_tree_2,plot.clim.seedtree.2$dominant_tree_3,sep=" ")
+
+plot.clim.seedtree.2$dom.veg.all <- paste(plot.clim.seedtree.2$dom.veg.2016,plot.clim.seedtree.2$dom.veg,sep=" ")
+
+
+
+
+
+
 ### write plot-level and species-level output files
-write.csv(plot.clim.seedtree,"data_intermediate/plot_level.csv",row.names=FALSE)
+write.csv(plot.clim.seedtree.2,"data_intermediate/plot_level.csv",row.names=FALSE)
 write.csv(plot.3.regen,"data_intermediate/speciesXplot_level.csv",row.names=FALSE)
 
 

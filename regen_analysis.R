@@ -22,7 +22,7 @@ d.plot <- d.plot[!plots.exceptions,]
 
 
 # only keep the necessary columns
-d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general","seed_tree_distance_conifer","seed_tree_distance_hardwood","diff.norm.ppt.z","diff.norm.ppt.min.z","tmean.post","ppt.post","ppt.post.min","perc.norm.ppt","perc.norm.ppt.min","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z","def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","diff.norm.def.max.z","diff.norm.aet.min.z","def.post","aet.post","def.post.max","aet.post.min","snow.post.min","snow.normal","snow.post","diff.norm.snow.z","diff.norm.snow.min.z","dominant_shrub_ht_cm")]
+d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general","seed_tree_distance_conifer","seed_tree_distance_hardwood","diff.norm.ppt.z","diff.norm.ppt.min.z","tmean.post","ppt.post","ppt.post.min","perc.norm.ppt","perc.norm.ppt.min","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z","def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","diff.norm.def.max.z","diff.norm.aet.min.z","def.post","aet.post","def.post.max","aet.post.min","snow.post.min","snow.normal","snow.post","diff.norm.snow.z","diff.norm.snow.min.z","dominant_shrub_ht_cm","dom.veg.all")]
 
 # only Sierra Nevada fires #! removed DEEP
 sierra.fires <- c("STRAYLOR","CUB","RICH","MOONLIGHT","ANTELOPE","BTU LIGHTENING","HARDING","BASSETTS","PENDOLA","AMERICAN RIVER","RALSTON","FREDS","SHOWERS","POWER","BAGLEY","PEAK","CHIPS")
@@ -169,6 +169,8 @@ d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "BTU LIGHTENING") & (d.p
 d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "BAGLEY") & (d.plot.precat$rad.march < 4000)),]
 d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "CUB") & (d.plot.precat$ppt.normal < 1300)),]
 
+d.plot.domveg <- d.plot.precat # save this data frame at this stage for extracting dominant vegetation data (doesn't matter what severity or years post-fire)
+
 # remove plots that are high severity but not surveyed in years 4-5 post-fire
 d.plot.precat <- d.plot.precat[!(d.plot.precat$FIRE_SEV.cat == "high.sev" & !(d.plot.precat$survey.years.post %in% c(4,5))),]
 
@@ -246,6 +248,66 @@ d.sp.2$proportion.young <- d.sp.2$regen.count.young / d.sp.2$regen.count.all
 
 
 
+### Compute dominant vegetation for each remaining topoclimate category, based on stated observed nearby dominants. use all plots regardless of severity
+
+non.tree.dom.veg <- c("ARPA6","CEIN3","CECO","CEPR") # species to exclude from list
+
+
+for(fire in unique(d.plot.3$Fire)) {
+  
+  d.plot.fire <- d.plot.3[d.plot.3$Fire == fire,]
+  
+  for(topoclim.cat in unique(d.plot.fire$topoclim.cat)) {
+    
+    
+    d.plot.fire.cat <- d.plot.domveg[(d.plot.domveg$Fire == fire) & (d.plot.domveg$topoclim.cat == topoclim.cat),]
+    
+    if (nrow(d.plot.fire.cat) < 5) {
+      cat("Less than 5 plots in ",fire," ",topoclim.cat,". Skipping.\n")
+      next()
+    }
+    
+    
+    fire.cat.sp <- paste(d.plot.fire.cat$dom.veg.all,collapse = " ")
+    
+    # use white space to split string into vector
+    sps <- scan(text=fire.cat.sp,what="")
+    sps <- sps[!is.na(sps)]
+    sps <- sps[!sps %in% non.tree.dom.veg]
+    sps[sps %in% c("PIJE","PIPO")] <- "PIPJ"
+    sps.tab <- table(sps)
+    sps.tab <- sort(sps.tab,decreasing=TRUE)
+    sps.tab <- sps.tab/sum(sps.tab)
+    
+    #print(sps.tab)
+    
+    # keep all species that got > 10% of the mentions
+    sps.tab <- sps.tab[sps.tab > .2]
+    
+    # keep the top 4 species
+    sps.tab <- sps.tab[1:4]
+    
+    # remove NAs (generated if list of species was < 4 prior to last line)
+    sps.tab <- sps.tab[!is.na(sps.tab)]
+    
+    # get names
+    dom.sp <- names(sps.tab)
+    
+    dom.sp <- paste(dom.sp,collapse=", ")
+    
+    
+    d.plot.3[(d.plot.3$Fire == fire) & (d.plot.3$topoclim.cat == topoclim.cat),"dom.tree.sp.obs"] <- dom.sp
+    
+  }
+  
+}
+
+
+
+
+
+
+
 
 ### Plot histogram of seed tree distance ####
 
@@ -267,7 +329,54 @@ ggplot(a,aes(x=Fire,y=mean)) +
 
 
 
+#### 4. Determine dominant adult tree species (from control plots) within each category ####
+library(reshape)
 
+d.sp.pre <- d.sp.2[,c("species","topoclim.cat","Fire","adult.ba")]
+
+d.fire.sp <- cast(d.sp.pre,Fire + topoclim.cat ~ species,value="adult.ba")
+
+d.fire.sp$PIPJ <- d.fire.sp$PIPO + d.fire.sp$PIJE
+
+sp.names <- names(d.fire.sp)
+names.drop <- c("ALL","ALNUS","CONIF.ALLSP","CONIFER","HDWD.ALLSP","JUNIPERUS","PINUS.ALLSP","SHADE.ALLSP","ABIES","PIPO","PIJE")
+sp.names <- sp.names[!(sp.names %in% names.drop)]
+d.fire.sp <- d.fire.sp[,sp.names]
+d.fire.sp[,4:length(names(d.fire.sp))] <- d.fire.sp[,4:length(names(d.fire.sp))] / rowSums(d.fire.sp[,4:length(names(d.fire.sp))])
+
+d.fire.sp <- d.fire.sp[complete.cases(d.fire.sp),]
+
+## for each one, get a list of all species with > 20% BA
+
+d.fire.sp$dom.tree.sp.ba <- ""
+
+for (i in 1:nrow(d.fire.sp)) {
+  
+  row.ba <- d.fire.sp[i,4:ncol(d.fire.sp)]
+  
+  row.ba <- sort(row.ba,decreasing=TRUE)
+  
+  row.ba <- unlist(row.ba)
+  names.store <- names(row.ba)
+  row.ba <- as.numeric(row.ba)
+  names(row.ba) <- names.store
+  
+  row.ba <- row.ba[row.ba > .2]
+  
+  row.ba <- row.ba[1:4]
+  row.ba <- row.ba[!is.na(row.ba)]
+  
+  dom.sp.row <- paste(names(row.ba),collapse=", ")
+  
+  d.fire.sp[i,"dom.tree.sp.ba"] <- dom.sp.row
+}
+
+d.fire.sp <- d.fire.sp[,c("Fire","topoclim.cat","dom.tree.sp.ba")]
+
+d.plot.3 <- merge(d.plot.3,d.fire.sp,all.x=TRUE)
+
+
+d.view <- d.plot.3[,c("Fire","topoclim.cat","dom.tree.sp.ba","dom.tree.sp.obs","count.control")]
 
 
 #### 6.5 Plot-level analysis with GLM; also run randomForest to get importance scores ####
@@ -301,7 +410,7 @@ d.plot <- d.plot[!is.na(d.plot$Fire),]
 
 
 #sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO","ABMA","CONIF.ALLSP","PSME","PILA","CADE27","PIJE","PIPJ")
-sp.opts <- c("PIPO","ABCO","PILA","SHADE.ALLSP","QUKE","PINUS.ALLSP","QUCH2","HDWD.ALLSP","PSME") # reduced
+sp.opts <- c("PIPO","ABCO","PILA","SHADE.ALLSP","QUKE","PINUS.ALLSP","QUCH2","HDWD.ALLSP","PSME","CADE27","PIPJ") # reduced
 sp.opts <- c("PIPO","ABCO","PILA","QUKE","QUCH2","PSME","PINUS.ALLSP","SHADE.ALLSP") # reduced
 #sp.opts <- c("PIPO","ABCO","PILA","PSME","CADE27","QUKE","QUCH2") # reduced
 
@@ -319,7 +428,7 @@ cover.opts <- c("COV.SHRUB","COV.GRASS") # reduced
 ht.opts <- c("HT.PINUS.ALLSP","HT.SHADE.ALLSP","HT.PIPO","HT.ABCO")
 ht.opts <- c("HT.PINUS.ALLSP","HT.PIPO")
 
-htabs.opts <- c("HTABS.PIPO","HTABS.PINUS.ALLSP","HTABS.SHRUB")
+htabs.opts <- c("HTABS.PIPO","HTABS.PINUS.ALLSP","HTABS.SHRUB","HTABS.SHADE.ALLSP","HTABS.ABCO")
 htaps.opts <- c("HTABS.PIPO","HTABS.SHRUB")
 
 prop.opts <- c("PROP.PINUS")
@@ -353,11 +462,14 @@ pred.rf <- data.frame()
 
 
 
-#Remove Dry fires
-dry.fires <- c("STRAYLOR","HARDING","ANTELOPE","MOONLIGHT")
-d.plot <- d.plot[!(d.plot$Fire %in% dry.fires),]
+# #Remove Dry fires
+# dry.fires <- c("STRAYLOR","HARDING","ANTELOPE","MOONLIGHT")
+# d.plot <- d.plot[!(d.plot$Fire %in% dry.fires),]
 
-# d.plot <- d.plot[!is.na(d.plot$diff.norm.snow.z),] #! need to enable this line if running code for snow models
+# Remove Bassetts
+d.plot <- d.plot[d.plot$Fire != "BASSETTS",]
+
+d.plot <- d.plot[!is.na(d.plot$diff.norm.snow.z),] #! need to enable this line if running code for snow models
 
 for(sp in sp.opts) {
   
@@ -578,7 +690,7 @@ for(sp in sp.opts) {
       formulas[["nP2.aPni"]] <- formula(response.var ~ ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c.sq)
       formulas[["nP2.aP2ni"]] <- formula(response.var ~ ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq)
       
-      # 
+
       # ## snow
       # 
       # 
@@ -689,9 +801,9 @@ for(sp in sp.opts) {
       # formulas[["nA2.aAni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.z_c + aet.normal_c.sq)
       # formulas[["nA2.aA2ni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
       # 
-      # 
-      # 
-      # 
+
+
+
       
       
       ## PPT
@@ -821,7 +933,7 @@ for(sp in sp.opts) {
       # formulas[["nA.aA2minni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
       # formulas[["nA2.aAminni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c.sq)
       # formulas[["nA2.aA2minni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
-      # 
+
       
       #### With seed tree ####
       
@@ -863,8 +975,8 @@ for(sp in sp.opts) {
       
       
       
-      # 
-      # 
+
+
       # ## Snow
       # 
       # formulas[["n0as.aS"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.snow.z_c)
@@ -971,9 +1083,9 @@ for(sp in sp.opts) {
       # formulas[["nAs.aA2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
       # formulas[["nA2s.aAni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c.sq)
       # formulas[["nA2s.aA2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
-      # 
-      # 
-      # 
+
+
+
       
       
       
@@ -1010,8 +1122,8 @@ for(sp in sp.opts) {
       
       
       
-      # 
-      # 
+
+
       # ## Snow
       # 
       # formulas[["n0as.aSmin"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.snow.min.z_c)
@@ -1108,7 +1220,7 @@ for(sp in sp.opts) {
       # formulas[["nAs.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
       # formulas[["nA2s.aAminni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c.sq)
       # formulas[["nA2s.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
-      # 
+
     }
     
     
@@ -1140,8 +1252,8 @@ for(sp in sp.opts) {
     ## normal models
     search <- ".a0"
     normal.model.names <- cv.results[grep(search,cv.results$model,fixed=TRUE),]$mod
-    #normal.model.names <- normal.model.names[normal.model.names != "n0.a0"] # exclude null model
-    # 
+    # normal.model.names <- normal.model.names[normal.model.names != "n0.a0"] # exclude null model
+
     # if(sp %in% cover.opts) { # don't allow a normal with adults in it if this is a cover model
     #   norm.search.opts <- c(Pmean = "n(P|0)2?\\.a0",
     #                         Dmean = "n(D|0)2?\\.a0",
@@ -1182,12 +1294,12 @@ for(sp in sp.opts) {
     #                       Amin = "pA2?mina?s?$",
     #                       Smin = "pS2?mina?s?$"
     # )
-    # 
-    # 
+
+
     
     
     ## For ppt only
-    
+
     if(sp %in% cover.opts) { # don't allow a normal with adults in it if this is a cover model
       norm.search.opts <- c(Pmean = "n(P|0)2?\\.a0",
                             Pmin = "n(P|0)2?\\.a0")
@@ -1195,19 +1307,19 @@ for(sp in sp.opts) {
       norm.search.opts <- c(Pmean = "n(P|0)2?a?s?\\.a0",
                             Pmin = "n(P|0)2?a?s?\\.a0")
     }
-    
+
     anom.search.opts <- c(Pmean = "aP2?(ni)?$",
                           Pmin = "aP2?min(ni)?$")
-    
-    
+
+
     post.search.opts <- c(Pmean = "pP2?a?s?$",
                           Pmin = "pP2?mina?s?$")
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
     
     
     d.maes.anoms.sp <- data.frame()
@@ -1671,7 +1783,7 @@ pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$type == "anom",]
 ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z_c,y=pred.mid,color=norm.level,fill=norm.level)) +
   geom_point() +
   geom_ribbon(aes(ymin=pred.low,ymax=pred.high),alpha=0.3,color=NA) +
-  facet_wrap(anom~sp.rad,nrow=2,scales="free_y") +
+  facet_wrap(sp.rad~anom,nrow=2,scales="free_y") +
   geom_text(aes(0,1,label=best.of.species),size=3,color="black") +
   geom_text(aes(0,0.9,label=most.improved),size=3,color="black") +
   geom_text(aes(0,0.8,label=anom.improvement),size=3,color="black")
