@@ -221,9 +221,6 @@ plot.comb[which(plot.comb$Regen_Plot == "CUB0404"),"dominant_shrub_1"] <- "ARNE"
 
 
 
-#! when a 2016 plot had a shrub that was actually a hardwood, fake it so it counts as a hardwood PRESENCE (make fake hardwood column that is counted when calculating hardwood presence but not count)
-#! exclude 2016 plots from hardwood COUNT: not 0 but NA, not part of analysis
-
 
 plot.welch <- read.csv("../data_survey/Welch/Plot_data.txt",stringsAsFactors=FALSE)
 sap.welch <- read.csv("../data_survey/Welch/sapling_regen.txt",stringsAsFactors=FALSE)
@@ -894,8 +891,21 @@ regen.ht.shade.agg <- aggregate(regen.ht.shade$tallest_ht_cm,by=list(regen.ht.sh
 names(regen.ht.shade.agg) <- c("Regen_Plot","tallest_ht_cm")
 regen.ht.shade.agg$species <- "SHADE.ALLSP"
 
+yellow <- c("PIPO","PIJE")
+regen.ht.yellow <- regen.ht[regen.ht$Species %in% yellow,]
+regen.ht.yellow.agg <- aggregate(regen.ht.yellow$tallest_ht_cm,by=list(regen.ht.yellow$Regen_Plot),FUN=max)
+names(regen.ht.yellow.agg) <- c("Regen_Plot","tallest_ht_cm")
+regen.ht.yellow.agg$species <- "PIPJ"
+
+hdwd <- c("ALNUS","QUKE","QUCH2","ARME","LIDE3","CHCH","QUGA4","ACMA","ACME","CEMO2","CONU4","POTR5","QUBE5","QUJO3","QUWI","UMCA","ALRH")
+regen.ht.hdwd <- regen.ht[regen.ht$Species %in% hdwd,]
+regen.ht.hdwd.agg <- aggregate(regen.ht.hdwd$tallest_ht_cm,by=list(regen.ht.hdwd$Regen_Plot),FUN=max)
+names(regen.ht.hdwd.agg) <- c("Regen_Plot","tallest_ht_cm")
+regen.ht.hdwd.agg$species <- "HDWD.ALLSP"
+
+
 ## Append
-regen.ht.agg <- rbind.fill(regen.ht.agg,regen.ht.pinus.agg,regen.ht.shade.agg)
+regen.ht.agg <- rbind.fill(regen.ht.agg,regen.ht.pinus.agg,regen.ht.shade.agg,regen.ht.yellow.agg,regen.ht.hdwd.agg)
 
 
 

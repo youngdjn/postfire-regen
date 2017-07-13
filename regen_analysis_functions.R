@@ -169,7 +169,7 @@ cvfun.fire <- function(formula,data) {
       m.fit.sort <- sort(m.fit,decreasing=TRUE)
       
       #what number of them should be presences?
-      num.present <- round(prop.present*nrow(data.train))
+      num.present <- round(prop.present*sum(!is.na(data.train$response.var)))
       
       #what is the probability at that point? use it as the cutoff
       cutoff <- m.fit.sort[num.present]
