@@ -85,32 +85,49 @@ cvfun <- function(formula,data) {
 #plot-level cross-validation (withholding an entire fire at a time)
 cvfun.fire <- function(formula,data) {
   
+  by.fire <- TRUE
+  
+  data <- data[!is.na(data$response.var),]
+  
+  
+  
+  if(by.fire == TRUE) {
+    for.in <- 1:length(unique(data$Fire))
+  } else {
+    for.in <- 1:nrow(data)
+  }
+  
   errs <- NULL
   
-  for(i in 1:length(unique(data$Fire))) {
+  for(i in for.in) {
     
-    Fire <- unique(data$Fire)[i]
-    
-    data.train <- data[data$Fire != Fire,]
-    data.val <- data[data$Fire == Fire,]
-    
-
-
+  
+    if(by.fire == TRUE) {
+      Fire <- unique(data$Fire)[i]
+      data.train <- data[data$Fire != Fire,]
+      data.val <- data[data$Fire == Fire,]
+    } else {
+      data.train <- data[-i,]
+      data.val <- data[i,]
+    }
     
     if(sp %in% c(cover.opts,prop.opts)) {
       
-      
       data.train <- data.train[!is.na(data.train$response.var),]
+
+
+      print("Hello\n")      
+      
       
       m <- try(betareg(formula,data=data.train),silent=TRUE)
       if(class(m) == "try-error") {
-        message <- paste0("Model error for ",sp," ",formula.name)
+        message <- paste0("\nModel error during CV for ",sp," ",formula.name,"\n")
         print(message)
         next()
       }
       
       if(m$converged == FALSE) {
-        message <- paste0("No convergence for ",sp," ",formula.name)
+        message <- paste0("No convergence during CV for ",sp," ",formula.name,"\n")
         print(message)
         next()
       }
@@ -138,7 +155,7 @@ cvfun.fire <- function(formula,data) {
       m <- glm(formula,data=data.train,family="gaussian")
       
       if(m$converged == FALSE) {
-        message <- paste0("No convergence for ",sp," ",formula.name)
+        message <- paste0("No convergence during CV for ",sp," ",formula.name,"\n")
         print(message)
         next()
       }
@@ -155,7 +172,7 @@ cvfun.fire <- function(formula,data) {
       m <- glm(formula,data=data.train,family="binomial")
       
       if(m$converged == FALSE) {
-        message <- paste0("No convergence for ",sp," ",formula.name)
+        message <- paste0("No convergence during CV for ",sp," ",formula.name,"\n")
         print(message)
         next()
       }

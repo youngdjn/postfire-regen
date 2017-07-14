@@ -413,34 +413,25 @@ d.plot <- d.plot[!is.na(d.plot$Fire),]
 
 ## other potential plots to remove: BTU1300050, CUB1300305
 
+sp.opts <- c("PIPO","ABCO","PILA","SHADE.ALLSP","QUKE","PINUS.ALLSP","HDWD.ALLSP","PSME","CADE27","PIPJ")
+cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB")
 
-#sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO","ABMA","CONIF.ALLSP","PSME","PILA","CADE27","PIJE","PIPJ")
-sp.opts <- c("PIPO","ABCO","PILA","SHADE.ALLSP","QUKE","PINUS.ALLSP","QUCH2","HDWD.ALLSP","PSME","CADE27","PIPJ") # reduced
-sp.opts <- c("PIPO","ABCO","PILA","QUKE","QUCH2","PSME","PINUS.ALLSP","SHADE.ALLSP") # reduced
-#sp.opts <- c("PIPO","ABCO","PILA","PSME","CADE27","QUKE","QUCH2") # reduced
-
-sp.opts <- c("PIPO","ABCO","PINUS.ALLSP","SHADE.ALLSP") # reduced
-sp.opts <- c("PIPO")
-#sp.opts <- c("PIPO","ABCO") # reduced
-#sp.opts <- c("SHADE.ALLSP","PSME","QUKE","QUCH2")
-
-
-#cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB","COV.HARDWOOD","COV.CONIFER")
-cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB") # reduced
-cover.opts <- c("COV.SHRUB") # reduced
-cover.opts <- c("COV.SHRUB","COV.GRASS") # reduced
-
-ht.opts <- c("HT.PIPJ","HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP","HT.PIPO","HT.ABCO")
-ht.opts <- c("HT.PINUS.ALLSP","HT.PIPO")
-
-htabs.opts <- c("HTABS.PIPJ","HTABS.HDWD.ALLSP","HTABS.PIPO","HTABS.PINUS.ALLSP","HTABS.SHRUB","HTABS.SHADE.ALLSP","HTABS.ABCO")
-htaps.opts <- c("HTABS.PIPO","HTABS.SHRUB")
-
+# All
+ht.opts <- c("HT.PIPJ","HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP")
+htabs.opts <- c("HTABS.PIPJ","HTABS.PIPO","HTABS.SHRUB","HTABS.ABCO","HTABS.PSME","HTABS.PILA","HTABS.QUKE","HTABS.CADE27","HTABS.HDWD.ALLSP","HTABS.PINUS.ALLSP","HTABS.SHADE.ALLSP")
 prop.opts <- c("PROP.CONIF","PROP.PINUS","PROP.SHADE")
+prop.opts <- NULL
+
+# # sp grps
+# ht.opts <- c("HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP")
+# htabs.opts <- c("HTABS.HDWD.ALLSP","HTABS.PINUS.ALLSP","HTABS.SHRUB","HTABS.SHADE.ALLSP")
+# prop.opts <- c("PROP.CONIF","PROP.PINUS")
+# 
 
 
-#cover.opts <- NULL
-sp.opts <- c(prop.opts,htabs.opts,sp.opts,cover.opts,ht.opts)
+
+resp.opts <- c(prop.opts,htabs.opts,sp.opts,cover.opts,ht.opts)
+
 
 do.regression <-TRUE
 
@@ -474,9 +465,9 @@ pred.rf <- data.frame()
 # Remove Bassetts
 # d.plot <- d.plot[d.plot$Fire != "BASSETTS",]
 
-d.plot <- d.plot[!is.na(d.plot$diff.norm.snow.z),] #! need to enable this line if running code for snow models
+# d.plot <- d.plot[!is.na(d.plot$diff.norm.snow.z),] #! need to enable this line if running code for snow models
 
-for(sp in sp.opts) {
+for(sp in resp.opts) {
   
   cat("\n\n#####")
   cat("Running model for: ",sp,"")
@@ -741,38 +732,38 @@ for(sp in sp.opts) {
 
       ## snow
 
-
-      formulas[["n0a.aS"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.snow.z_c)
-      formulas[["n0.aS"]] <- formula(response.var ~ diff.norm.snow.z_c)
-      formulas[["n0a.aS2"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.snow.z_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
-      formulas[["n0.aS2"]] <- formula(response.var ~ diff.norm.snow.z_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
-
-      formulas[["nSa.a0"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c)
-      formulas[["nSa.aS"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c)
-      formulas[["nSa.aS2"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
-      formulas[["pSa"]] <- formula(response.var ~ adult.ba.agg_c + snow.post_c)
-      formulas[["nS2a.a0"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + snow.normal_c.sq)
-      formulas[["nS2a.aS"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c.sq)
-      formulas[["nS2a.aS2"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
-      formulas[["pS2a"]] <- formula(response.var ~ adult.ba.agg_c + snow.post_c + snow.post_c.sq)
-      formulas[["nSa.aSni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c)
-      formulas[["nSa.aS2ni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
-      formulas[["nS2a.aSni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c.sq)
-      formulas[["nS2a.aS2ni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
-
-      formulas[["nS.a0"]] <- formula(response.var ~ snow.normal_c)
-      formulas[["nS.aS"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.z_c)
-      formulas[["nS.aS2"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
-      formulas[["pS"]] <- formula(response.var ~ snow.post_c)
-      formulas[["nS2.a0"]] <- formula(response.var ~ snow.normal_c + snow.normal_c.sq)
-      formulas[["nS2.aS"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.z_c + snow.normal_c.sq)
-      formulas[["nS2.aS2"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
-      formulas[["pS2"]] <- formula(response.var ~ snow.post_c + snow.post_c.sq)
-      formulas[["nS.aSni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.z_c)
-      formulas[["nS.aS2ni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
-      formulas[["nS2.aSni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.z_c + snow.normal_c.sq)
-      formulas[["nS2.aS2ni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
-
+# 
+#       formulas[["n0a.aS"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.snow.z_c)
+#       formulas[["n0.aS"]] <- formula(response.var ~ diff.norm.snow.z_c)
+#       formulas[["n0a.aS2"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.snow.z_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+#       formulas[["n0.aS2"]] <- formula(response.var ~ diff.norm.snow.z_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+# 
+#       formulas[["nSa.a0"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c)
+#       formulas[["nSa.aS"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c)
+#       formulas[["nSa.aS2"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+#       formulas[["pSa"]] <- formula(response.var ~ adult.ba.agg_c + snow.post_c)
+#       formulas[["nS2a.a0"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + snow.normal_c.sq)
+#       formulas[["nS2a.aS"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c.sq)
+#       formulas[["nS2a.aS2"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
+#       formulas[["pS2a"]] <- formula(response.var ~ adult.ba.agg_c + snow.post_c + snow.post_c.sq)
+#       formulas[["nSa.aSni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c)
+#       formulas[["nSa.aS2ni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+#       formulas[["nS2a.aSni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c.sq)
+#       formulas[["nS2a.aS2ni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
+# 
+#       formulas[["nS.a0"]] <- formula(response.var ~ snow.normal_c)
+#       formulas[["nS.aS"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.z_c)
+#       formulas[["nS.aS2"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+#       formulas[["pS"]] <- formula(response.var ~ snow.post_c)
+#       formulas[["nS2.a0"]] <- formula(response.var ~ snow.normal_c + snow.normal_c.sq)
+#       formulas[["nS2.aS"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.z_c + snow.normal_c.sq)
+#       formulas[["nS2.aS2"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
+#       formulas[["pS2"]] <- formula(response.var ~ snow.post_c + snow.post_c.sq)
+#       formulas[["nS.aSni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.z_c)
+#       formulas[["nS.aS2ni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+#       formulas[["nS2.aSni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.z_c + snow.normal_c.sq)
+#       formulas[["nS2.aS2ni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
+# 
 
 
 
@@ -887,37 +878,37 @@ for(sp in sp.opts) {
       
       
       ## Snow
-
-      formulas[["n0a.aSmin"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.snow.min.z_c)
-      formulas[["n0a.aS2min"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.snow.min.z_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
-      formulas[["n0.aSmin"]] <- formula(response.var ~ diff.norm.snow.min.z_c)
-      formulas[["n0.aS2min"]] <- formula(response.var ~ diff.norm.snow.min.z_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
-
-
-
-      formulas[["nSa.aSmin"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c)
-      formulas[["nSa.aS2min"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
-      formulas[["pSmina"]] <- formula(response.var ~ adult.ba.agg_c + snow.post.min_c)
-      formulas[["nS2a.aSmin"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c.sq)
-      formulas[["nS2a.aS2min"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
-      formulas[["pS2mina"]] <- formula(response.var ~ adult.ba.agg_c + snow.post.min_c + snow.post.min_c.sq)
-      formulas[["nSa.aSminni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c)
-      formulas[["nSa.aS2minni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
-      formulas[["nS2a.aSminni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c.sq)
-      formulas[["nS2a.aS2minni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
-
-      formulas[["nS.aSmin"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.min.z_c)
-      formulas[["nS.aS2min"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
-      formulas[["pSmin"]] <- formula(response.var ~ snow.post.min_c)
-      formulas[["nS2.aSmin"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c.sq)
-      formulas[["nS2.aS2min"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
-      formulas[["pS2min"]] <- formula(response.var ~ snow.post.min_c + snow.post.min_c.sq)
-      formulas[["nS.aSminni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.min.z_c)
-      formulas[["nS.aS2minni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
-      formulas[["nS2.aSminni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c.sq)
-      formulas[["nS2.aS2minni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
-
-
+# 
+#       formulas[["n0a.aSmin"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.snow.min.z_c)
+#       formulas[["n0a.aS2min"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.snow.min.z_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+#       formulas[["n0.aSmin"]] <- formula(response.var ~ diff.norm.snow.min.z_c)
+#       formulas[["n0.aS2min"]] <- formula(response.var ~ diff.norm.snow.min.z_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+# 
+# 
+# 
+#       formulas[["nSa.aSmin"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c)
+#       formulas[["nSa.aS2min"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+#       formulas[["pSmina"]] <- formula(response.var ~ adult.ba.agg_c + snow.post.min_c)
+#       formulas[["nS2a.aSmin"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c.sq)
+#       formulas[["nS2a.aS2min"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
+#       formulas[["pS2mina"]] <- formula(response.var ~ adult.ba.agg_c + snow.post.min_c + snow.post.min_c.sq)
+#       formulas[["nSa.aSminni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c)
+#       formulas[["nSa.aS2minni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+#       formulas[["nS2a.aSminni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c.sq)
+#       formulas[["nS2a.aS2minni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
+# 
+#       formulas[["nS.aSmin"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.min.z_c)
+#       formulas[["nS.aS2min"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+#       formulas[["pSmin"]] <- formula(response.var ~ snow.post.min_c)
+#       formulas[["nS2.aSmin"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c.sq)
+#       formulas[["nS2.aS2min"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
+#       formulas[["pS2min"]] <- formula(response.var ~ snow.post.min_c + snow.post.min_c.sq)
+#       formulas[["nS.aSminni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.min.z_c)
+#       formulas[["nS.aS2minni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+#       formulas[["nS2.aSminni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c.sq)
+#       formulas[["nS2.aS2minni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
+# 
+# 
 
       ##DEF
 
@@ -1026,37 +1017,37 @@ for(sp in sp.opts) {
 
 
       ## Snow
-
-      formulas[["n0as.aS"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.snow.z_c)
-      formulas[["n0s.aS"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.snow.z_c)
-      formulas[["n0as.aS2"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.snow.z_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
-      formulas[["n0s.aS2"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.snow.z_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
-
-      formulas[["nSas.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c)
-      formulas[["nSas.aS"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c)
-      formulas[["nSas.aS2"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
-      formulas[["pSas"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.post_c)
-      formulas[["nS2as.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + snow.normal_c.sq)
-      formulas[["nS2as.aS"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c.sq)
-      formulas[["nS2as.aS2"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
-      formulas[["pS2as"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.post_c + snow.post_c.sq)
-      formulas[["nSas.aSni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c)
-      formulas[["nSas.aS2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
-      formulas[["nS2as.aSni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c.sq)
-      formulas[["nS2as.aS2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
-
-      formulas[["nSs.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c)
-      formulas[["nSs.aS"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.z_c)
-      formulas[["nSs.aS2"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
-      formulas[["pSs"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.post_c)
-      formulas[["nS2s.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + snow.normal_c.sq)
-      formulas[["nS2s.aS"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c.sq)
-      formulas[["nS2s.aS2"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
-      formulas[["pS2s"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.post_c + snow.post_c.sq)
-      formulas[["nSs.aSni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.z_c)
-      formulas[["nSs.aS2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
-      formulas[["nS2s.aSni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c.sq)
-      formulas[["nS2s.aS2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
+# 
+#       formulas[["n0as.aS"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.snow.z_c)
+#       formulas[["n0s.aS"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.snow.z_c)
+#       formulas[["n0as.aS2"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.snow.z_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+#       formulas[["n0s.aS2"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.snow.z_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+# 
+#       formulas[["nSas.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c)
+#       formulas[["nSas.aS"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c)
+#       formulas[["nSas.aS2"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+#       formulas[["pSas"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.post_c)
+#       formulas[["nS2as.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + snow.normal_c.sq)
+#       formulas[["nS2as.aS"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c.sq)
+#       formulas[["nS2as.aS2"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
+#       formulas[["pS2as"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.post_c + snow.post_c.sq)
+#       formulas[["nSas.aSni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c)
+#       formulas[["nSas.aS2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+#       formulas[["nS2as.aSni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c.sq)
+#       formulas[["nS2as.aS2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
+# 
+#       formulas[["nSs.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c)
+#       formulas[["nSs.aS"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.z_c)
+#       formulas[["nSs.aS2"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+#       formulas[["pSs"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.post_c)
+#       formulas[["nS2s.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + snow.normal_c.sq)
+#       formulas[["nS2s.aS"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c.sq)
+#       formulas[["nS2s.aS2"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
+#       formulas[["pS2s"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.post_c + snow.post_c.sq)
+#       formulas[["nSs.aSni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.z_c)
+#       formulas[["nSs.aS2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+#       formulas[["nS2s.aSni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c.sq)
+#       formulas[["nS2s.aS2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
 
 
 
@@ -1173,36 +1164,36 @@ for(sp in sp.opts) {
 
 
       ## Snow
-
-      formulas[["n0as.aSmin"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.snow.min.z_c)
-      formulas[["n0as.aS2min"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.snow.min.z_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
-      formulas[["n0s.aSmin"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.snow.min.z_c)
-      formulas[["n0s.aS2min"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.snow.min.z_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
-
-
-
-      formulas[["nSas.aSmin"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c)
-      formulas[["nSas.aS2min"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
-      formulas[["pSminas"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.post.min_c)
-      formulas[["nS2as.aSmin"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c.sq)
-      formulas[["nS2as.aS2min"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
-      formulas[["pS2minas"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.post.min_c + snow.post.min_c.sq)
-      formulas[["nSas.aSminni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c)
-      formulas[["nSas.aS2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
-      formulas[["nS2as.aSminni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c.sq)
-      formulas[["nS2as.aS2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
-
-      formulas[["nSs.aSmin"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.min.z_c)
-      formulas[["nSs.aS2min"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
-      formulas[["pSmins"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.post.min_c)
-      formulas[["nS2s.aSmin"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c.sq)
-      formulas[["nS2s.aS2min"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
-      formulas[["pS2mins"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.post.min_c + snow.post.min_c.sq)
-      formulas[["nSs.aSminni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.min.z_c)
-      formulas[["nSs.aS2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
-      formulas[["nS2s.aSminni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c.sq)
-      formulas[["nS2s.aS2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
-
+# 
+#       formulas[["n0as.aSmin"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.snow.min.z_c)
+#       formulas[["n0as.aS2min"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.snow.min.z_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+#       formulas[["n0s.aSmin"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.snow.min.z_c)
+#       formulas[["n0s.aS2min"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.snow.min.z_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+# 
+# 
+# 
+#       formulas[["nSas.aSmin"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c)
+#       formulas[["nSas.aS2min"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+#       formulas[["pSminas"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.post.min_c)
+#       formulas[["nS2as.aSmin"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c.sq)
+#       formulas[["nS2as.aS2min"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
+#       formulas[["pS2minas"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.post.min_c + snow.post.min_c.sq)
+#       formulas[["nSas.aSminni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c)
+#       formulas[["nSas.aS2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+#       formulas[["nS2as.aSminni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c.sq)
+#       formulas[["nS2as.aS2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
+# 
+#       formulas[["nSs.aSmin"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.min.z_c)
+#       formulas[["nSs.aS2min"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+#       formulas[["pSmins"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.post.min_c)
+#       formulas[["nS2s.aSmin"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c.sq)
+#       formulas[["nS2s.aS2min"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
+#       formulas[["pS2mins"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.post.min_c + snow.post.min_c.sq)
+#       formulas[["nSs.aSminni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.min.z_c)
+#       formulas[["nSs.aS2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+#       formulas[["nS2s.aSminni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c.sq)
+#       formulas[["nS2s.aS2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
+# 
 
 
 
@@ -1278,7 +1269,11 @@ for(sp in sp.opts) {
     
     cv.results <- data.frame()
     
+    cat("\n")
+    
     for(i in 1:length(formulas)) {
+      
+      #cat("\rEvaluating model ",i," of ",length(formulas))
       
       formula.name <- names(formulas)[i]
       cv.result <- cvfun.fire(formulas[[i]],data=d.c)
@@ -1306,41 +1301,48 @@ for(sp in sp.opts) {
       norm.search.opts <- c(Pmean = "n(P|0)2?\\.a0",
                             Dmean = "n(D|0)2?\\.a0",
                             Amean = "n(A|0)2?\\.a0",
-                            Smean = "n(S|0)2?\\.a0",
+                            # Smean = "n(S|0)2?\\.a0",
                             Pmin = "n(P|0)2?\\.a0",
                             Dmax = "n(D|0)2?\\.a0",
-                            Amin = "n(A|0)2?\\.a0",
-                            Smin = "n(S|0)2?\\.a0")
+                            Amin = "n(A|0)2?\\.a0"
+                            
+                            # ,
+                            # Smin = "n(S|0)2?\\.a0"
+                            )
     } else {
       norm.search.opts <- c(Pmean = "n(P|0)2?a?s?\\.a0",
                             Dmean = "n(D|0)2?a?s?\\.a0",
                             Amean = "n(A|0)2?a?s?\\.a0",
-                            Smean = "n(S|0)2?a?s?\\.a0",
+                            # Smean = "n(S|0)2?a?s?\\.a0",
                             Pmin = "n(P|0)2?a?s?\\.a0",
                             Dmax = "n(D|0)2?a?s?\\.a0",
-                            Amin = "n(A|0)2?a?s?\\.a0",
-                            Smin = "n(S|0)2?a?s?\\.a0")
+                            Amin = "n(A|0)2?a?s?\\.a0"
+                            # ,
+                            # Smin = "n(S|0)2?a?s?\\.a0"
+                            )
     }
 
     anom.search.opts <- c(Pmean = "aP2?(ni)?$",
                           Dmean = "aD2?(ni)?$",
                           Amean = "aA2?(ni)?$",
-                          Smean = "aS2?(ni)?$",
+                          # Smean = "aS2?(ni)?$",
                           Pmin = "aP2?min(ni)?$",
                           Dmax = "aD2?max(ni)?$",
-                          Amin = "aA2?min(ni)?$",
-                          Smin = "aS2?min(ni)?$"
+                          Amin = "aA2?min(ni)?$"
+                          # ,
+                          # Smin = "aS2?min(ni)?$"
     )
 
 
     post.search.opts <- c(Pmean = "pP2?a?s?$",
                           Dmean = "pD2?a?s?$",
                           Amean = "pA2?a?s?$",
-                          Smean = "pS2?a?s?$",
+                          # Smean = "pS2?a?s?$",
                           Pmin = "pP2?mina?s?$",
                           Dmax = "pD2?maxa?s?$",
-                          Amin = "pA2?mina?s?$",
-                          Smin = "pS2?mina?s?$"
+                          Amin = "pA2?mina?s?$"
+                          # ,
+                          # Smin = "pS2?mina?s?$"
     )
 
 
@@ -1563,14 +1565,14 @@ for(sp in sp.opts) {
           #fit the anom and normal models
           mod.anom <- try(betareg(formulas[[best.anom.mod]],data=d.c.boot))
           if(class(mod.anom) == "try-error") {
-            message <- paste0("Model error in bootstrapping for ",sp," ",formula.name)
+            message <- paste0("Model error in bootstrapping for ",sp," ",formula.name,"\n")
             print(message)
             next()
           }
           
           mod.norm <- try(betareg(formulas[[best.anom.normal.mod]],data=d.c.boot))
           if(class(mod.norm) == "try-error") {
-            message <- paste0("Model error in bootstrapping for ",sp," ",formula.name)
+            message <- paste0("Model error in bootstrapping for ",sp," ",formula.name,"\n")
             print(message)
             next()
           }
