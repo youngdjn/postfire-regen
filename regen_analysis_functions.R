@@ -113,10 +113,7 @@ cvfun.fire <- function(formula,data) {
     
     if(sp %in% c(cover.opts,prop.opts)) {
       
-      data.train <- data.train[!is.na(data.train$response.var),]
-
-
-      print("Hello\n")      
+      data.train <- data.train[!is.na(data.train$response.var),] 
       
       
       m <- try(betareg(formula,data=data.train),silent=TRUE)
