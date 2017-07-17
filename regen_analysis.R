@@ -857,9 +857,9 @@ for(sp in resp.opts) {
         formulas[["pP2a"]] <- formula(response.var ~ adult.ba.agg_c + ppt.post_c + ppt.post_c.sq)
         formulas[["nPa.aPni"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c)
         formulas[["nPa.aP2ni"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
-        # # formulas[["nP2a.aPni"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c.sq)
-        # # formulas[["nP2a.aP2ni"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq)
-        # 
+        formulas[["nP2a.aPni"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c.sq)
+        formulas[["nP2a.aP2ni"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq)
+         
         
 
         formulas[["n0a.aD"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.def.z_c)
@@ -1162,6 +1162,464 @@ for(sp in resp.opts) {
         formulas[["nA2s.aAminni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c.sq)
         formulas[["nA2s.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
       }
+      
+      
+      #### With solar rad ####
+      
+      formulas[["n0r.a0"]] <- formula(response.var~ rad.march_c +  1)
+      
+      ## PPT
+      
+      formulas[["n0r.aP"]] <- formula(response.var~ rad.march_c +  diff.norm.ppt.z_c)
+      formulas[["n0r.aP2"]] <- formula(response.var~ rad.march_c +  diff.norm.ppt.z_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+      
+      
+      formulas[["nPr.a0"]] <- formula(response.var~ rad.march_c +  ppt.normal_c)
+      formulas[["nPr.aP"]] <- formula(response.var~ rad.march_c +  ppt.normal_c*diff.norm.ppt.z_c)
+      formulas[["nPr.aP2"]] <- formula(response.var~ rad.march_c +  ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+      formulas[["pPr"]] <- formula(response.var~ rad.march_c +  ppt.post_c)
+      formulas[["nP2r.a0"]] <- formula(response.var~ rad.march_c +  ppt.normal_c + ppt.normal_c.sq)
+      formulas[["nP2r.aP"]] <- formula(response.var~ rad.march_c +  ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq)
+      formulas[["nP2r.aP2"]] <- formula(response.var~ rad.march_c +  ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq)
+      formulas[["pP2r"]] <- formula(response.var~ rad.march_c +  ppt.post_c + ppt.post_c.sq)
+      formulas[["nPr.aPni"]] <- formula(response.var~ rad.march_c +  ppt.normal_c + diff.norm.ppt.z_c)
+      formulas[["nPr.aP2ni"]] <- formula(response.var~ rad.march_c +  ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+      formulas[["nP2r.aPni"]] <- formula(response.var~ rad.march_c +  ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c.sq)
+      formulas[["nP2r.aP2ni"]] <- formula(response.var~ rad.march_c +  ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq)
+      
+      
+      
+      ##DEF
+      
+      formulas[["n0r.aD"]] <- formula(response.var~ rad.march_c +  diff.norm.def.z_c)
+      formulas[["n0r.aD2"]] <- formula(response.var~ rad.march_c +  diff.norm.def.z_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+      
+      
+      
+      formulas[["nDr.a0"]] <- formula(response.var~ rad.march_c +  def.normal_c)
+      formulas[["nDr.aD"]] <- formula(response.var~ rad.march_c +  def.normal_c*diff.norm.def.z_c)
+      formulas[["nDr.aD2"]] <- formula(response.var~ rad.march_c +  def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+      formulas[["pDr"]] <- formula(response.var~ rad.march_c +  def.post_c)
+      formulas[["nD2r.a0"]] <- formula(response.var~ rad.march_c +  def.normal_c + def.normal_c.sq)
+      formulas[["nD2r.aD"]] <- formula(response.var~ rad.march_c +  def.normal_c*diff.norm.def.z_c + def.normal_c.sq)
+      formulas[["nD2r.aD2"]] <- formula(response.var~ rad.march_c +  def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq)
+      formulas[["pD2r"]] <- formula(response.var~ rad.march_c +  def.post_c + def.post_c.sq)
+      formulas[["nDr.aDni"]] <- formula(response.var~ rad.march_c +  def.normal_c + diff.norm.def.z_c)
+      formulas[["nDr.aD2ni"]] <- formula(response.var~ rad.march_c +  def.normal_c + diff.norm.def.z_c + def.normal_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+      formulas[["nD2r.aDni"]] <- formula(response.var~ rad.march_c +  def.normal_c + diff.norm.def.z_c + def.normal_c.sq)
+      formulas[["nD2r.aD2ni"]] <- formula(response.var~ rad.march_c +  def.normal_c + diff.norm.def.z_c + def.normal_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq)
+      
+      
+      
+      ##AET
+      
+      
+      formulas[["n0r.aA"]] <- formula(response.var~ rad.march_c +  diff.norm.aet.z_c)
+      formulas[["n0r.aA2"]] <- formula(response.var~ rad.march_c +  diff.norm.aet.z_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+      
+      
+      formulas[["nAr.a0"]] <- formula(response.var~ rad.march_c +  aet.normal_c)
+      formulas[["nAr.aA"]] <- formula(response.var~ rad.march_c +  aet.normal_c*diff.norm.aet.z_c)
+      formulas[["nAr.aA2"]] <- formula(response.var~ rad.march_c +  aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+      formulas[["pAr"]] <- formula(response.var~ rad.march_c +  aet.post_c)
+      formulas[["nA2r.a0"]] <- formula(response.var~ rad.march_c +  aet.normal_c + aet.normal_c.sq)
+      formulas[["nA2r.aA"]] <- formula(response.var~ rad.march_c +  aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq)
+      formulas[["nA2r.aA2"]] <- formula(response.var~ rad.march_c +  aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+      formulas[["pA2r"]] <- formula(response.var~ rad.march_c +  aet.post_c + aet.post_c.sq)
+      formulas[["nAr.aAni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.z_c)
+      formulas[["nAr.aA2ni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+      formulas[["nA2r.aAni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.z_c + aet.normal_c.sq)
+      formulas[["nA2r.aA2ni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+      
+      
+      
+      
+      
+      
+      ## PPT
+      formulas[["n0r.aPmin"]] <- formula(response.var~ rad.march_c +  diff.norm.ppt.min.z_c)
+      formulas[["n0r.aP2min"]] <- formula(response.var~ rad.march_c +  diff.norm.ppt.min.z_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+      
+      
+      
+      
+      formulas[["nPr.aPmin"]] <- formula(response.var~ rad.march_c +  ppt.normal_c*diff.norm.ppt.min.z_c)
+      formulas[["nPr.aP2min"]] <- formula(response.var~ rad.march_c +  ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c*diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+      formulas[["pPminr"]] <- formula(response.var~ rad.march_c +  ppt.post.min_c)
+      formulas[["nP2r.aPmin"]] <- formula(response.var~ rad.march_c +  ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c.sq)
+      formulas[["nP2r.aP2min"]] <- formula(response.var~ rad.march_c +  ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c*diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq + ppt.normal_c.sq)
+      formulas[["pP2minr"]] <- formula(response.var~ rad.march_c +  ppt.post.min_c + ppt.post.min_c.sq)
+      formulas[["nPr.aPminni"]] <- formula(response.var~ rad.march_c +  ppt.normal_c + diff.norm.ppt.min.z_c)
+      formulas[["nPr.aP2minni"]] <- formula(response.var~ rad.march_c +  ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+      formulas[["nP2r.aPminni"]] <- formula(response.var~ rad.march_c +  ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c.sq)
+      formulas[["nP2r.aP2minni"]] <- formula(response.var~ rad.march_c +  ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq + ppt.normal_c.sq)
+      
+      
+      
+      ##DEF
+      
+      formulas[["n0r.aDmax"]] <- formula(response.var~ rad.march_c +  diff.norm.def.max.z_c)
+      formulas[["n0r.aD2max"]] <- formula(response.var~ rad.march_c +  diff.norm.def.max.z_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+      
+      formulas[["nDr.aDmax"]] <- formula(response.var~ rad.march_c +  def.normal_c*diff.norm.def.max.z_c)
+      formulas[["nDr.aD2max"]] <- formula(response.var~ rad.march_c +  def.normal_c*diff.norm.def.max.z_c + def.normal_c*diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+      formulas[["pDmaxr"]] <- formula(response.var~ rad.march_c +  def.post.max_c)
+      formulas[["nD2r.aDmax"]] <- formula(response.var~ rad.march_c +  def.normal_c*diff.norm.def.max.z_c + def.normal_c.sq)
+      formulas[["nD2r.aD2max"]] <- formula(response.var~ rad.march_c +  def.normal_c*diff.norm.def.max.z_c + def.normal_c*diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq + def.normal_c.sq)
+      formulas[["pD2maxr"]] <- formula(response.var~ rad.march_c +  def.post.max_c + def.post.max_c.sq)
+      formulas[["nDr.aDmaxni"]] <- formula(response.var~ rad.march_c +  def.normal_c + diff.norm.def.max.z_c)
+      formulas[["nDr.aD2maxni"]] <- formula(response.var~ rad.march_c +  def.normal_c + diff.norm.def.max.z_c + def.normal_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+      formulas[["nD2r.aDmaxni"]] <- formula(response.var~ rad.march_c +  def.normal_c + diff.norm.def.max.z_c + def.normal_c.sq)
+      formulas[["nD2r.aD2maxni"]] <- formula(response.var~ rad.march_c +  def.normal_c + diff.norm.def.max.z_c + def.normal_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq + def.normal_c.sq)
+      
+      
+      
+      ##AET
+      
+      formulas[["n0r.aAmin"]] <- formula(response.var~ rad.march_c +  diff.norm.aet.min.z_c)
+      formulas[["n0r.aA2min"]] <- formula(response.var~ rad.march_c +  diff.norm.aet.min.z_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+      
+      
+      formulas[["nAr.aAmin"]] <- formula(response.var~ rad.march_c +  aet.normal_c*diff.norm.aet.min.z_c)
+      formulas[["nAr.aA2min"]] <- formula(response.var~ rad.march_c +  aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+      formulas[["pAminr"]] <- formula(response.var~ rad.march_c +  aet.post.min_c)
+      formulas[["nA2r.aAmin"]] <- formula(response.var~ rad.march_c +  aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c.sq)
+      formulas[["nA2r.aA2min"]] <- formula(response.var~ rad.march_c +  aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+      formulas[["pA2minr"]] <- formula(response.var~ rad.march_c +  aet.post.min_c + aet.post.min_c.sq)
+      formulas[["nAr.aAminni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.min.z_c)
+      formulas[["nAr.aA2minni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+      formulas[["nA2r.aAminni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c.sq)
+      formulas[["nA2r.aA2minni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+      
+      
+      if(!(sp %in% c(cover.opts,ht.opts,htabs.opts,prop.opts))) {
+        
+        
+        #### With adult ####
+        
+        formulas[["n0ar.a0"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c)
+        formulas[["n0ar.aP"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + diff.norm.ppt.z_c)
+        formulas[["n0ar.aP2"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + diff.norm.ppt.z_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+        
+        formulas[["nPar.a0"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.normal_c)
+        formulas[["nPar.aP"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.z_c)
+        formulas[["nPar.aP2"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+        formulas[["pPar"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.post_c)
+        formulas[["nP2ar.a0"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.normal_c + ppt.normal_c.sq)
+        formulas[["nP2ar.aP"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq)
+        formulas[["nP2ar.aP2"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq)
+        formulas[["pP2ar"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.post_c + ppt.post_c.sq)
+        formulas[["nPar.aPni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c)
+        formulas[["nPar.aP2ni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+        formulas[["nP2ar.aPni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c.sq)
+        formulas[["nP2ar.aP2ni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq)
+ 
+        
+        
+        formulas[["n0ar.aD"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + diff.norm.def.z_c)
+        formulas[["n0ar.aD2"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + diff.norm.def.z_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+        
+        formulas[["nDar.a0"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.normal_c)
+        formulas[["nDar.aD"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.normal_c*diff.norm.def.z_c)
+        formulas[["nDar.aD2"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+        formulas[["pDar"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.post_c)
+        formulas[["nD2ar.a0"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.normal_c + def.normal_c.sq)
+        formulas[["nD2ar.aD"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.normal_c*diff.norm.def.z_c + def.normal_c.sq)
+        formulas[["nD2ar.aD2"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq)
+        formulas[["pD2ar"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.post_c + def.post_c.sq)
+        formulas[["nDar.aDni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.normal_c + diff.norm.def.z_c)
+        formulas[["nDar.aD2ni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.normal_c + diff.norm.def.z_c + def.normal_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+        formulas[["nD2ar.aDni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.normal_c + diff.norm.def.z_c + def.normal_c.sq)
+        formulas[["nD2ar.aD2ni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.normal_c + diff.norm.def.z_c + def.normal_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq)
+        
+        
+        formulas[["n0ar.aA2"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + diff.norm.aet.z_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        formulas[["n0ar.aA"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + diff.norm.aet.z_c)
+        
+        
+        formulas[["nAar.a0"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.normal_c)
+        formulas[["nAar.aA"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.normal_c*diff.norm.aet.z_c)
+        formulas[["nAar.aA2"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        formulas[["pAar"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.post_c)
+        formulas[["nA2ar.a0"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.normal_c + aet.normal_c.sq)
+        formulas[["nA2ar.aA"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq)
+        formulas[["nA2ar.aA2"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+        formulas[["pA2ar"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.post_c + aet.post_c.sq)
+        formulas[["nAar.aAni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.normal_c + diff.norm.aet.z_c)
+        formulas[["nAar.aA2ni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        formulas[["nA2ar.aAni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c.sq)
+        formulas[["nA2ar.aA2ni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+        
+        
+        formulas[["n0ar.aPmin"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + diff.norm.ppt.min.z_c)
+        formulas[["n0ar.aP2min"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + diff.norm.ppt.min.z_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+        
+        
+        formulas[["nPar.aPmin"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.min.z_c)
+        formulas[["nPar.aP2min"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c*diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+        formulas[["pPminar"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.post.min_c)
+        formulas[["nP2ar.aPmin"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c.sq)
+        formulas[["nP2ar.aP2min"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c*diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq + ppt.normal_c.sq)
+        formulas[["pP2minar"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.post.min_c + ppt.post.min_c.sq)
+        formulas[["nPar.aPminni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.min.z_c)
+        formulas[["nPar.aP2minni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+        formulas[["nP2ar.aPminni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c.sq)
+        formulas[["nP2ar.aP2minni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq + ppt.normal_c.sq)
+        
+        
+        
+        formulas[["n0ar.aDmax"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + diff.norm.def.max.z_c)
+        formulas[["n0ar.aD2max"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + diff.norm.def.max.z_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+        
+        
+        formulas[["nDar.aDmax"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.normal_c*diff.norm.def.max.z_c)
+        formulas[["nDar.aD2max"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.normal_c*diff.norm.def.max.z_c + def.normal_c*diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+        formulas[["pDmaxar"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.post.max_c)
+        formulas[["nD2ar.aDmax"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.normal_c*diff.norm.def.max.z_c + def.normal_c.sq)
+        formulas[["nD2ar.aD2max"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.normal_c*diff.norm.def.max.z_c + def.normal_c*diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq + def.normal_c.sq)
+        formulas[["pD2maxar"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.post.max_c + def.post.max_c.sq)
+        formulas[["nDar.aDmaxni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.normal_c + diff.norm.def.max.z_c)
+        formulas[["nDar.aD2maxni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.normal_c + diff.norm.def.max.z_c + def.normal_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+        formulas[["nD2ar.aDmaxni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.normal_c + diff.norm.def.max.z_c + def.normal_c.sq)
+        formulas[["nD2ar.aD2maxni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + def.normal_c + diff.norm.def.max.z_c + def.normal_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq + def.normal_c.sq)
+        
+        
+        formulas[["n0ar.aAmin"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + diff.norm.aet.min.z_c)
+        formulas[["n0ar.aA2min"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + diff.norm.aet.min.z_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+        
+        
+        formulas[["nAar.aAmin"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.normal_c*diff.norm.aet.min.z_c)
+        formulas[["nAar.aA2min"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+        formulas[["pAminar"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.post.min_c)
+        formulas[["nA2ar.aAmin"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c.sq)
+        formulas[["nA2ar.aA2min"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+        formulas[["pA2minar"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.post.min_c + aet.post.min_c.sq)
+        formulas[["nAar.aAminni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.normal_c + diff.norm.aet.min.z_c)
+        formulas[["nAar.aA2minni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+        formulas[["nA2ar.aAminni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c.sq)
+        formulas[["nA2ar.aA2minni"]] <- formula(response.var~ rad.march_c +  adult.ba.agg_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+        
+        
+        
+        
+        
+        
+        #### With seed tree ####
+        
+        formulas[["n0sr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + 1)
+        formulas[["n0asr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c)
+        
+        ## PPT
+        
+        formulas[["n0asr.aP"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.ppt.z_c)
+        formulas[["n0sr.aP"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.ppt.z_c)
+        formulas[["n0asr.aP2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.ppt.z_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+        formulas[["n0sr.aP2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.ppt.z_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+        
+        formulas[["nPasr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c)
+        formulas[["nPasr.aP"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.z_c)
+        formulas[["nPasr.aP2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+        formulas[["pPasr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.post_c)
+        formulas[["nP2asr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + ppt.normal_c.sq)
+        formulas[["nP2asr.aP"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq)
+        formulas[["nP2asr.aP2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq)
+        formulas[["pP2asr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.post_c + ppt.post_c.sq)
+        formulas[["nPasr.aPni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c)
+        formulas[["nPasr.aP2ni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+        formulas[["nP2asr.aPni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c.sq)
+        formulas[["nP2asr.aP2ni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq)
+        
+        formulas[["nPsr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.normal_c)
+        formulas[["nPsr.aP"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.normal_c*diff.norm.ppt.z_c)
+        formulas[["nPsr.aP2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+        formulas[["pPsr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.post_c)
+        formulas[["nP2sr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.normal_c + ppt.normal_c.sq)
+        formulas[["nP2sr.aP"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq)
+        formulas[["nP2sr.aP2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq)
+        formulas[["pP2sr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.post_c + ppt.post_c.sq)
+        formulas[["nPsr.aPni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.normal_c + diff.norm.ppt.z_c)
+        formulas[["nPsr.aP2ni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+        formulas[["nP2sr.aPni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c.sq)
+        formulas[["nP2sr.aP2ni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq)
+        
+        
+        
+        
+        ##DEF
+        
+        formulas[["n0asr.aD"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.def.z_c)
+        formulas[["n0asr.aD2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.def.z_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+        formulas[["n0sr.aD"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.def.z_c)
+        formulas[["n0sr.aD2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.def.z_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+        
+        
+        formulas[["nDasr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c)
+        formulas[["nDasr.aD"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c*diff.norm.def.z_c)
+        formulas[["nDasr.aD2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+        formulas[["pDasr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.post_c)
+        formulas[["nD2asr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c + def.normal_c.sq)
+        formulas[["nD2asr.aD"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c*diff.norm.def.z_c + def.normal_c.sq)
+        formulas[["nD2asr.aD2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq)
+        formulas[["pD2asr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.post_c + def.post_c.sq)
+        formulas[["nDasr.aDni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c + diff.norm.def.z_c)
+        formulas[["nDasr.aD2ni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c + diff.norm.def.z_c + def.normal_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+        formulas[["nD2asr.aDni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c + diff.norm.def.z_c + def.normal_c.sq)
+        formulas[["nD2asr.aD2ni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c + diff.norm.def.z_c + def.normal_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq)
+        
+        formulas[["nDsr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.normal_c)
+        formulas[["nDsr.aD"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.normal_c*diff.norm.def.z_c)
+        formulas[["nDsr.aD2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+        formulas[["pDsr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.post_c)
+        formulas[["nD2sr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.normal_c + def.normal_c.sq)
+        formulas[["nD2sr.aD"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.normal_c*diff.norm.def.z_c + def.normal_c.sq)
+        formulas[["nD2sr.aD2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq)
+        formulas[["pD2sr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.post_c + def.post_c.sq)
+        formulas[["nDsr.aDni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.normal_c + diff.norm.def.z_c)
+        formulas[["nDsr.aD2ni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.normal_c + diff.norm.def.z_c + def.normal_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+        formulas[["nD2sr.aDni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.normal_c + diff.norm.def.z_c + def.normal_c.sq)
+        formulas[["nD2sr.aD2ni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.normal_c + diff.norm.def.z_c + def.normal_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq)
+        
+        
+        
+        ##AET
+        
+        formulas[["n0asr.aA"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.aet.z_c)
+        formulas[["n0asr.aA2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.aet.z_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        
+        formulas[["n0sr.aA"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.aet.z_c)
+        formulas[["n0sr.aA2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.aet.z_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        
+        formulas[["nAasr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c)
+        formulas[["nAasr.aA"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c*diff.norm.aet.z_c)
+        formulas[["nAasr.aA2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        formulas[["pAasr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.post_c)
+        formulas[["nA2asr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c + aet.normal_c.sq)
+        formulas[["nA2asr.aA"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq)
+        formulas[["nA2asr.aA2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+        formulas[["pA2asr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.post_c + aet.post_c.sq)
+        formulas[["nAasr.aAni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c + diff.norm.aet.z_c)
+        formulas[["nAasr.aA2ni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        formulas[["nA2asr.aAni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c.sq)
+        formulas[["nA2asr.aA2ni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+        
+        formulas[["nAsr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c)
+        formulas[["nAsr.aA"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.z_c)
+        formulas[["nAsr.aA2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        formulas[["pAsr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.post_c)
+        formulas[["nA2sr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + aet.normal_c.sq)
+        formulas[["nA2sr.aA"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq)
+        formulas[["nA2sr.aA2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+        formulas[["pA2sr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.post_c + aet.post_c.sq)
+        formulas[["nAsr.aAni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c)
+        formulas[["nAsr.aA2ni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        formulas[["nA2sr.aAni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c.sq)
+        formulas[["nA2sr.aA2ni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+        
+        
+        
+        
+        
+        
+        ## PPT
+        
+        formulas[["n0asr.aPmin"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.ppt.min.z_c)
+        formulas[["n0asr.aP2min"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.ppt.min.z_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+        formulas[["n0sr.aPmin"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.ppt.min.z_c)
+        formulas[["n0sr.aP2min"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.ppt.min.z_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+        
+        
+        
+        formulas[["nPasr.aPmin"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.min.z_c)
+        formulas[["nPasr.aP2min"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c*diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+        formulas[["pPminasr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.post.min_c)
+        formulas[["nP2asr.aPmin"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c.sq)
+        formulas[["nP2asr.aP2min"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c*diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq + ppt.normal_c.sq)
+        formulas[["pP2minasr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.post.min_c + ppt.post.min_c.sq)
+        formulas[["nPasr.aPminni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.min.z_c)
+        formulas[["nPasr.aP2minni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+        formulas[["nP2asr.aPminni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c.sq)
+        formulas[["nP2asr.aP2minni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq + ppt.normal_c.sq)
+        
+        formulas[["nPsr.aPmin"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.normal_c*diff.norm.ppt.min.z_c)
+        formulas[["nPsr.aP2min"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c*diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+        formulas[["pPminsr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.post.min_c)
+        formulas[["nP2sr.aPmin"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c.sq)
+        formulas[["nP2sr.aP2min"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c*diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq + ppt.normal_c.sq)
+        formulas[["pP2minsr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.post.min_c + ppt.post.min_c.sq)
+        formulas[["nPsr.aPminni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.normal_c + diff.norm.ppt.min.z_c)
+        formulas[["nPsr.aP2minni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+        formulas[["nP2sr.aPminni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c.sq)
+        formulas[["nP2sr.aP2minni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq + ppt.normal_c.sq)
+        
+        
+        
+        ##DEF
+        
+        formulas[["n0asr.aDmax"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.def.max.z_c)
+        formulas[["n0asr.aD2max"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.def.max.z_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+        
+        formulas[["n0sr.aDmax"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.def.max.z_c)
+        formulas[["n0sr.aD2max"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.def.max.z_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+        
+        formulas[["nDasr.aDmax"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c*diff.norm.def.max.z_c)
+        formulas[["nDasr.aD2max"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c*diff.norm.def.max.z_c + def.normal_c*diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+        formulas[["pDmaxasr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.post.max_c)
+        formulas[["nD2asr.aDmax"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c*diff.norm.def.max.z_c + def.normal_c.sq)
+        formulas[["nD2asr.aD2max"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c*diff.norm.def.max.z_c + def.normal_c*diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq + def.normal_c.sq)
+        formulas[["pDmax2asr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.post.max_c + def.post.max_c.sq)
+        formulas[["nDasr.aDmaxni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c + diff.norm.def.max.z_c)
+        formulas[["nDasr.aD2maxni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c + diff.norm.def.max.z_c + def.normal_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+        formulas[["nD2asr.aDmaxni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c + diff.norm.def.max.z_c + def.normal_c.sq)
+        formulas[["nD2asr.aD2maxni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c + diff.norm.def.max.z_c + def.normal_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq + def.normal_c.sq)
+        
+        formulas[["nDsr.aDmax"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.normal_c*diff.norm.def.max.z_c)
+        formulas[["nDsr.aD2max"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.normal_c*diff.norm.def.max.z_c + def.normal_c*diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+        formulas[["pDmaxsr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.post.max_c)
+        formulas[["nD2sr.aDmax"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.normal_c*diff.norm.def.max.z_c + def.normal_c.sq)
+        formulas[["nD2sr.aD2max"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.normal_c*diff.norm.def.max.z_c + def.normal_c*diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq + def.normal_c.sq)
+        formulas[["pD2maxsr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.post.max_c + def.post.max_c.sq)
+        formulas[["nDsr.aDmaxni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.normal_c + diff.norm.def.max.z_c)
+        formulas[["nDsr.aD2maxni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.normal_c + diff.norm.def.max.z_c + def.normal_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+        formulas[["nD2sr.aDmaxni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.normal_c + diff.norm.def.max.z_c + def.normal_c.sq)
+        formulas[["nD2sr.aD2maxni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + def.normal_c + diff.norm.def.max.z_c + def.normal_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq + def.normal_c.sq)
+        
+        
+        
+        ##AET
+        
+        formulas[["n0asr.aAmin"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.aet.min.z_c)
+        formulas[["n0asr.aA2min"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.aet.min.z_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+        
+        formulas[["n0sr.aAmin"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.aet.min.z_c)
+        formulas[["n0sr.aA2min"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.aet.min.z_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+        
+        
+        formulas[["nAasr.aAmin"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c*diff.norm.aet.min.z_c)
+        formulas[["nAasr.aA2min"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+        formulas[["pAminasr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.post.min_c)
+        formulas[["nA2asr.aAmin"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c.sq)
+        formulas[["nA2asr.aA2min"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+        formulas[["pA2minasr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.post.min_c + aet.post.min_c.sq)
+        formulas[["nAasr.aAminni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c + diff.norm.aet.min.z_c)
+        formulas[["nAasr.aA2minni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+        formulas[["nA2asr.aAminni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c.sq)
+        formulas[["nA2asr.aA2minni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+        
+        formulas[["nAsr.aAmin"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.min.z_c)
+        formulas[["nAsr.aA2min"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+        formulas[["pAminsr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.post.min_c)
+        formulas[["nA2sr.aAmin"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c.sq)
+        formulas[["nA2sr.aA2min"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+        formulas[["pA2minsr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.post.min_c + aet.post.min_c.sq)
+        formulas[["nAsr.aAminni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c)
+        formulas[["nAsr.aA2minni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+        formulas[["nA2sr.aAminni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c.sq)
+        formulas[["nA2sr.aA2minni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+      }
+      
+      
+      
+      
     }
     
     
@@ -1200,52 +1658,39 @@ for(sp in resp.opts) {
     # normal.model.names <- normal.model.names[normal.model.names != "n0.a0"] # exclude null model
 
     if(sp %in% cover.opts) { # don't allow a normal with adults in it if this is a cover model
-      norm.search.opts <- c(Pmean = "n(P|0)2?\\.a0",
-                            Dmean = "n(D|0)2?\\.a0",
-                            Amean = "n(A|0)2?\\.a0",
-                            # # Smean = "n(S|0)2?\\.a0",
-                            Pmin = "n(P|0)2?\\.a0",
-                            Dmax = "n(D|0)2?\\.a0",
-                            Amin = "n(A|0)2?\\.a0"
-                            # 
-                            # ,
-                            # Smin = "n(S|0)2?\\.a0"
+      norm.search.opts <- c(Pmean = "n(P|0)2?r?\\.a0",
+                            Dmean = "n(D|0)2?r?\\.a0",
+                            Amean = "n(A|0)2?r?\\.a0",
+                            Pmin = "n(P|0)2?r?\\.a0",
+                            Dmax = "n(D|0)2?r?\\.a0",
+                            Amin = "n(A|0)2?r?\\.a0"
                             )
     } else {
-      norm.search.opts <- c(Pmean = "n(P|0)2?a?s?\\.a0",
-                            Dmean = "n(D|0)2?a?s?\\.a0",
-                            Amean = "n(A|0)2?a?s?\\.a0",
-                            # Smean = "n(S|0)2?a?s?\\.a0",
-                            Pmin = "n(P|0)2?a?s?\\.a0",
-                            Dmax = "n(D|0)2?a?s?\\.a0",
-                            Amin = "n(A|0)2?a?s?\\.a0"
-                            # ,
-                            # Smin = "n(S|0)2?a?s?\\.a0"
+      norm.search.opts <- c(Pmean = "n(P|0)2?a?s?r?\\.a0",
+                            Dmean = "n(D|0)2?a?s?r?\\.a0",
+                            Amean = "n(A|0)2?a?s?r?\\.a0",
+                            Pmin = "n(P|0)2?a?s?r?\\.a0",
+                            Dmax = "n(D|0)2?a?s?r?\\.a0",
+                            Amin = "n(A|0)2?a?s?r?\\.a0"
                             )
     }
 
     anom.search.opts <- c(Pmean = "aP2?(ni)?$",
                           Dmean = "aD2?(ni)?$",
                           Amean = "aA2?(ni)?$",
-                          # Smean = "aS2?(ni)?$",
                           Pmin = "aP2?min(ni)?$",
                           Dmax = "aD2?max(ni)?$",
                           Amin = "aA2?min(ni)?$"
-                          # ,
-                          # Smin = "aS2?min(ni)?$"
-    )
+                          )
 
 
-    post.search.opts <- c(Pmean = "pP2?a?s?$",
-                          Dmean = "pD2?a?s?$",
-                          Amean = "pA2?a?s?$",
-                          # Smean = "pS2?a?s?$",
-                          Pmin = "pP2?mina?s?$",
-                          Dmax = "pD2?maxa?s?$",
-                          Amin = "pA2?mina?s?$"
-                          # ,
-                          # Smin = "pS2?mina?s?$"
-    )
+    post.search.opts <- c(Pmean = "pP2?a?s?r?$",
+                          Dmean = "pD2?a?s?r?$",
+                          Amean = "pA2?a?s?r?$",
+                          Pmin = "pP2?mina?s?r?$",
+                          Dmax = "pD2?maxa?s?r?$",
+                          Amin = "pA2?mina?s?r?$"
+                          )
 
 
     
@@ -1253,19 +1698,19 @@ for(sp in resp.opts) {
     # ## For ppt only
     # 
     # if(sp %in% cover.opts) { # don't allow a normal with adults in it if this is a cover model
-    #   norm.search.opts <- c(Pmean = "n(P|0)2?\\.a0",
-    #                         Pmin = "n(P|0)2?\\.a0")
+    #   norm.search.opts <- c(Pmean = "n(P|0)2?r?\\.a0",
+    #                         Pmin = "n(P|0)2?r?\\.a0")
     # } else {
-    #   norm.search.opts <- c(Pmean = "n(P|0)2?a?s?\\.a0",
-    #                         Pmin = "n(P|0)2?a?s?\\.a0")
+    #   norm.search.opts <- c(Pmean = "n(P|0)2?a?s?r?\\.a0",
+    #                         Pmin = "n(P|0)2?a?s?r?\\.a0")
     # }
     # 
     # anom.search.opts <- c(Pmean = "aP2?(ni)?$",
     #                       Pmin = "aP2?min(ni)?$")
     # 
     # 
-    # post.search.opts <- c(Pmean = "pP2?a?s?$",
-    #                       Pmin = "pP2?mina?s?$")
+    # post.search.opts <- c(Pmean = "pP2?a?s?r?$",
+    #                       Pmin = "pP2?mina?s?r?$")
     # 
 
 
@@ -1282,7 +1727,7 @@ for(sp in resp.opts) {
       anom.name <- names(norm.search.opts)[i]
       norm.search <- norm.search.opts[i]
       anom.search <- anom.search.opts[i]
-      null.names <- c("n0.a0","n0a.a0","n0s.a0","n0as.a0")
+      null.names <- c("n0.a0","n0a.a0","n0s.a0","n0as.a0" , "n0r.a0","n0ar.a0","n0sr.a0","n0asr.a0")
       normal.model.names <- cv.results[grep(norm.search,cv.results$model,fixed=FALSE),]$model
       
       d.cv.normal <- cv.results[cv.results$model %in% normal.model.names,]
@@ -1304,7 +1749,7 @@ for(sp in resp.opts) {
   
       
       
-      #what is the best post model for that normal, sticking with whichever anom we have
+      #what is the best post model for that normal, sticking with whichever anom we have from the normal
       post.mod.name.1 <- gsub("^n","p",best.normal.nonull.mod)
       post.mod.name.2 <- substr(post.mod.name.1,1,nchar(post.mod.name.1)-3)
       extreme.text <- "(min)?(max)?"
@@ -1363,13 +1808,13 @@ for(sp in resp.opts) {
     }
     
     low.val.fun <- function(var) {
-      a <- quantile(d.c[,var],0.25,na.rm=TRUE)
+      a <- quantile(d.c[,var],0.20,na.rm=TRUE)
       #a <- min(d.c[,var])
       return(a)
     }
     
     high.val.fun <- function(var) {
-      a <- quantile(d.c[,var],0.75,na.rm=TRUE)
+      a <- quantile(d.c[,var],0.80,na.rm=TRUE)
       #a <- max(d.c[,var])
       return(a)
     }
@@ -1605,87 +2050,7 @@ for(sp in resp.opts) {
       
     }
   }
-  
-  # 
-  # ### run random forest
-  # 
-  # 
-  # pred.names <- c("seed_tree_distance_general_c", "adult.ba.agg_c", "ppt.normal_c", "diff.norm.ppt.z_c", "diff.norm.ppt.min.z_c")
-  # 
-  # data <- d.c[,c(pred.names,"response.var")]
-  # data <- data[complete.cases(data),]
-  # 
-  # if(!(sp %in% c(htabs.opts,prop.opts,cover.opts))) { # if it's not a continuous variable response
-  #   data$response.var <- as.factor(data$response.var)
-  # }
-  # 
-  # m2.mean <- cforest(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c,data=data)
-  # 
-  # rf.importance.sp <- as.data.frame(t(varimp(m2.mean,conditional=TRUE)))
-  # rf.importance.sp$sp <- sp
-  # rf.importance.sp$anom <- "mean"
-  # rf.importance <- rbind.fill(rf.importance,rf.importance.sp)
-  # 
-  # m2.min <- cforest(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.min.z_c,data=data)
-  # 
-  # rf.importance.sp <- as.data.frame(t(varimp(m2.min,conditional=TRUE)))
-  # rf.importance.sp$sp <- sp
-  # rf.importance.sp$anom <- "min"
-  # 
-  # 
-  # rf.importance <- rbind.fill(rf.importance,rf.importance.sp)
-  # 
-  # 
-  # ### predict for min
-  # 
-  # preds <- predict(m2.min,newdata=newdat,type="prob")
-  # preds.df <- data.frame()
-  # 
-  # for(k in 1:length(preds)) {
-  #   preds.df <- rbind(preds.df,preds[[k]])  
-  # }
-  # 
-  # if(!(sp %in% c(htabs.opts,prop.opts,cover.opts,ht.opts))) { # if it's not a continuous variable response
-  #   pred <- preds.df$response.var.1
-  # } else if (sp %in% ht.opts) {
-  #   pred <- preds.df$response.var.TRUE
-  # } else {
-  #   pred <- preds.df$response.var
-  # } 
-  # 
-  # pred.newdat <- cbind(pred,newdat)
-  # 
-  # pred.newdat$anom <- "min"
-  # pred.newdat$species <- sp
-  # 
-  # pred.rf <- rbind(pred.rf,pred.newdat)
-  # 
-  # 
-  # 
-  # ### predict for mean
-  # 
-  # preds <- predict(m2.mean,newdata=newdat,type="prob")
-  # preds.df <- data.frame()
-  # 
-  # for(k in 1:length(preds)) {
-  #   preds.df <- rbind(preds.df,preds[[k]])  
-  # }
-  # 
-  # if(!(sp %in% c(htabs.opts,prop.opts,cover.opts,ht.opts))) { # if it's not a continuous variable response
-  #   pred <- preds.df$response.var.1
-  # } else if (sp %in% ht.opts) {
-  #   pred <- preds.df$response.var.TRUE
-  # }  else {
-  #   pred <- preds.df$response.var
-  # }
-  # 
-  # pred.newdat <- cbind(pred,newdat)
-  # 
-  # pred.newdat$anom <- "mean"
-  # pred.newdat$species <- sp
-  # 
-  # pred.rf <- rbind(pred.rf,pred.newdat)
-  # 
+   
 }
 sink(file=NULL)
 
