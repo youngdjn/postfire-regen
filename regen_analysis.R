@@ -1,5 +1,6 @@
 setwd("~/UC Davis/Research Projects/Post-fire regen/Dev/postfire-regen")
 
+library(party)
 library(ggplot2)
 library(brms)
 library(pROC)
@@ -14,8 +15,15 @@ source("regen_analysis_functions.R")
 d.plot <- read.csv("data_intermediate/plot_level.csv",header=T,stringsAsFactors=FALSE)
 d.sp <- read.csv("data_intermediate/speciesXplot_level.csv",header=T,stringsAsFactors=FALSE)
 
+
+
+## Look for plots with incomplete data specified in the comments
+plots.exceptions <- grepl("#.*(INCOMPLETE|INCORRECT)",d.plot$NOTES)
+d.plot <- d.plot[!plots.exceptions,]
+
+
 # only keep the necessary columns
-d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general","seed_tree_distance_conifer","seed_tree_distance_hardwood","diff.norm.ppt.z","diff.norm.ppt.min.z","tmean.post","ppt.post","ppt.post.min","perc.norm.ppt","perc.norm.ppt.min","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z","def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","diff.norm.def.max.z","diff.norm.aet.min.z","def.post","aet.post")]
+d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general","seed_tree_distance_conifer","seed_tree_distance_hardwood","diff.norm.ppt.z","diff.norm.ppt.min.z","tmean.post","ppt.post","ppt.post.min","perc.norm.ppt","perc.norm.ppt.min","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z","def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","diff.norm.def.max.z","diff.norm.aet.min.z","def.post","aet.post","def.post.max","aet.post.min","snow.post.min","snow.normal","snow.post","diff.norm.snow.z","diff.norm.snow.min.z","dominant_shrub_ht_cm","dom.veg.all")]
 
 # only Sierra Nevada fires #! removed DEEP
 sierra.fires <- c("STRAYLOR","CUB","RICH","MOONLIGHT","ANTELOPE","BTU LIGHTENING","HARDING","BASSETTS","PENDOLA","AMERICAN RIVER","RALSTON","FREDS","SHOWERS","POWER","BAGLEY","PEAK","CHIPS")
@@ -29,26 +37,29 @@ plot.ids.exclude <- plots.exclude[plots.exclude$Exclude != "",]$Regen_Plot
 d.plot <- d.plot[!(d.plot$Regen_Plot %in% plot.ids.exclude),]
 
 
+
+
 # ## Removed this code: because most of the time NA means seed source not visible, and excluding all plots >50 m from seed source
 # # if no data on seed tree distance (or it was recorded as being at/beyond the limit of the laser) use remote-sensing-based value
 # d.plot$seed.tree.any.comb <- ifelse(is.na(d.plot$seed_tree_distance_general) | (d.plot$seed_tree_distance_general >= 150),d.plot$dist.to.low,d.plot$seed_tree_distance_general)
 
 ## Replaced with this:
 # Remove any plots > 50m from seed source
-d.plot <- d.plot[which(d.plot$seed_tree_distance_general < 50),]
+d.plot <- d.plot[which(d.plot$seed_tree_distance_general < 75),]
 
 
 # quadratic climate terms
 d.plot$ppt.normal.sq <- d.plot$ppt.normal^2
 d.plot$tmean.normal.sq <- d.plot$tmean.normal^2
+d.plot$snow.normal.sq <- d.plot$snow.normal^2
 
 # variable for regen presence/absence
 d.sp$regen.presab.young <- ifelse(d.sp$regen.count.young > 0,TRUE,FALSE)
 d.sp$regen.presab.old <- ifelse(d.sp$regen.count.old > 0,TRUE,FALSE)
 d.sp$regen.presab.all <- ifelse(d.sp$regen.count.all > 0,TRUE,FALSE)
 
-#! TEMPORARY: if there was no radiation data, set it equal to 0
-d.plot$rad.march <- ifelse(is.na(d.plot$rad.march),0,d.plot$rad.march)
+# #! TEMPORARY: if there was no radiation data, set it equal to 0
+# d.plot$rad.march <- ifelse(is.na(d.plot$rad.march),0,d.plot$rad.march)
 
 high.sev <- c(4,5) # which field-assessed severity values are considered high severity
 control <- c(0,1) # which field-assessed severity values are considered controls
@@ -78,8 +89,12 @@ for(fire in fires) {
   # determine what the precipitation breakpoints should be (here just using median) -- based on high severity plots only
   breaks <- quantile(d.plot[(d.plot$Fire == fire) & (d.plot$FIRE_SEV %in% high.sev),]$ppt.normal,probs=c(0.5),na.rm=TRUE)
   
-  #override the precip breaks, so we just have one category per fire
-  breaks <- 0
+  
+  # for some fires with a small range of precip, override the precip breaks, so we just have one category per fire
+  fires.small.precip.range <- c("AMERICAN RIVER","ANTELOPE","BAGLEY","BASSETTS","BTU LIGHTENING","HARDING","STRAYLOR")
+  if(fire %in% fires.small.precip.range) {
+    breaks <- 0
+  }
   
   # categorize plots based on where they fall between the breakpoints  
   categories <- categorize(d.plot[d.plot$Fire==fire,]$ppt.normal,breaks,name="P")
@@ -134,9 +149,16 @@ ggplot(d.plot.precat[!is.na(d.plot.precat$FIRE_SEV.cat),],aes(x=ppt.normal,y=rad
   theme_bw(16)
 
 # look at control only
-ggplot(d.plot[d.plot$FIRE_SEV %in% control,],aes(x=ppt.normal,y=rad.march,col=topoclim.cat)) +
+ggplot(d.plot.precat[d.plot.precat$FIRE_SEV %in% control,],aes(x=ppt.normal,y=rad.march,col=topoclim.cat)) +
   geom_point() +
-  facet_wrap(~Fire,scales="free")
+  facet_wrap(~Fire,scales="free") +
+  theme_bw(16)
+
+# look at high sev only
+ggplot(d.plot.precat[d.plot.precat$FIRE_SEV %in% high.sev,],aes(x=ppt.normal,y=rad.march,col=topoclim.cat)) +
+  geom_point() +
+  facet_wrap(~Fire,scales="free") +
+  theme_bw(16)
 
 
 
@@ -148,13 +170,14 @@ d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "BTU LIGHTENING") & (d.p
 d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "BAGLEY") & (d.plot.precat$rad.march < 4000)),]
 d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "CUB") & (d.plot.precat$ppt.normal < 1300)),]
 
+d.plot.domveg <- d.plot.precat # save this data frame at this stage for extracting dominant vegetation data (doesn't matter what severity or years post-fire)
 
 # remove plots that are high severity but not surveyed in years 4-5 post-fire
 d.plot.precat <- d.plot.precat[!(d.plot.precat$FIRE_SEV.cat == "high.sev" & !(d.plot.precat$survey.years.post %in% c(4,5))),]
 
 
 
-
+write.csv(d.plot.precat,"../../all_plots.csv",row.names=FALSE)
 
 
 
@@ -219,10 +242,67 @@ d.sp.2 <- d.sp.agg
 #### 3. Steps required prior to any analysis ####
 
 # Remove the topoclimatic categories with too few plots in either burned or control
-d.plot.3 <- d.plot.2[which((d.plot.2$count.control > 3) & (d.plot.2$count.highsev > 3)),]
+d.plot.3 <- d.plot.2[which((d.plot.2$count.control > 4) & (d.plot.2$count.highsev > 0)),]
 
 # Compute additional variables
 d.sp.2$proportion.young <- d.sp.2$regen.count.young / d.sp.2$regen.count.all
+
+
+
+### Compute dominant vegetation for each remaining topoclimate category, based on stated observed nearby dominants. use all plots regardless of severity
+
+non.tree.dom.veg <- c("ARPA6","CEIN3","CECO","CEPR") # species to exclude from list
+
+
+for(fire in unique(d.plot.3$Fire)) {
+  
+  d.plot.fire <- d.plot.3[d.plot.3$Fire == fire,]
+  
+  for(topoclim.cat in unique(d.plot.fire$topoclim.cat)) {
+    
+    
+    d.plot.fire.cat <- d.plot.domveg[(d.plot.domveg$Fire == fire) & (d.plot.domveg$topoclim.cat == topoclim.cat),]
+    
+    if (nrow(d.plot.fire.cat) < 5) {
+      cat("Less than 5 plots in ",fire," ",topoclim.cat,". Skipping.\n")
+      next()
+    }
+    
+    
+    fire.cat.sp <- paste(d.plot.fire.cat$dom.veg.all,collapse = " ")
+    
+    # use white space to split string into vector
+    sps <- scan(text=fire.cat.sp,what="")
+    sps <- sps[!is.na(sps)]
+    sps <- sps[!sps %in% non.tree.dom.veg]
+    sps[sps %in% c("PIJE","PIPO")] <- "PIPJ"
+    sps.tab <- table(sps)
+    sps.tab <- sort(sps.tab,decreasing=TRUE)
+    sps.tab <- sps.tab/sum(sps.tab)
+    
+    #print(sps.tab)
+    
+    # keep all species that got > 10% of the mentions
+    sps.tab <- sps.tab[sps.tab > .2]
+    
+    # keep the top 4 species
+    sps.tab <- sps.tab[1:4]
+    
+    # remove NAs (generated if list of species was < 4 prior to last line)
+    sps.tab <- sps.tab[!is.na(sps.tab)]
+    
+    # get names
+    dom.sp <- names(sps.tab)
+    
+    dom.sp <- paste(dom.sp,collapse=", ")
+    
+    
+    d.plot.3[(d.plot.3$Fire == fire) & (d.plot.3$topoclim.cat == topoclim.cat),"dom.tree.sp.obs"] <- dom.sp
+    
+  }
+  
+}
+
 
 
 
@@ -249,16 +329,64 @@ ggplot(a,aes(x=Fire,y=mean)) +
   
 
 
-#### 6. Plot-level analysis with BRMS ####
+
+#### 4. Determine dominant adult tree species (from control plots) within each category ####
+library(reshape)
+
+d.sp.pre <- d.sp.2[,c("species","topoclim.cat","Fire","adult.ba")]
+
+d.fire.sp <- cast(d.sp.pre,Fire + topoclim.cat ~ species,value="adult.ba")
+
+d.fire.sp$PIPJ <- d.fire.sp$PIPO + d.fire.sp$PIJE
+
+sp.names <- names(d.fire.sp)
+names.drop <- c("ALL","ALNUS","CONIF.ALLSP","CONIFER","HDWD.ALLSP","JUNIPERUS","PINUS.ALLSP","SHADE.ALLSP","ABIES","PIPO","PIJE")
+sp.names <- sp.names[!(sp.names %in% names.drop)]
+d.fire.sp <- d.fire.sp[,sp.names]
+d.fire.sp[,4:length(names(d.fire.sp))] <- d.fire.sp[,4:length(names(d.fire.sp))] / rowSums(d.fire.sp[,4:length(names(d.fire.sp))])
+
+d.fire.sp <- d.fire.sp[complete.cases(d.fire.sp),]
+
+## for each one, get a list of all species with > 20% BA
+
+d.fire.sp$dom.tree.sp.ba <- ""
+
+for (i in 1:nrow(d.fire.sp)) {
+  
+  row.ba <- d.fire.sp[i,4:ncol(d.fire.sp)]
+  
+  row.ba <- sort(row.ba,decreasing=TRUE)
+  
+  row.ba <- unlist(row.ba)
+  names.store <- names(row.ba)
+  row.ba <- as.numeric(row.ba)
+  names(row.ba) <- names.store
+  
+  row.ba <- row.ba[row.ba > .2]
+  
+  row.ba <- row.ba[1:4]
+  row.ba <- row.ba[!is.na(row.ba)]
+  
+  dom.sp.row <- paste(names(row.ba),collapse=", ")
+  
+  d.fire.sp[i,"dom.tree.sp.ba"] <- dom.sp.row
+}
+
+d.fire.sp <- d.fire.sp[,c("Fire","topoclim.cat","dom.tree.sp.ba")]
+
+d.plot.3 <- merge(d.plot.3,d.fire.sp,all.x=TRUE)
+
+
+d.view <- d.plot.3[,c("Fire","topoclim.cat","dom.tree.sp.ba","dom.tree.sp.obs","count.control")]
 
 
 
 
 
 
+#### 6.5 Plot-level analysis with GLM; also run randomForest to get importance scores ####
 
-
-
+d.plot.3 <- d.plot.3[d.plot.3$count.control > 4 & d.plot.3$count.highsev > 0,]
 
 
 ## Next, fit models ## 
@@ -266,16 +394,18 @@ ggplot(a,aes(x=Fire,y=mean)) +
 library(brms)
 library(loo)
 
-d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV %in% c(4,5)),]
+d.plot <- d.plot.c
 
-## remove an outlier plot with 20 abco that is preventing model conversion
-d.plot <- d.plot[!(d.plot$Regen_Plot == "CHI1248"),]
+d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV %in% c(4,5)),]
+# 
+# ## remove an outlier plot with 20 abco that is preventing model conversion
+# d.plot <- d.plot[!(d.plot$Regen_Plot == "CHI1248"),]
 
 ## remove another potential outlier plot: extremely high normal precip and high numbers of ABCO way above other plots with similar precip
 d.plot <- d.plot[!(d.plot$Regen_Plot == "BTU1300185"),]
 
-## remove a plot that has no grass cover data
-d.plot <- d.plot[!(d.plot$Regen_Plot == "AMR1300445"),]
+# ## remove a plot that has no grass cover data
+# d.plot <- d.plot[!(d.plot$Regen_Plot == "AMR1300445"),]
 
 
 ## remove an NA fire value
@@ -283,163 +413,27 @@ d.plot <- d.plot[!is.na(d.plot$Fire),]
 
 ## other potential plots to remove: BTU1300050, CUB1300305
 
-d.plot$Fire[d.plot$Fire == "BTU LIGHTENING"] <- "BTU LIGHTNING"
+sp.opts <- c("ABCO","PILA","SHADE.ALLSP","QUKE","PINUS.ALLSP","HDWD.ALLSP","PSME","CADE27","PIPJ")
+cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB")
+
+# All
+ht.opts <- c("HT.PIPJ","HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP")
+htabs.opts <- c("HTABS.PIPJ","HTABS.SHRUB","HTABS.ABCO","HTABS.PSME","HTABS.PILA","HTABS.QUKE","HTABS.CADE27","HTABS.HDWD.ALLSP","HTABS.PINUS.ALLSP","HTABS.SHADE.ALLSP")
+prop.opts <- c("PROP.CONIF","PROP.PINUS","PROP.SHADE")
+prop.opts <- NULL
+
+# # sp grps
+# ht.opts <- c("HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP")
+# htabs.opts <- c("HTABS.HDWD.ALLSP","HTABS.PINUS.ALLSP","HTABS.SHRUB","HTABS.SHADE.ALLSP")
+# prop.opts <- c("PROP.CONIF","PROP.PINUS")
+# 
 
 
 
+resp.opts <- c(prop.opts,htabs.opts,sp.opts,cover.opts,ht.opts)
 
 
-### Plot of monitoring plots in climate space ###
-
-# For each fire, make a point at mean normal precip and mean precip anom
-fire.centers <- data.frame()
-fires <- unique(d.plot$Fire)
-for(fire in fires) {
-  d.fire <- d.plot[d.plot$Fire == fire,]
-  norm.mean <- mean(d.fire$ppt.normal)
-  anom.mean <- mean(d.fire$diff.norm.ppt.z)
-  year <- d.fire$Year.of.Fire[1]
-  
-  fire.center <- data.frame(Fire=fire,year=year,ppt.normal=norm.mean,diff.norm.ppt.z=anom.mean)
-  fire.centers <- rbind(fire.centers,fire.center)  
-}
-fire.centers$fire.year <- paste0(fire.centers$Fire,", ",fire.centers$year)
-
-
-p <- ggplot(d.plot,aes(x=ppt.normal,y=diff.norm.ppt.z,color=Fire)) +
-  geom_point(size=3) +
-  #geom_point(data=fire.centers,size=5,pch=1) +
-  geom_text(data=fire.centers,aes(label=fire.year),nudge_y=.04,size=6,color="darkgray") +
-  guides(color=FALSE) +
-  theme_bw(18) +
-  labs(x="Normal precipitation (mm)",y="Postfire precipitation anomaly (SD)") +
-  scale_x_continuous(limits=c(180,2580))
-
-
-Cairo(file=paste0("../Figures/Fig1_climateSpace_",Sys.Date(),".png"),width=1500,height=1500,ppi=200,res=200,dpi=200)
-print(p)
-dev.off()
-
-
-
-
-## plot seed tree distance effect
-
-d.plot.temp <- read.csv("data_intermediate/plot_level.csv",header=T,stringsAsFactors=FALSE)
-d.sp.temp <- read.csv("data_intermediate/speciesXplot_level.csv",header=T,stringsAsFactors=FALSE)
-
-# only keep the necessary columns
-d.plot.temp <- d.plot.temp[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general","seed_tree_distance_conifer","seed_tree_distance_hardwood","diff.norm.ppt.z","diff.norm.ppt.min.z","tmean.post","ppt.post","ppt.post.min","perc.norm.ppt","perc.norm.ppt.min","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z","def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","diff.norm.def.max.z","diff.norm.aet.min.z","def.post","aet.post")]
-
-# only Sierra Nevada fires #! removed DEEP
-sierra.fires <- c("STRAYLOR","CUB","RICH","MOONLIGHT","ANTELOPE","BTU LIGHTENING","HARDING","BASSETTS","PENDOLA","AMERICAN RIVER","RALSTON","FREDS","SHOWERS","POWER","BAGLEY","PEAK","CHIPS")
-d.plot.temp <- d.plot.temp[d.plot.temp$Fire %in% sierra.fires,]
-
-d.plot.temp <- d.plot.temp[d.plot.temp$Regen_Plot != "SHR0900015",]
-
-## Remove managed plots, plots in nonforested locations (e.g. exposed bedrock), etc.
-plots.exclude <- read.csv("data_intermediate/plots_exclude.csv",header=T,stringsAsFactors=FALSE)
-plot.ids.exclude <- plots.exclude[plots.exclude$Exclude != "",]$Regen_Plot
-d.plot.temp <- d.plot.temp[!(d.plot.temp$Regen_Plot %in% plot.ids.exclude),]
-
-
-d.sp.curr <- d.sp[d.sp$species=="CONIF.ALLSP",]
-d <- merge(d.plot.temp,d.sp.curr,all.x=TRUE,by="Regen_Plot")
-
-d <- d[d$seed_tree_distance_general < 200,]
-d <- d[d$FIRE_SEV > 3,]
-
-p <- ggplot(d,aes(x=seed_tree_distance_general,y=regen.count.all)) +
-  geom_point(size=3) +
-  scale_y_continuous(limits=c(0,70)) +
-  labs(x="Distance to seed tree (m)",y="Number of seedlings") +
-  theme_bw(18)
-
-Cairo(file=paste0("../Figures/Fig6_seedTree_",Sys.Date(),".png"),width=1500,height=1500,ppi=200,res=200,dpi=200)
-print(p)
-dev.off()
-
-
-
-### plot fire-level regen ###
-
-
-
-sp.names <- c(
-  "PIPO"="Ponderosa\npine",
-  "PILA"="Sugar pine",
-  "ABCO"="White fir",    
-  "QUKE"="Black oak",  
-  "QUCH2"="Canyon\nlive oak",
-  "PINUS.ALLSP"="Pines",
-  "SHADE.ALLSP"="Shade tolerant conifers",
-  "COV.SHRUB"="Shrub cover",
-  "COV.GRASS"="Grass cover",
-  "COV.FORB"="Forb cover",
-  "HDWD.ALLSP"="Hardwoods",
-  "PSME" = "Douglas-fir",
-  "ABMA" = "Red fir"
-)
-
-#compute fire-level average regen
-d.sp.wfire <- merge(d.sp,d.plot[,c("Regen_Plot","Fire")],by="Regen_Plot")
-
-d.sp.agg <- aggregate(d.sp.wfire,by=list(d.sp.wfire$Fire,d.sp.wfire$species),FUN=mean)
-
-d.sp.agg$Fire <- d.sp.agg$Group.1
-d.sp.agg$species <- d.sp.agg$Group.2
-
-d.sp.agg$Fire <- factor(d.sp.agg$Fire,c("BAGLEY","CHIPS","RALSTON","BASSETTS","MOONLIGHT","ANTELOPE","HARDING","RICH","BTU LIGHTNING","STRAYLOR","CUB","AMERICAN RIVER","FREDS","POWER"))
-
-d.sp.agg <- d.sp.agg[d.sp.agg$species %in% c("PIPO","ABCO"),]
-
-d.sp.agg <- d.sp.agg[!(d.sp.agg$Fire %in% "RICH"),]
-
-ggplot(d.sp.agg,aes(x=Fire,y=regen.presab.old)) +
-  geom_bar(stat="identity") +
-  facet_grid(species~.,labeller=as_labeller(sp.names)) +
-  #scale_y_continuous(limits=c(0,0.5)) +
-  theme_bw(20) +
-  theme(axis.text.x = element_text(angle=90,hjust=1,vjust=0.5)) +
-  labs(y="Proportion of plots with regeneration")
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-### end plotting ###
-
-
-
-
-#sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO","ABMA","CONIF.ALLSP","PSME","PILA","CADE27","PIJE","PIPJ")
-sp.opts <- c("PIPO","ABCO","PILA","SHADE.ALLSP","QUKE","PINUS.ALLSP","QUCH2","HDWD.ALLSP") # reduced
-sp.opts <- c("PIPO","ABCO","PILA","QUKE","QUCH2") # reduced
-
-sp.opts <- c("PIPO","ABCO") # reduced
-#sp.opts <- c("PIPO","ABCO") # reduced
-#sp.opts <- c("SHADE.ALLSP","PSME","QUKE","QUCH2")
-
-
-#cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB","COV.HARDWOOD","COV.CONIFER")
-cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB") # reduced
-cover.opts <- c("COV.SHRUB") # reduced
-cover.opts <- c("COV.SHRUB","COV.GRASS") # reduced
-
-#cover.opts <- NULL
-sp.opts <- c(sp.opts,cover.opts)
+do.regression <-TRUE
 
 m.p <- list()
 
@@ -455,927 +449,166 @@ mods.best <- data.frame()
 
 aucs <- data.frame()
 
-for(sp in sp.opts) { # about 1 hr per species
+pred.dat <- data.frame()
+fit.dat <- data.frame()
+d.maes.anoms <- data.frame()
+
+rf.importance <- data.frame()
+pred.rf <- data.frame()
+
+
+
+
+
+
+# #Remove Dry fires
+# dry.fires <- c("STRAYLOR","HARDING","ANTELOPE","MOONLIGHT")
+# d.plot <- d.plot[!(d.plot$Fire %in% dry.fires),]
+
+# Remove Bassetts
+# d.plot <- d.plot[d.plot$Fire != "BASSETTS",]
+
+# d.plot <- d.plot[!is.na(d.plot$diff.norm.snow.z),] #! need to enable this line if running code for snow models
+
+sink("run_output.txt")
+for(sp in resp.opts) {
   
-      cat("\n\n#####")
-      cat("Running model for: ",sp,"")
-      cat("#####\n\n")
-      
-      
-      if(sp %in% cover.opts) {
-        d.sp.curr <- d.sp[d.sp$species=="PIPO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
-      } else {
-        d.sp.curr <- d.sp[d.sp$species==sp,]
-      }
-      
-      d <- merge(d.plot,d.sp.curr,all.x=TRUE,by="Regen_Plot")
-      vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
-      vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z", "def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","def.post","aet.post")
-      d <- d[complete.cases(d[,vars.focal]),]
-      d.c <- center.df(d,vars.leave)
-
-      d.c$ppt.normal_c.sq <- d.c$ppt.normal_c^2
-      d.c$tmean.normal_c.sq <- d.c$tmean.normal_c^2
-      
-      d.c$def.normal_c.sq <- d.c$def.normal_c^2
-      d.c$aet.normal_c.sq <- d.c$aet.normal_c^2
-      
-      # ####!!!! trick model: make diff.norm into diff.norm.min
-      # d.c$diff.norm.ppt.z_c <- d.c$diff.norm.ppt.min.z_c
-      # d.c$diff.norm.tmean.z_c <- d.c$diff.norm.tmean.max.z_c
-      # d.c$diff.norm.aet.z_c <- d.c$diff.norm.aet.min.z_c
-      # d.c$diff.norm.def.z_c <- d.c$diff.norm.def.max.z_c
-      # #### end trick model
-      
-      
-      d.c$diff.norm.ppt.z_c.sq <- d.c$diff.norm.ppt.z_c^2
-      d.c$diff.norm.tmean.z_c.sq <- d.c$diff.norm.tmean.z_c^2
-      
-      d.c$diff.norm.def.z_c.sq <- d.c$diff.norm.def.z_c^2
-      d.c$diff.norm.aet.z_c.sq <- d.c$diff.norm.aet.z_c^2
-      
-      d.c$ppt.post_c.sq <- d.c$ppt.post_c^2
-      d.c$tmean.post_c.sq <- d.c$tmean.post_c^2
-      
-      d.c$def.post_c.sq <- d.c$def.post_c^2
-      d.c$aet.post_c.sq <- d.c$aet.post_c^2
-      
-      d.c$regen.presab.all.01 <- ifelse(d.c$regen.presab.all == TRUE,1,0)
-      d.c$regen.presab.old.01 <- ifelse(d.c$regen.presab.old == TRUE,1,0)
-      
-      
-      vars.focal.c <- paste0(vars.focal[-6],"_c")
-      pairs(d.c[,vars.focal.c])
-      
-      ## transform cover so it does not include 0 or 1 (for Beta distrib)
-      d.c$SHRUB.p <- d.c$SHRUB/100
-      d.c$SHRUB.pt <- (d.c$SHRUB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-      
-      d.c$GRASS.p <- d.c$GRASS/100
-      d.c$GRASS.pt <- (d.c$GRASS.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-      
-      d.c$HARDWOOD.p <- d.c$HARDWOOD/100
-      d.c$HARDWOOD.pt <- (d.c$HARDWOOD.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-      
-      d.c$FORB.p <- d.c$FORB/100
-      d.c$FORB.pt <- (d.c$FORB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-      
-      d.c$CONIFER.p <- d.c$CONIFER/100
-      d.c$CONIFER.pt <- (d.c$CONIFER.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-      
-      
-      d.c$Fire <- as.factor(d.c$Fire)
-      
-      #d.c <- d.c[!(d.c$Fire == "RICH"),]
-      
-      d.c$regen.count.all.int <- ceiling(d.c$regen.count.all)
-      d.c$regen.count.old.int <- ceiling(d.c$regen.count.old)
-      
-      
-      if(sp %in% cover.opts) {
-        
-        sp.cov <- substr(sp,5,100)
-        sp.cov <- paste0(sp.cov,".pt")
-  
-        d.c$response.var <- d.c[,sp.cov]
-        
-        mod.family <- "Beta"
-        
-      } else {
-
-        d.c$response.var <- round(d.c$regen.presab.old.01)
-        
-        mod.family <- "bernoulli"
-        
-      }
-      
-      m <- list()
-      
-      m[["n0.a0"]] <- brm(response.var ~ 1,family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nPT.a0"]] <- brm(response.var ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nPT.aPT"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nPT.aPT2"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["pPT"]] <- brm(response.var ~ ppt.post_c + ppt.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nP.a0"]] <- brm(response.var ~ ppt.normal_c + ppt.normal_c.sq  + tmean.normal_c + tmean.normal_c.sq + seed_tree_distance_general_c + rad.march_c,family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nP.aP"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq   + tmean.normal_c + tmean.normal_c.sq + seed_tree_distance_general_c + rad.march_c,family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["nP.aP2"]] <- brm(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq   + tmean.normal_c + tmean.normal_c.sq + seed_tree_distance_general_c + rad.march_c,family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      m[["pP"]] <- brm(response.var ~ ppt.post_c + ppt.post_c.sq   + tmean.post_c + tmean.post_c.sq + seed_tree_distance_general_c + rad.march_c,family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nT.a0"]] <- brm(response.var ~ tmean.normal_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nT.aT"]] <- brm(response.var ~ tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["nT.aT2"]] <- brm(response.var ~ tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      #m[["pT"]] <- brm(response.var ~ tmean.post_c + tmean.post_c.sq + tmean.post_c + tmean.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      
-      # m[["n0.a0"]] <- brm(response.var ~ 1 + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      # m[["nAD.a0"]] <- brm(response.var ~ aet.normal_c + aet.normal_c.sq + def.normal_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      # m[["nAD.aAD"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq + def.normal_c*diff.norm.def.z_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      # m[["nAD.aAD2"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq + def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      # m[["pAD"]] <- brm(response.var ~ aet.post_c + aet.post_c.sq + def.post_c + def.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      # #m[["nA.a0"]] <- brm(response.var ~ aet.normal_c + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      # #m[["nA.aA"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      # #m[["nA.aA2"]] <- brm(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      # #m[["pA"]] <- brm(response.var ~ aet.post_c + aet.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      # m[["nD.a0"]] <- brm(response.var ~ def.normal_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      # m[["nD.aD"]] <- brm(response.var ~ def.normal_c*diff.norm.def.z_c + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      # m[["nD.aD2"]] <- brm(response.var ~ def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      # m[["pD"]] <- brm(response.var ~ def.post_c + def.post_c.sq + def.post_c + def.post_c.sq + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-      # 
-
-      
-      #get individual loos (will get specific pairs later)
-      
-      d.loos <- data.frame()
-      
-      for(mod in names(m)) {
-        cat(mod," ")
-        loo.mod <- loo(m[[as.character(mod)]])
-        d.mod <- data.frame(sp=sp,mod=mod,LOOIC=loo.mod$looic,SE=loo.mod$se_looic)
-        d.loos <- rbind(d.loos,d.mod)
-        
-      }
-      
-      d.loos$upr <- d.loos$LOOIC + 1.96*d.loos$SE
-      
-      d.loos.all <- rbind(d.loos.all,d.loos)
-      
-      ### Specify model categories
-      
-      ## normal models
-      search <- ".a0"
-      normal.model.names <- d.loos[grep(search,d.loos$mod,fixed=TRUE),]$mod
-      normal.model.names <- normal.model.names[normal.model.names != "n0.a0"] # exclude null model
-      
-      ## anomaly models
-      search <- ".a"
-      anomaly.model.names <- d.loos[grep(search,d.loos$mod,fixed=TRUE),]$mod
-      anomaly.model.names <- anomaly.model.names[!(anomaly.model.names %in% normal.model.names)]
-      anomaly.model.names <- anomaly.model.names[anomaly.model.names != "n0.a0"] # exclude null model
-            
-      ### Find the best normal model
-      
-      d.loos.normal <- d.loos[d.loos$mod %in% normal.model.names,]
-      best.normal.mod <- d.loos.normal[d.loos.normal$upr == min(d.loos.normal$upr,na.rm=TRUE),]$mod[1]
-      
-      ### Compare null to best normal
-      comp.null.normal <- loo(m[["n0.a0"]],m[[as.character(best.normal.mod)]])$ic_diffs__
-      
-      ### Get post corresponding to best normal
-      norm.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
-      norm.post.mod <- sub("n","p",norm.part)
-      
-      ### Compare best normal to corresponding post
-      comp.normal.post <- loo(m[[as.character(best.normal.mod)]],m[[as.character(norm.post.mod)]])$ic_diffs__
-      
-      
-      ### Get anomaly models corresponding to best normal
-      
-      normal.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
-      search <- paste0(normal.part,".")
-      normal.matches <- grepl(search,d.loos$mod,fixed=TRUE)
-      search <- paste0(normal.part,".a0")
-      non.anom.match <- grepl(search,d.loos$mod,fixed=TRUE)
-      normal.anom <- normal.matches & (!non.anom.match)
-      normal.anom.names <- d.loos[normal.anom,]$mod
-      
-      ### Get the best corresponding anomaly model
-      
-      d.loos.anom <- d.loos[d.loos$mod %in% normal.anom.names,]
-      best.normal.anom <- d.loos.anom[d.loos.anom$upr == min(d.loos.anom$upr,na.rm=TRUE),]$mod[1]
-      
-      ### Compare best normal with corresponding best anomaly
-      comp.normal.anom <- loo(m[[as.character(best.normal.mod)]],m[[as.character(best.normal.anom)]])$ic_diffs__
-      
-      
-      ### Get the best anomaly, independent of best normal
-      d.loos.anomaly <- d.loos[d.loos$mod %in% anomaly.model.names,]
-      best.anomaly.mod <- d.loos.anomaly[d.loos.anomaly$upr == min(d.loos.anomaly$upr,na.rm=TRUE),]$mod[1]
-      
-      ### Get the normal corresponding to the best anomaly
-      best.anom.normal.part <- strsplit(as.character(best.anomaly.mod),".",fixed=TRUE)[[1]][1]
-      best.anom.normal <- paste0(best.anom.normal.part,".a0")
-      
-      ### Compare corresponding normal to best anomaly
-      comp.anom.normal <- loo(m[[as.character(best.anom.normal)]],m[[as.character(best.anomaly.mod)]])$ic_diffs__
-      
-      
-      
-      ### Store loos comps
-      d.loo.comps.sp <- rbind(comp.null.normal,comp.normal.post,comp.normal.anom,comp.anom.normal)
-      d.loo.comps.sp <- as.data.frame(d.loo.comps.sp)
-      d.loo.comps.sp$comp <-c("null.normal","normal.post","normal.anom","anom.normal")
-      d.loo.comps.sp$sp <- sp
-      
-      d.loo.comps <- rbind(d.loo.comps,d.loo.comps.sp)
-      
-      
-      ## store what the best ones were!
-      mods.best.sp <- data.frame(best.normal=best.normal.mod,norm.post=norm.post.mod,best.normal.anom=best.normal.anom,best.anomaly=best.anomaly.mod,sp=sp)
-      mods.best <- rbind(mods.best, mods.best.sp)
-      
-      
-      
-      
-      
-      
-      
-      if(sp =="COV.SHRUB") {
-        d.c$regen.count.old <- d.c$SHRUB
-      }
-      if(sp =="COV.GRASS") {
-        d.c$regen.count.old <- d.c$GRASS
-      }
-
-      
-      
-      
-      ### Function to find the center of a "fixed" predictor variable within the species distribution
-      mid.val.fun <- function(var) {
-        d.c.sp <- d.c[d.c$regen.count.old > 0,]
-        #d.c.sp$prod <- d.c.sp[,var] * d.c.sp$regen.count.old
-        #prod.sum <- sum(d.c.sp$prod)
-        #count.tot <- sum(d.c.sp$regen.count.old)
-        #mid.val <- prod.sum/count.tot
-        
-        mid.val <- mean(d.c.sp[,var])
-        
-        return(mid.val)
-      }
-      
-      low.val.fun <- function(var) {
-        d.c.sp <- d.c[d.c$regen.count.old > 0,]
-              
-        # vals.rep <- list()
-        # for(i in 1:nrow(d.c.sp))      {
-        # 
-        #   d.c.sp.row <- d.c.sp[i,]
-        #   vals.rep[[i]] <- rep(d.c.sp.row[,var],round(d.c.sp.row$regen.count.old*3))
-        # }
-        # 
-        # vals.rep <- unlist(vals.rep)
-        # 
-        # a <- quantile(vals.rep,0.25)
-        
-        a <- quantile(d.c.sp[,var],0.25)
-        
-        return(a)
-      }
-      
-      high.val.fun <- function(var) {
-
-        d.c.sp <- d.c[d.c$regen.count.old > 0,]        
-        # vals.rep <- list()
-        # for(i in 1:nrow(d.c.sp))      {
-        # 
-        #   d.c.sp.row <- d.c.sp[i,]
-        #   vals.rep[[i]] <- rep(d.c.sp.row[,var],round(d.c.sp.row$regen.count.old*3))
-        # }
-        # 
-        # vals.rep <- unlist(vals.rep)
-        # a <- quantile(vals.rep,0.75)
-        # 
-        a <- quantile(d.c.sp[,var],0.75)
-        
-        return(a)
-      }
-      
-      
-      
-      
-      
-      
-      ### For best anomaly model, store predictions for counterfactual plots
-      
-      ### Make counterfactual predictor sets
-      
-      ### For the variables being held constant, set them at the value where the species is most abundant
-      
-      ## For tmean.normal_c, get mean value of plots where the species was present, weighted by number of seedligns
-
-      vars <- c("ppt.normal_c","ppt.normal_c.sq","diff.norm.ppt.z_c","diff.norm.ppt.z_c.sq","tmean.normal_c","tmean.normal_c.sq",
-                "diff.norm.tmean.z_c","diff.norm.tmean.z_c.sq",
-                "aet.normal_c","aet.normal_c.sq","diff.norm.aet.z_c","diff.norm.aet.z_c.sq","def.normal_c","def.normal_c.sq",
-                "diff.norm.def.z_c","diff.norm.def.z_c.sq",
-                "seed_tree_distance_general_c","rad.march_c"
-                )
-      
-      
-      
-      mid.val <- sapply(vars,mid.val.fun,USE.NAMES=TRUE)
-      
-      low.val <- sapply(vars,low.val.fun,USE.NAMES=TRUE)
-      names(low.val) <- vars
-      
-      high.val <- sapply(vars,high.val.fun,USE.NAMES=TRUE)
-      names(high.val) <- vars
-
-      
-      
-      diff.norm.seq <- seq(from=-1.5,to=1.5,length.out=100)
-      
-      newdat.ppt <- data.frame(
-        ppt.normal_c = c(rep(low.val["ppt.normal_c"],100),rep(mid.val["ppt.normal_c"],100),rep(high.val["ppt.normal_c"],100)),
-        ppt.normal_c.sq = c(rep(low.val["ppt.normal_c"]^2,100),rep(mid.val["ppt.normal_c"]^2,100),rep(high.val["ppt.normal_c"]^2,100)),
-        norm.level = c(rep("low",100),rep("mid",100),rep("high",100)),
-        diff.norm.ppt.z_c = rep(diff.norm.seq,3),
-        diff.norm.ppt.z_c.sq = rep(diff.norm.seq^2,3),
-        tmean.normal_c = mid.val["tmean.normal_c"],
-        tmean.normal_c.sq = mid.val["tmean.normal_c"]^2,
-        diff.norm.tmean.z_c = mid.val["diff.norm.tmean.z_c"],
-        diff.norm.tmean.z_c.sq = mid.val["diff.norm.tmean.z_c"]^2,
-        scenario = "ppt",
-        
-        aet.normal_c = c(rep(low.val["aet.normal_c"],100),rep(mid.val["aet.normal_c"],100),rep(high.val["aet.normal_c"],100)),
-        aet.normal_c.sq = c(rep(low.val["aet.normal_c"]^2,100),rep(mid.val["aet.normal_c"]^2,100),rep(high.val["aet.normal_c"]^2,100)),
-        diff.norm.aet.z_c = rep(diff.norm.seq,3),
-        diff.norm.aet.z_c.sq = rep(diff.norm.seq^2,3),
-        def.normal_c = mid.val["def.normal_c"],
-        def.normal_c.sq = mid.val["def.normal_c"]^2,
-        diff.norm.def.z_c = mid.val["diff.norm.def.z_c"],
-        diff.norm.def.z_c.sq = mid.val["diff.norm.def.z_c"]^2,
-        
-        seed_tree_distance_general_c = mid.val["seed_tree_distance_general_c"],
-        rad.march_c = mid.val["rad.march_c"]
-      )
-      newdat.tmean <- data.frame(
-        tmean.normal_c = c(rep(low.val["tmean.normal_c"],100),rep(mid.val["tmean.normal_c"],100),rep(high.val["tmean.normal_c"],100)),
-        tmean.normal_c.sq = c(rep(low.val["tmean.normal_c"]^2,100),rep(mid.val["tmean.normal_c"]^2,100),rep(high.val["tmean.normal_c"]^2,100)),
-        norm.level = c(rep("low",100),rep("mid",100),rep("high",100)),
-        diff.norm.tmean.z_c = rep(diff.norm.seq,3),
-        diff.norm.tmean.z_c.sq = rep(diff.norm.seq^2,3),
-        ppt.normal_c = mid.val["ppt.normal_c"],
-        ppt.normal_c.sq = mid.val["ppt.normal_c"]^2,
-        diff.norm.ppt.z_c = mid.val["diff.norm.ppt.z_c"],
-        diff.norm.ppt.z_c.sq = mid.val["diff.norm.ppt.z_c"]^2,
-        scenario = "tmean",
-        
-        def.normal_c = c(rep(low.val["def.normal_c"],100),rep(mid.val["def.normal_c"],100),rep(high.val["def.normal_c"],100)),
-        def.normal_c.sq = c(rep(low.val["def.normal_c"]^2,100),rep(mid.val["def.normal_c"]^2,100),rep(high.val["def.normal_c"]^2,100)),
-        diff.norm.def.z_c = rep(diff.norm.seq,3),
-        diff.norm.def.z_c.sq = rep(diff.norm.seq^2,3),
-        aet.normal_c = mid.val["aet.normal_c"],
-        aet.normal_c.sq = mid.val["aet.normal_c"]^2,
-        diff.norm.aet.z_c = mid.val["diff.norm.aet.z_c"],
-        diff.norm.aet.z_c.sq = mid.val["diff.norm.aet.z_c"]^2,
-        
-        seed_tree_distance_general_c = mid.val["seed_tree_distance_general_c"],
-        rad.march_c = mid.val["rad.march_c"]
-      )
-      
-      newdat <- rbind(newdat.ppt,newdat.tmean)
-      interact.df <- data.frame("Fake"=rep(NA,nrow(newdat)))
-      for(i in 1:ncol(newdat)) { # for each col
-        for(j in 1:ncol(newdat)) {
-          name.i <- names(newdat)[i]
-          name.j <- names(newdat)[j]
-          name.inter <- paste(name.i,name.j,sep=":")
-          val.inter <- newdat[,i] * newdat[,j]
-          interact.df <- cbind(interact.df,val.inter)
-          names(interact.df)[ncol(interact.df)] <- name.inter
-        }
-      }
-      
-      newdat <- cbind(newdat,interact.df)
-      newdat$"(Intercept)" <- 1 # this is the "predictor" value to multiple the intercept by
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      m.sp <- m[[as.character(best.anomaly.mod)]]
-      m.p.sp <- posterior_samples(m.sp,pars="^b")
-      
-      if(sp %in% cover.opts) {
-        m.phi.sp <- posterior_samples(m.sp,pars="^phi")
-      }
-      
-      names(m.p.sp) <- sapply(names(m.p.sp),substr,start=3,stop=1000)
-      names(m.p.sp)[1] <- "(Intercept)"
-      
-      mod.vars <- colnames(m.p.sp)
-      
-      newdat.ordered <- newdat[,mod.vars]
-      
-      # for each row of newdat.ordered, multiply data by all coef values, sum across, and compute median and conf int
-      preds <- matrix(nrow=nrow(newdat.ordered),ncol=6)
-      for(i in 1:nrow(newdat.ordered)) {
-        
-        newdat.row <- as.matrix(newdat.ordered[i,])
-        
-        prod <- sweep(m.p.sp,MARGIN=2,newdat.row,`*`)
-        sums <- rowSums(prod)
-        
-        fit <- median(sums)
-        upr <- quantile(sums,probs=0.975)
-        lwr <- quantile(sums,probs=0.025)
-        
-
-        
-        
-        
-        
-        ## also compute prediction interval
-        
-        
-        
-        
-        
-        if(sp %in% cover.opts) {
-          
-          phi <- m.phi.sp
-          phi.resp.scale <- exp(phi)
-          
-          fits <- sums
-          fits.resp.scale <- inv.logit(fits)
-          
-          alpha.param <- fits.resp.scale*phi.resp.scale
-          beta.param <- -fits.resp.scale*phi.resp.scale + phi.resp.scale
-          
-          
-          pred.int.preds <- rbeta(n=length(alpha.param$phi),shape1=alpha.param$phi,shape2=beta.param$phi)
-          pred.int.lwr <- quantile(pred.int.preds,probs=0.025)
-          pred.int.upr <- quantile(pred.int.preds,probs=0.975)
-          
-          pred.lwr <- pred.int.lwr
-          pred.upr <- pred.int.upr
-          pred.int.pred <- NA
-          
-
-          
-        } else {
-          
-          fit.resp.scale <- inv.logit(fit)
-          pred.int.pred <- rbinom(1,1,fit.resp.scale)
-          pred.lwr <- NA
-          pred.upr <- NA
-
-        }
-        
-        
-        preds[i,] <- c(fit,lwr,upr,pred.lwr,pred.upr,pred.int.pred)
-        
-
-        
-      }
-
-      if(sp %in% cover.opts) {
-        preds[,1:3] <- inv.logit(preds[,1:3])
-      } else {
-        preds[,1:3] <- inv.logit(preds[,1:3])
-      }
-
-      
-      colnames(preds) <- c("fit","lwr","upr","pred.lwr","pred.upr","pred")
-      preds <- as.data.frame(preds)
-      
-      sp.grp <- sp
-      dat.preds.sp <- cbind(newdat,preds,sp.grp,best.anomaly.mod)
-      dat.preds <- rbind(dat.preds,dat.preds.sp)
-      
-
-      
-      
-      
-      
-      ### store a predicted vs. observed data frame here: one for the best anomaly model and one for the corresponding normal model ###
-      predicted.normal <- predict(m[[as.character(best.anom.normal)]])[,1]
-      predicted.anomaly <- predict(m[[as.character(best.anomaly.mod)]])[,1]
-      
-      observed <- d.c$response.var
-      
-
-      pred.obs.normal <- data.frame(pred=predicted.normal,obs=observed,mod="normal",sp=sp)
-      pred.obs.anomaly <- data.frame(pred=predicted.anomaly,obs=observed,mod="anomaly",sp=sp)
-      
-      pred.obs.sp <- rbind(pred.obs.normal,pred.obs.anomaly)
-      
-      # if(sp %in% cover.opts) {
-      #   pred.obs.sp$pred <- inv.logit(pred.obs.sp$pred)
-      # } else {
-      #   #pred.obs.sp$pred <- inv.logit(pred.obs.sp$pred)
-      #   
-      # }
-      
-      pred.obs <- rbind(pred.obs,pred.obs.sp)
-      
-      
-      ## Calculate AUC (for bernoulli) or R-sq (for cover)
-      
-      if(sp %in% cover.opts) {
-        auc.normal <- cor(observed,predicted.normal)^2
-        auc.anomaly <- cor(observed,predicted.anomaly)^2
-      } else {
-        auc.normal <- auc(observed,predicted.normal)
-        auc.anomaly <- auc(observed,predicted.anomaly)
-      }
-      
-      aucs.sp <- data.frame(auc.normal,auc.anomaly,sp)
-      
-      aucs <- rbind(aucs,aucs.sp)
-      
-      
-
-}
-
-
-
-
-## Save the outputs
-
-write.csv(dat.preds,"counterfactual_df.csv",row.names=FALSE)
-write.csv(pred.obs,"pred_obs.csv",row.names=FALSE)
-write.csv(d.loo.comps,"loo_comps.csv",row.names=FALSE)
-write.csv(d.loos.all,"loos.csv",row.names=FALSE)
-write.csv(mods.best,"mods_best.csv",row.names=FALSE)
-write.csv(aucs,"norm_anom_aucs_rsqs.csv",row.names=FALSE)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Open saved output ##
-
-folder <- "../data_model_summaries/out_04_mean_pptOnly_4-5yrSeedlings_noRE/"
-
-dat.preds <- read.csv(paste0(folder,"counterfactual_df.csv"),header=TRUE)
-pred.obs <- read.csv(paste0(folder,"pred_obs.csv"),header=TRUE)
-d.loo.comps <- read.csv(paste0(folder,"loo_comps.csv"),header=TRUE)
-d.loos.all <- read.csv(paste0(folder,"loos.csv"),header=TRUE)
-mods.best <- read.csv(paste0(folder,"mods_best.csv"),header=TRUE)
-aucs <- read.csv(paste0(folder,"norm_anom_aucs_rsqs.csv"),header=TRUE)
-# 
-# # second
-# 
-# folder <- "../data_model_summaries/model_output_07_bern_good_b_mean/"
-# 
-# dat.preds.b <- read.csv(paste0(folder,"counterfactual_df.csv"),header=TRUE)
-# pred.obs.b <- read.csv(paste0(folder,"pred_obs.csv"),header=TRUE)
-# d.loo.comps.b <- read.csv(paste0(folder,"loo_comps.csv"),header=TRUE)
-# d.loos.all.b <- read.csv(paste0(folder,"loos.csv"),header=TRUE)
-# mods.best.b <- read.csv(paste0(folder,"mods_best.csv"),header=TRUE)
-# 
-# # merge
-# 
-# dat.preds <- rbind(dat.preds,dat.preds.b)
-# pred.obs <- rbind(pred.obs,pred.obs.b)
-# d.loo.comps <- rbind(d.loo.comps,d.loo.comps.b)
-# d.loos.all <- rbind(d.loos.all,d.loos.all.b)
-# mods.best <- rbind(mods.best,mods.best.b)
-# 
-
-sp.names <- c(
-  "PIPO"="Ponderosa pine",
-  "PILA"="Sugar pine",
-  "ABCO"="White fir",    
-  "QUKE"="Black oak",  
-  "QUCH2"="Canyon live oak",
-  "PINUS.ALLSP"="Pines",
-  "SHADE.ALLSP"="Shade tolerant conifers",
-  "COV.SHRUB"="Shrub cover",
-  "COV.GRASS"="Grass cover",
-  "COV.FORB"="Forb cover",
-  "HDWD.ALLSP"="Hardwoods"
-)
-
-dat.preds$sp.grp <- factor(dat.preds$sp.grp,levels=c("PIPO","PILA","ABCO","QUKE","QUCH2","PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","COV.SHRUB","COV.GRASS","COV.FORB"))
-
-dat.preds <- dat.preds[dat.preds$norm.level != "mid",]
-dat.preds <- dat.preds[dat.preds$sp.grp != 'COV.FORB',]
-
-dat.ppt <- dat.preds[dat.preds$scenario=="ppt",]
-dat.ppt$variable <- "ppt-aet"
-dat.ppt$anomaly <- dat.ppt$diff.norm.ppt.z_c
-
-dat.ppt$ppt.level <- ifelse(dat.ppt$norm.level == "high","Wet","Dry")
-
-dat.ppt[dat.ppt$norm.level == "high",]$pred <- dat.ppt[dat.ppt$norm.level == "high",]$pred * .96 + 0.02
-
-
-
-dat.ppt$fit <- ifelse(dat.ppt$sp.grp == "COV.SHRUB",dat.ppt$fit*100,dat.ppt$fit)
-dat.ppt$lwr <- ifelse(dat.ppt$sp.grp == "COV.SHRUB",dat.ppt$lwr*100,dat.ppt$lwr)
-dat.ppt$upr <- ifelse(dat.ppt$sp.grp == "COV.SHRUB",dat.ppt$upr*100,dat.ppt$upr)
-dat.ppt$pred.lwr <- ifelse(dat.ppt$sp.grp == "COV.SHRUB",dat.ppt$pred.lwr*100,dat.ppt$pred.lwr)
-dat.ppt$pred.upr <- ifelse(dat.ppt$sp.grp == "COV.SHRUB",dat.ppt$pred.upr*100,dat.ppt$pred.upr)
-
-
-
-
-p <- ggplot(dat.ppt,aes(x=anomaly,y=fit,color=ppt.level)) +
-  #geom_ribbon(aes(ymin=pred.lwr,ymax=pred.upr),fill=NA) +
-  geom_line(size=1) +
-  geom_smooth(aes(y=pred.lwr),linetype="dashed",se=FALSE,size=0.8) +
-  geom_smooth(aes(y=pred.upr),linetype="dashed",se=FALSE,size=0.8) +
-  geom_ribbon(aes(ymin=lwr,ymax=upr,fill=ppt.level),alpha=0.3,color=NA) +
-  geom_point(aes(y=pred)) +
-  guides(fill=guide_legend(title="Normal\nprecipitation"),color=guide_legend(title="Normal\nprecipitation")) +
-  facet_wrap(~sp.grp,scales="free",nrow=2,labeller=as_labeller(sp.names)) +
-  labs(y="Regeneration probability or cover",x="Precipitation anomaly (z-score)") +
-  theme_bw(15)
-
-  Cairo(file=paste0("../Figures/FigMain_",Sys.Date(),".png"),width=3500,height=1750,ppi=200,res=200,dpi=200)
-  p
-  dev.off()
-
-### For plotting responses to any climate variable and bivariate responses, sep file per species ###
-# 
-# library(gridExtra)
-# library(Cairo)
-# 
-# 
-# sp.lookup <- rbind(
-#   c("PIPO","Ponderosa pine"),
-#   #c("PILA","Sugar pine")
-#   c("ABCO","White fir"),    
-#   c("QUKE","Black oak"),  
-#   c("QUCH2","Canyon live oak"),
-#   c("PINUS.ALLSP","All pines"),
-#   c("SHADE.ALLSP","Shade tolerant conifers"),
-#   c("COV.SHRUB","Shrub cover")
-#   #c("PSME","Douglas-fir")
-# )
-# colnames(sp.lookup) <- c("code","species")
-# sp.lookup <- as.data.frame(sp.lookup,stringsAsFactors=FALSE)
-# 
-# 
-# sp.opts <- sp.lookup$code
-# 
-# for(sp in sp.opts) {
-#   
-#   sp.name <- sp.lookup[sp.lookup$code == sp,]$species
-#   
-#   dat.pred.sp <- dat.pred[dat.pred$sp.grp == sp,]
-#   
-#   #is it a ppt-tmean or def-aet model?
-#   anom <- as.character(dat.pred.sp$best.anomaly.mod[1])
-#   anom.first <- strsplit(anom,".",fixed=TRUE)[[1]][1]
-#   anom.symb <- substr(anom.first,2,100)
-#   
-#   if(anom.symb %in% c("P","PT")) {
-#     mod.type <- "ppt"
-#     title.top <- sp.name
-#     title.bottom <- ""
-#     subtitle.top <- "Precipitation"
-#     subtitle.bottom <- "Temperature"
-#     legend.top <- "Normal precipitation"
-#     legend.bottom <- "Normal temperature"
-#     anom.top <- "Precipitation anomaly (z-score)"
-#     anom.bottom <- "Temperature anomaly (z-score)"
-#   } else {
-#     mod.type <- "def"
-#     title.top <- sp.name
-#     title.bottom <- ""
-#     subtitle.top <- "AET"
-#     subtitle.bottom <- "Deficit"
-#     title.bottom <- ""
-#     legend.top <- "Normal AET"
-#     legend.bottom <- "Normal deficit"
-#     anom.top <- "AET anomaly (z-score)"
-#     anom.bottom <- "Deficit anomaly (z-score)"
-#   }
-#   
-#   ## top plot
-#   
-#   dat.pred.sp.top <- dat.pred.sp[dat.pred.sp$variable=="ppt-aet",]
-#   
-#   gtop <- ggplot(dat.pred.sp.top,aes(x=anomaly,y=fit,color=norm.level)) +
-#     geom_line(size=1) +
-#     geom_ribbon(aes(ymin=lwr,ymax=upr,fill=norm.level),alpha=0.3,color=NA) +
-#     guides(fill=guide_legend(title="Normal climate"),color=guide_legend(title="Normal climate")) +
-#     labs(title=title.top,subtitle=subtitle.top,x="Climate anomaly (z-score)",y="Regeneration probability") +
-#     theme_bw(15) +
-#     theme(plot.title = element_text(hjust = 0.5),plot.subtitle = element_text(hjust = 0.5))
-#     
-#   ## bottom plot
-#   
-#   dat.pred.sp.top <- dat.pred.sp[dat.pred.sp$variable=="tmean-def",]
-#   
-#   gbottom <- ggplot(dat.pred.sp.top,aes(x=anomaly,y=fit,color=norm.level)) +
-#     geom_line(size=1) +
-#     geom_ribbon(aes(ymin=lwr,ymax=upr,fill=norm.level),alpha=0.3,color=NA) +
-#     guides(fill=guide_legend(title="Normal climate"),color=guide_legend(title="Normal climate")) +
-#     labs(title=title.bottom,subtitle=subtitle.bottom,x="Climate anomaly (z-score)",y="Regeneration probability") +
-#     theme_bw(15) +
-#     theme(plot.title = element_text(hjust = 0.5),plot.subtitle = element_text(hjust = 0.5))
-#   
-#   Cairo(file=paste0("../Figures/Fig2_",sp,"_",Sys.Date(),".png"),width=1200,height=1750,ppi=200,res=200,dpi=200)
-#   grid.arrange(gtop,gbottom,nrow=2)
-#   dev.off()
-# }
-#   
-
-
-
-
-### LOO comp plots
-
-sp.names <- c(
-  "PIPO"="Ponderosa pine",
-  "PILA"="Sugar pine",
-  "ABCO"="White fir",    
-  "QUKE"="Black oak",  
-  "QUCH2"="Canyon live oak",
-  "PINUS.ALLSP"="Pines",
-  "SHADE.ALLSP"="Shade tolerant conifers",
-  "COV.SHRUB"="Shrub cover",
-  "COV.GRASS"="Grass cover",
-  "COV.FORB"="Forb cover",
-  "HDWD.ALLSP"="Hardwoods"
-)
-
-d.loo.comps$upr <- d.loo.comps$LOOIC + d.loo.comps$SE*1.96
-d.loo.comps$lwr <- d.loo.comps$LOOIC - d.loo.comps$SE*1.96
-
-d.loo.comps$sp <- factor(d.loo.comps$sp,levels=rev(c("PIPO","PILA","ABCO","QUKE","QUCH2","PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","COV.SHRUB","COV.GRASS","COV.FORB")))
-
-comp.opts <- c("null.normal","normal.post","normal.anom","anom.normal")
-
-for(comp.opt in comp.opts) {
-  
-  d.comp <- d.loo.comps[d.loo.comps$comp == comp.opt,]
-  
-  p <- ggplot(d.comp,aes(y=sp,x=LOOIC)) +
-    geom_point() +
-    geom_errorbarh(aes(xmax=upr,xmin=lwr),height=.2) +
-    theme_bw(18) +
-    geom_vline(xintercept=0,color="red") +
-    scale_y_discrete(labels=as_labeller(sp.names)) +
-    labs(x="Model improvement (delta LOOIC)",y="") +
-    theme(axis.text.x = element_text(size=18),axis.text.y=element_text(size=18),axis.title.x=element_text(size=18))
-
-    Cairo(file=paste0("../Figures/Fig3_loocomps_",comp.opt,"_",Sys.Date(),".png"),width=1400,height=1600,ppi=200,res=200,dpi=200)
-    print(p)
-    dev.off()
-  
-  
-}
-
-
-
-
-
-
-
-
-
-
-### Plot pred vs. observed for best anomaly model (without and then with anomaly)
-sp.names <- c(
-  "PIPO"="Ponderosa pine",
-  "PILA"="Sugar pine",
-  "ABCO"="White fir",    
-  "QUKE"="Black oak",  
-  "QUCH2"="Canyon live oak",
-  "PINUS.ALLSP"="Pines",
-  "SHADE.ALLSP"="Shade tolerant conifers",
-  "COV.SHRUB"="Shrub cover",
-  "COV.GRASS"="Grass cover",
-  "COV.FORB"="Forb cover",
-  "HDWD.ALLSP"="Hardwoods"
-)
-
-sp.names <- as.data.frame(as.matrix(sp.names))
-names(sp.names) <- "name"
-sp.names$sp <- row.names(sp.names)
-
-## Tree seedlings
-
-
-pred.obs2 <- pred.obs
-pred.obs2$mod <- ifelse(pred.obs2$mod=="anomaly","Norm & Anom","Normal climate")
-pred.obs2$mod <- factor(pred.obs2$mod,levels=c("Normal climate","Norm & Anom"))
-pred.obs2 <- merge(pred.obs2,sp.names,by.x="sp",by.y="sp",all.x=TRUE)
-
-
-sp.plot <- c("PIPO","ABCO","QUKE")
-pred.obs2$name <- factor(pred.obs2$name,levels=c("Ponderosa pine","White fir","Black oak"))
-pred.obs2$obs.int <- ifelse(pred.obs2$obs == 0,"Absent","Present")
-pred.obs2$obs.int <- factor(pred.obs2$obs.int,levels=c("Absent","Present"))
-
-pred.obs.sp <- pred.obs2[pred.obs2$sp %in% sp.plot,]
-
-p <- ggplot(pred.obs.sp,aes(x=obs.int,y=pred)) +
-  geom_point(position = position_jitter(w = 0.2, h = 0)) +
-  facet_wrap(~name+mod,scales="fixed",ncol=2) +
-  #geom_abline(intercept=0, slope=1,color="red") +
-  theme_bw(15) +
-  labs(x="Observed presence/absence",y="Fitted probability of presence")
-
-Cairo(file=paste0("../Figures/Fig4_presab_tree_",Sys.Date(),".png"),width=1200,height=1250,ppi=200,res=200,dpi=200)
-print(p)
-dev.off()
-
-
-### Covers
-
-
-pred.obs2 <- pred.obs
-pred.obs2$mod <- ifelse(pred.obs2$mod=="anomaly","Norm & Anom","Normal climate")
-pred.obs2$mod <- factor(pred.obs2$mod,levels=c("Normal climate","Norm & Anom"))
-pred.obs2 <- merge(pred.obs2,sp.names,by.x="sp",by.y="sp",all.x=TRUE)
-
-
-sp.plot <- c("COV.SHRUB")
-#pred.obs2$name <- factor(pred.obs2$name,levels=c("Ponderosa pine","White fir","Black oak"))
-pred.obs2$obs.int <- ifelse(pred.obs2$obs == 0,"Absent","Present")
-pred.obs2$obs.int <- factor(pred.obs2$obs.int,levels=c("Absent","Present"))
-
-pred.obs.sp <- pred.obs2[pred.obs2$sp %in% sp.plot,]
-
-p <- ggplot(pred.obs.sp,aes(x=obs,y=pred)) +
-  geom_point() +
-  facet_wrap(~name+mod,scales="fixed",ncol=2) +
-  #geom_abline(intercept=0, slope=1,color="red") +
-  theme_bw(15) +
-  labs(x="Observed presence/absence",y="Fitted probability of presence")
-
-Cairo(file=paste0("../Figures/Fig4_presab_cover_",Sys.Date(),".png"),width=1200,height=700,ppi=200,res=200,dpi=200)
-print(p)
-dev.off()
-
-
-
-
-
-
-
-
-
-
-
-
-
-#### 7. Test how much better a model is with FIRE ####
-
-
-d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV %in% c(4,5)),]
-
-## remove an outlier plot with 20 abco that is preventing model conversion
-d.plot <- d.plot[!(d.plot$Regen_Plot == "CHI1248"),]
-
-## remove another potential outlier plot: extremely high normal precip and high numbers of ABCO way above other plots with similar precip
-d.plot <- d.plot[!(d.plot$Regen_Plot == "BTU1300185"),]
-
-
-
-loos.fire <- data.frame()
-
-
-sp.opts <- c("PIPO","ABCO","PILA","SHADE.ALLSP","QUKE","PINUS.ALLSP","QUCH2") # reduced
-cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB")
-sp.opts <- c(sp.opts,cover.opts)
-
-
-for(sp in sp.opts) {
-
   cat("\n\n#####")
-  cat("Running fire-nofire comparison for: ",sp,"")
+  cat("Running model for: ",sp,"")
   cat("#####\n\n")
-  
+
   if(sp %in% cover.opts) {
-    d.sp.curr <- d.sp[d.sp$species=="PIPO",]
-  } else {
-    d.sp.curr <- d.sp[d.sp$species==sp,]
+    d.sp.curr.agg <- d.sp.2[d.sp.2$species=="PIPO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
+    d.sp.curr.plt <- d.sp[d.sp$species=="PIPO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
+  } else if(sp %in% ht.opts)  {
+    sp.name <- substr(sp,4,100)
+    d.sp.curr.agg <- d.sp.2[d.sp.2$species==sp.name,]
+    d.sp.curr.plt <- d.sp[d.sp$species==sp.name,]
+  } else if(sp == "HTABS.SHRUB") {
+    d.sp.curr.agg <- d.sp.2[d.sp.2$species=="PIPO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
+    d.sp.curr.plt <- d.sp[d.sp$species=="PIPO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
+  } else if(sp %in% htabs.opts) {
+    sp.name <- substr(sp,7,100)
+    d.sp.curr.agg <- d.sp.2[d.sp.2$species==sp.name,]
+    d.sp.curr.plt <- d.sp[d.sp$species==sp.name,]
+  }  else if(sp == "PROP.PINUS") {
+    d.sp.curr.agg <- d.sp.2[d.sp.2$species=="PINUS.ALLSP",]
+    d.sp.curr.plt <- d.sp[d.sp$species=="PINUS.ALLSP",]
+    d.sp.conif.plt <- d.sp[d.sp$species=="CONIF.ALLSP",]
+    
+    
+    regen.pinus.old <- d.sp.curr.plt$regen.count.old / d.sp.conif.plt$regen.count.old
+    regen.pinus.all <- d.sp.curr.plt$regen.count.all / d.sp.conif.plt$regen.count.all
+    
+    regen.pinus.old <- ifelse(is.nan(regen.pinus.old),NA,regen.pinus.old)
+    regen.pinus.all <- ifelse(is.nan(regen.pinus.all),NA,regen.pinus.all)
+    
+    d.sp.curr.plt$prop.regen.pinus.old <- regen.pinus.old
+    d.sp.curr.plt$prop.regen.pinus.all <- regen.pinus.all
+    
+  } else if(sp == "PROP.SHADE") {
+    d.sp.curr.agg <- d.sp.2[d.sp.2$species=="SHADE.ALLSP",]
+    d.sp.curr.plt <- d.sp[d.sp$species=="SHADE.ALLSP",]
+    d.sp.conif.plt <- d.sp[d.sp$species=="CONIF.ALLSP",]
+    
+    
+    regen.shade.old <- d.sp.curr.plt$regen.count.old / d.sp.conif.plt$regen.count.old
+    regen.shade.all <- d.sp.curr.plt$regen.count.all / d.sp.conif.plt$regen.count.all
+    
+    regen.shade.old <- ifelse(is.nan(regen.shade.old),NA,regen.shade.old)
+    regen.shade.all <- ifelse(is.nan(regen.shade.all),NA,regen.shade.all)
+    
+    d.sp.curr.plt$prop.regen.shade.old <- regen.shade.old
+    d.sp.curr.plt$prop.regen.shade.all <- regen.shade.all
+    
+  } else if(sp == "PROP.CONIF") {
+    d.sp.curr.agg <- d.sp.2[d.sp.2$species=="CONIF.ALLSP",]
+    d.sp.curr.plt <- d.sp[d.sp$species=="CONIF.ALLSP",]
+    d.sp.conif.plt <- d.sp[d.sp$species=="ALL",]
+    
+    
+    regen.conif.old <- d.sp.curr.plt$regen.count.old / d.sp.conif.plt$regen.count.old
+    regen.conif.all <- d.sp.curr.plt$regen.count.all / d.sp.conif.plt$regen.count.all
+    
+    regen.conif.old <- ifelse(is.nan(regen.conif.old),NA,regen.conif.old)
+    regen.conif.all <- ifelse(is.nan(regen.conif.all),NA,regen.conif.all)
+    
+    d.sp.curr.plt$prop.regen.conif.old <- regen.conif.old
+    d.sp.curr.plt$prop.regen.conif.all <- regen.conif.all
+    
+  }  else  {
+    
+    d.sp.curr.agg <- d.sp.2[d.sp.2$species==sp,]
+    d.sp.curr.plt <- d.sp[d.sp$species==sp,]
   }
-  d <- merge(d.plot,d.sp.curr,all.x=TRUE,by="Regen_Plot")
-  vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
-  vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z")
+  
+  d <- merge(d.plot,d.plot.3,by=c("Fire","topoclim.cat")) # this effectively thins to plots that belong to a topoclimate category that has enough plots in it
+  
+  d <- merge(d,d.sp.curr.plt,by=c("Regen_Plot"))
+  
+  names(d.sp.curr.agg) <- paste0(names(d.sp.curr.agg),".agg")
+  d <- merge(d,d.sp.curr.agg,by.x=c("Fire","topoclim.cat"),by.y=c("Fire.agg","topoclim.cat.agg")) # add the aggregated species data (from this we just want adult BA from the control plot)
+  
+  
+  vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all","dominant_shrub_ht_cm","tallest_ht_cm","prop.regen.pinus.old","prop.regen.pinus.all","prop.regen.shade.old","prop.regen.hdwd.old","prop.regen.hdwd.old","prop.regen.conif.old")
+  vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z", "def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","def.post","aet.post","adult.ba.agg","snow.post")
   d <- d[complete.cases(d[,vars.focal]),]
   d.c <- center.df(d,vars.leave)
   
   d.c$ppt.normal_c.sq <- d.c$ppt.normal_c^2
   d.c$tmean.normal_c.sq <- d.c$tmean.normal_c^2
+  d.c$snow.normal_c.sq <- d.c$snow.normal_c^2
+  
+  d.c$def.normal_c.sq <- d.c$def.normal_c^2
+  d.c$aet.normal_c.sq <- d.c$aet.normal_c^2
   
   # ####!!!! trick model: make diff.norm into diff.norm.min
   # d.c$diff.norm.ppt.z_c <- d.c$diff.norm.ppt.min.z_c
   # d.c$diff.norm.tmean.z_c <- d.c$diff.norm.tmean.max.z_c
+  # d.c$diff.norm.aet.z_c <- d.c$diff.norm.aet.min.z_c
+  # d.c$diff.norm.def.z_c <- d.c$diff.norm.def.max.z_c
   # #### end trick model
   
   
   d.c$diff.norm.ppt.z_c.sq <- d.c$diff.norm.ppt.z_c^2
   d.c$diff.norm.tmean.z_c.sq <- d.c$diff.norm.tmean.z_c^2
+  d.c$diff.norm.snow.z_c.sq <- d.c$diff.norm.snow.z_c^2
+  
+  d.c$diff.norm.def.z_c.sq <- d.c$diff.norm.def.z_c^2
+  d.c$diff.norm.aet.z_c.sq <- d.c$diff.norm.aet.z_c^2
+  
+  
+  
+  d.c$diff.norm.ppt.min.z_c.sq <- d.c$diff.norm.ppt.min.z_c^2
+  d.c$diff.norm.tmean.max.z_c.sq <- d.c$diff.norm.tmean.max.z_c^2
+  d.c$diff.norm.snow.min.z_c.sq <- d.c$diff.norm.snow.min.z_c^2
+  
+  
+  d.c$diff.norm.def.max.z_c.sq <- d.c$diff.norm.def.max.z_c^2
+  d.c$diff.norm.aet.min.z_c.sq <- d.c$diff.norm.aet.min.z_c^2
+  
+  
+  
   
   d.c$ppt.post_c.sq <- d.c$ppt.post_c^2
   d.c$tmean.post_c.sq <- d.c$tmean.post_c^2
+  d.c$snow.post_c.sq <- d.c$snow.post_c^2
+  
+  d.c$def.post_c.sq <- d.c$def.post_c^2
+  d.c$aet.post_c.sq <- d.c$aet.post_c^2
+  
+  d.c$ppt.post.min_c.sq <- d.c$ppt.post.min_c^2
+  #d.c$tmean.post.max_c.sq <- d.c$tmean.post.max_c^2
+  d.c$snow.post.min_c.sq <- d.c$snow.post.min_c^2
+  
+  d.c$def.post.max_c.sq <- d.c$def.post.max_c^2
+  d.c$aet.post.min_c.sq <- d.c$aet.post.min_c^2
   
   d.c$regen.presab.all.01 <- ifelse(d.c$regen.presab.all == TRUE,1,0)
   d.c$regen.presab.old.01 <- ifelse(d.c$regen.presab.old == TRUE,1,0)
+  
+  
+  vars.focal.c <- paste0(vars.focal[-6],"_c")
   
   ## transform cover so it does not include 0 or 1 (for Beta distrib)
   d.c$SHRUB.p <- d.c$SHRUB/100
@@ -1396,100 +629,1555 @@ for(sp in sp.opts) {
   
   d.c$Fire <- as.factor(d.c$Fire)
   
+  #d.c <- d.c[!(d.c$Fire == "RICH"),]
+  
   d.c$regen.count.all.int <- ceiling(d.c$regen.count.all)
   d.c$regen.count.old.int <- ceiling(d.c$regen.count.old)
+  
+  
+  ## Test whether seedling taller than shrub
+  d.c$seedl.taller <- d.c$tallest_ht_cm > d.c$dominant_shrub_ht_cm
+
+  
+  
+  
+  
   
   if(sp %in% cover.opts) {
     
     sp.cov <- substr(sp,5,100)
     sp.cov <- paste0(sp.cov,".pt")
     
-    d.c$cov.response <- d.c[,sp.cov]
+    d.c$response.var <- d.c[,sp.cov]
     
-    d.c$response.var <- d.c$cov.response
+  } else if(sp %in% ht.opts){
     
-    mod.family <- "Beta"
+    d.c <- d.c[d.c$regen.presab.old == TRUE,] # this is where we select whether we want all plots where the species was present or just old seedlings
+    d.c$response.var <- d.c$seedl.taller
     
-  } else {
+  } else if(sp == "HTABS.SHRUB") {
+    d.c$response.var <- d.c$dominant_shrub_ht_cm
+    d.c <- d.c[!is.na(d.c$response.var),]
+  } else if(sp %in% htabs.opts) {
+    d.c <- d.c[d.c$regen.presab.old == TRUE, ] # this is where we select whether we want all plots where the species was present or just old seedlings
+    d.c$response.var <- d.c$tallest_ht_cm
+  } else if(sp == "PROP.PINUS") {
     
-    d.c$response.var <- round(d.c$regen.presab.old.01)
+    prop.regen.pinus.old.pt <- (d.c$prop.regen.pinus.old*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+    d.c$response.var <- prop.regen.pinus.old.pt
     
-    mod.family <- "bernoulli"
+  } else if(sp %in% "PROP.SHADE") {
+    
+    prop.regen.shade.old.pt <- (d.c$prop.regen.shade.old*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+    d.c$response.var <- prop.regen.shade.old.pt
+    
+  } else if(sp %in% "PROP.CONIF") {
+    
+    prop.regen.conif.old.pt <- (d.c$prop.regen.conif.old*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+    d.c$response.var <- prop.regen.conif.old.pt
+    
+  } else if(sp %in% "PROP.HDWD") {
+    
+    prop.regen.hdwd.old.pt <- (d.c$prop.regen.hdwd.old*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+    d.c$response.var <- prop.regen.hdwd.old.pt
+    
+  }  else  {
+    
+    d.c$response.var <- d.c$regen.presab.old.01
     
   }
   
-
-  m.nofire <- brm(response.var ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + seed_tree_distance_general_c + rad.march_c,family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-  m.fire <- brm(response.var ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + seed_tree_distance_general_c + rad.march_c + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
+  if(do.regression) { 
     
+    if(TRUE) {
+      
+      
+      formulas <- list()
+      
+      
+      #### No seed tree ####
+      
+      formulas[["n0.a0"]] <- formula(response.var ~ 1)
+      
+      ## PPT
+      
+      formulas[["n0.aP"]] <- formula(response.var ~ diff.norm.ppt.z_c)
+      formulas[["n0.aP2"]] <- formula(response.var ~ diff.norm.ppt.z_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+      
+      
+      formulas[["nP.a0"]] <- formula(response.var ~ ppt.normal_c)
+      formulas[["nP.aP"]] <- formula(response.var ~ ppt.normal_c*diff.norm.ppt.z_c)
+      formulas[["nP.aP2"]] <- formula(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+      formulas[["pP"]] <- formula(response.var ~ ppt.post_c)
+      formulas[["nP2.a0"]] <- formula(response.var ~ ppt.normal_c + ppt.normal_c.sq)
+      formulas[["nP2.aP"]] <- formula(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq)
+      formulas[["nP2.aP2"]] <- formula(response.var ~ ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq)
+      formulas[["pP2"]] <- formula(response.var ~ ppt.post_c + ppt.post_c.sq)
+      formulas[["nP.aPni"]] <- formula(response.var ~ ppt.normal_c + diff.norm.ppt.z_c)
+      formulas[["nP.aP2ni"]] <- formula(response.var ~ ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+      formulas[["nP2.aPni"]] <- formula(response.var ~ ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c.sq)
+      formulas[["nP2.aP2ni"]] <- formula(response.var ~ ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq)
+      
 
+      ## snow
+
+# 
+#       formulas[["n0a.aS"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.snow.z_c)
+#       formulas[["n0.aS"]] <- formula(response.var ~ diff.norm.snow.z_c)
+#       formulas[["n0a.aS2"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.snow.z_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+#       formulas[["n0.aS2"]] <- formula(response.var ~ diff.norm.snow.z_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+# 
+#       formulas[["nSa.a0"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c)
+#       formulas[["nSa.aS"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c)
+#       formulas[["nSa.aS2"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+#       formulas[["pSa"]] <- formula(response.var ~ adult.ba.agg_c + snow.post_c)
+#       formulas[["nS2a.a0"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + snow.normal_c.sq)
+#       formulas[["nS2a.aS"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c.sq)
+#       formulas[["nS2a.aS2"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
+#       formulas[["pS2a"]] <- formula(response.var ~ adult.ba.agg_c + snow.post_c + snow.post_c.sq)
+#       formulas[["nSa.aSni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c)
+#       formulas[["nSa.aS2ni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+#       formulas[["nS2a.aSni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c.sq)
+#       formulas[["nS2a.aS2ni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
+# 
+#       formulas[["nS.a0"]] <- formula(response.var ~ snow.normal_c)
+#       formulas[["nS.aS"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.z_c)
+#       formulas[["nS.aS2"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+#       formulas[["pS"]] <- formula(response.var ~ snow.post_c)
+#       formulas[["nS2.a0"]] <- formula(response.var ~ snow.normal_c + snow.normal_c.sq)
+#       formulas[["nS2.aS"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.z_c + snow.normal_c.sq)
+#       formulas[["nS2.aS2"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
+#       formulas[["pS2"]] <- formula(response.var ~ snow.post_c + snow.post_c.sq)
+#       formulas[["nS.aSni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.z_c)
+#       formulas[["nS.aS2ni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+#       formulas[["nS2.aSni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.z_c + snow.normal_c.sq)
+#       formulas[["nS2.aS2ni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
+# 
+
+
+
+
+
+
+      ##DEF
+
+      formulas[["n0.aD"]] <- formula(response.var ~ diff.norm.def.z_c)
+      formulas[["n0.aD2"]] <- formula(response.var ~ diff.norm.def.z_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+
+
+
+      formulas[["nD.a0"]] <- formula(response.var ~ def.normal_c)
+      formulas[["nD.aD"]] <- formula(response.var ~ def.normal_c*diff.norm.def.z_c)
+      formulas[["nD.aD2"]] <- formula(response.var ~ def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+      formulas[["pD"]] <- formula(response.var ~ def.post_c)
+      formulas[["nD2.a0"]] <- formula(response.var ~ def.normal_c + def.normal_c.sq)
+      formulas[["nD2.aD"]] <- formula(response.var ~ def.normal_c*diff.norm.def.z_c + def.normal_c.sq)
+      formulas[["nD2.aD2"]] <- formula(response.var ~ def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq)
+      formulas[["pD2"]] <- formula(response.var ~ def.post_c + def.post_c.sq)
+      formulas[["nD.aDni"]] <- formula(response.var ~ def.normal_c + diff.norm.def.z_c)
+      formulas[["nD.aD2ni"]] <- formula(response.var ~ def.normal_c + diff.norm.def.z_c + def.normal_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+      formulas[["nD2.aDni"]] <- formula(response.var ~ def.normal_c + diff.norm.def.z_c + def.normal_c.sq)
+      formulas[["nD2.aD2ni"]] <- formula(response.var ~ def.normal_c + diff.norm.def.z_c + def.normal_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq)
+
+
+
+      ##AET
+
+
+      formulas[["n0.aA"]] <- formula(response.var ~ diff.norm.aet.z_c)
+      formulas[["n0.aA2"]] <- formula(response.var ~ diff.norm.aet.z_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+
+
+      formulas[["nA.a0"]] <- formula(response.var ~ aet.normal_c)
+      formulas[["nA.aA"]] <- formula(response.var ~ aet.normal_c*diff.norm.aet.z_c)
+      formulas[["nA.aA2"]] <- formula(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+      formulas[["pA"]] <- formula(response.var ~ aet.post_c)
+      formulas[["nA2.a0"]] <- formula(response.var ~ aet.normal_c + aet.normal_c.sq)
+      formulas[["nA2.aA"]] <- formula(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq)
+      formulas[["nA2.aA2"]] <- formula(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+      formulas[["pA2"]] <- formula(response.var ~ aet.post_c + aet.post_c.sq)
+      formulas[["nA.aAni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.z_c)
+      formulas[["nA.aA2ni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+      formulas[["nA2.aAni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.z_c + aet.normal_c.sq)
+      formulas[["nA2.aA2ni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+
+
+
+
+
+
+      ## PPT
+      formulas[["n0.aPmin"]] <- formula(response.var ~ diff.norm.ppt.min.z_c)
+      formulas[["n0.aP2min"]] <- formula(response.var ~ diff.norm.ppt.min.z_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+
+
+
+
+      formulas[["nP.aPmin"]] <- formula(response.var ~ ppt.normal_c*diff.norm.ppt.min.z_c)
+      formulas[["nP.aP2min"]] <- formula(response.var ~ ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c*diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+      formulas[["pPmin"]] <- formula(response.var ~ ppt.post.min_c)
+      formulas[["nP2.aPmin"]] <- formula(response.var ~ ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c.sq)
+      formulas[["nP2.aP2min"]] <- formula(response.var ~ ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c*diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq + ppt.normal_c.sq)
+      formulas[["pP2min"]] <- formula(response.var ~ ppt.post.min_c + ppt.post.min_c.sq)
+      formulas[["nP.aPminni"]] <- formula(response.var ~ ppt.normal_c + diff.norm.ppt.min.z_c)
+      formulas[["nP.aP2minni"]] <- formula(response.var ~ ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+      formulas[["nP2.aPminni"]] <- formula(response.var ~ ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c.sq)
+      formulas[["nP2.aP2minni"]] <- formula(response.var ~ ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq + ppt.normal_c.sq)
+
+#       
+      ## Snow
+# 
+#       formulas[["n0a.aSmin"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.snow.min.z_c)
+#       formulas[["n0a.aS2min"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.snow.min.z_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+#       formulas[["n0.aSmin"]] <- formula(response.var ~ diff.norm.snow.min.z_c)
+#       formulas[["n0.aS2min"]] <- formula(response.var ~ diff.norm.snow.min.z_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+# 
+# 
+# 
+#       formulas[["nSa.aSmin"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c)
+#       formulas[["nSa.aS2min"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+#       formulas[["pSmina"]] <- formula(response.var ~ adult.ba.agg_c + snow.post.min_c)
+#       formulas[["nS2a.aSmin"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c.sq)
+#       formulas[["nS2a.aS2min"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
+#       formulas[["pS2mina"]] <- formula(response.var ~ adult.ba.agg_c + snow.post.min_c + snow.post.min_c.sq)
+#       formulas[["nSa.aSminni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c)
+#       formulas[["nSa.aS2minni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+#       formulas[["nS2a.aSminni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c.sq)
+#       formulas[["nS2a.aS2minni"]] <- formula(response.var ~ adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
+# 
+#       formulas[["nS.aSmin"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.min.z_c)
+#       formulas[["nS.aS2min"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+#       formulas[["pSmin"]] <- formula(response.var ~ snow.post.min_c)
+#       formulas[["nS2.aSmin"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c.sq)
+#       formulas[["nS2.aS2min"]] <- formula(response.var ~ snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
+#       formulas[["pS2min"]] <- formula(response.var ~ snow.post.min_c + snow.post.min_c.sq)
+#       formulas[["nS.aSminni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.min.z_c)
+#       formulas[["nS.aS2minni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+#       formulas[["nS2.aSminni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c.sq)
+#       formulas[["nS2.aS2minni"]] <- formula(response.var ~ snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
+# 
+# 
+# 
+      ##DEF
+
+      formulas[["n0.aDmax"]] <- formula(response.var ~ diff.norm.def.max.z_c)
+      formulas[["n0.aD2max"]] <- formula(response.var ~ diff.norm.def.max.z_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+
+      formulas[["nD.aDmax"]] <- formula(response.var ~ def.normal_c*diff.norm.def.max.z_c)
+      formulas[["nD.aD2max"]] <- formula(response.var ~ def.normal_c*diff.norm.def.max.z_c + def.normal_c*diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+      formulas[["pDmax"]] <- formula(response.var ~ def.post.max_c)
+      formulas[["nD2.aDmax"]] <- formula(response.var ~ def.normal_c*diff.norm.def.max.z_c + def.normal_c.sq)
+      formulas[["nD2.aD2max"]] <- formula(response.var ~ def.normal_c*diff.norm.def.max.z_c + def.normal_c*diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq + def.normal_c.sq)
+      formulas[["pD2max"]] <- formula(response.var ~ def.post.max_c + def.post.max_c.sq)
+      formulas[["nD.aDmaxni"]] <- formula(response.var ~ def.normal_c + diff.norm.def.max.z_c)
+      formulas[["nD.aD2maxni"]] <- formula(response.var ~ def.normal_c + diff.norm.def.max.z_c + def.normal_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+      formulas[["nD2.aDmaxni"]] <- formula(response.var ~ def.normal_c + diff.norm.def.max.z_c + def.normal_c.sq)
+      formulas[["nD2.aD2maxni"]] <- formula(response.var ~ def.normal_c + diff.norm.def.max.z_c + def.normal_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq + def.normal_c.sq)
+
+
+
+      ##AET
+
+      formulas[["n0.aAmin"]] <- formula(response.var ~ diff.norm.aet.min.z_c)
+      formulas[["n0.aA2min"]] <- formula(response.var ~ diff.norm.aet.min.z_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+
+
+      formulas[["nA.aAmin"]] <- formula(response.var ~ aet.normal_c*diff.norm.aet.min.z_c)
+      formulas[["nA.aA2min"]] <- formula(response.var ~ aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+      formulas[["pAmin"]] <- formula(response.var ~ aet.post.min_c)
+      formulas[["nA2.aAmin"]] <- formula(response.var ~ aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c.sq)
+      formulas[["nA2.aA2min"]] <- formula(response.var ~ aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+      formulas[["pA2min"]] <- formula(response.var ~ aet.post.min_c + aet.post.min_c.sq)
+      formulas[["nA.aAminni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.min.z_c)
+      formulas[["nA.aA2minni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+      formulas[["nA2.aAminni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c.sq)
+      formulas[["nA2.aA2minni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+
+      
+      if(!(sp %in% c(cover.opts,ht.opts,htabs.opts,"HTABS.SHRUB"))) {
+      
+        
+        #### With adult ####
+        
+        formulas[["n0a.a0"]] <- formula(response.var ~ adult.ba.agg_c)
+        formulas[["n0a.aP"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.ppt.z_c)
+        formulas[["n0a.aP2"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.ppt.z_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+        
+        formulas[["nPa.a0"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c)
+        formulas[["nPa.aP"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.z_c)
+        formulas[["nPa.aP2"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+        formulas[["pPa"]] <- formula(response.var ~ adult.ba.agg_c + ppt.post_c)
+        formulas[["nP2a.a0"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c + ppt.normal_c.sq)
+        formulas[["nP2a.aP"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq)
+        formulas[["nP2a.aP2"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq)
+        formulas[["pP2a"]] <- formula(response.var ~ adult.ba.agg_c + ppt.post_c + ppt.post_c.sq)
+        formulas[["nPa.aPni"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c)
+        formulas[["nPa.aP2ni"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+        # # formulas[["nP2a.aPni"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c.sq)
+        # # formulas[["nP2a.aP2ni"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq)
+        # 
+        
+
+        formulas[["n0a.aD"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.def.z_c)
+        formulas[["n0a.aD2"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.def.z_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+
+        formulas[["nDa.a0"]] <- formula(response.var ~ adult.ba.agg_c + def.normal_c)
+        formulas[["nDa.aD"]] <- formula(response.var ~ adult.ba.agg_c + def.normal_c*diff.norm.def.z_c)
+        formulas[["nDa.aD2"]] <- formula(response.var ~ adult.ba.agg_c + def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+        formulas[["pDa"]] <- formula(response.var ~ adult.ba.agg_c + def.post_c)
+        formulas[["nD2a.a0"]] <- formula(response.var ~ adult.ba.agg_c + def.normal_c + def.normal_c.sq)
+        formulas[["nD2a.aD"]] <- formula(response.var ~ adult.ba.agg_c + def.normal_c*diff.norm.def.z_c + def.normal_c.sq)
+        formulas[["nD2a.aD2"]] <- formula(response.var ~ adult.ba.agg_c + def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq)
+        formulas[["pD2a"]] <- formula(response.var ~ adult.ba.agg_c + def.post_c + def.post_c.sq)
+        formulas[["nDa.aDni"]] <- formula(response.var ~ adult.ba.agg_c + def.normal_c + diff.norm.def.z_c)
+        formulas[["nDa.aD2ni"]] <- formula(response.var ~ adult.ba.agg_c + def.normal_c + diff.norm.def.z_c + def.normal_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+        formulas[["nD2a.aDni"]] <- formula(response.var ~ adult.ba.agg_c + def.normal_c + diff.norm.def.z_c + def.normal_c.sq)
+        formulas[["nD2a.aD2ni"]] <- formula(response.var ~ adult.ba.agg_c + def.normal_c + diff.norm.def.z_c + def.normal_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq)
+
+
+        formulas[["n0a.aA2"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.aet.z_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        formulas[["n0a.aA"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.aet.z_c)
+
+
+        formulas[["nAa.a0"]] <- formula(response.var ~ adult.ba.agg_c + aet.normal_c)
+        formulas[["nAa.aA"]] <- formula(response.var ~ adult.ba.agg_c + aet.normal_c*diff.norm.aet.z_c)
+        formulas[["nAa.aA2"]] <- formula(response.var ~ adult.ba.agg_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        formulas[["pAa"]] <- formula(response.var ~ adult.ba.agg_c + aet.post_c)
+        formulas[["nA2a.a0"]] <- formula(response.var ~ adult.ba.agg_c + aet.normal_c + aet.normal_c.sq)
+        formulas[["nA2a.aA"]] <- formula(response.var ~ adult.ba.agg_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq)
+        formulas[["nA2a.aA2"]] <- formula(response.var ~ adult.ba.agg_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+        formulas[["pA2a"]] <- formula(response.var ~ adult.ba.agg_c + aet.post_c + aet.post_c.sq)
+        formulas[["nAa.aAni"]] <- formula(response.var ~ adult.ba.agg_c + aet.normal_c + diff.norm.aet.z_c)
+        formulas[["nAa.aA2ni"]] <- formula(response.var ~ adult.ba.agg_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        formulas[["nA2a.aAni"]] <- formula(response.var ~ adult.ba.agg_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c.sq)
+        formulas[["nA2a.aA2ni"]] <- formula(response.var ~ adult.ba.agg_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+
+
+        formulas[["n0a.aPmin"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.ppt.min.z_c)
+        formulas[["n0a.aP2min"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.ppt.min.z_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+
+
+        formulas[["nPa.aPmin"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.min.z_c)
+        formulas[["nPa.aP2min"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c*diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+        formulas[["pPmina"]] <- formula(response.var ~ adult.ba.agg_c + ppt.post.min_c)
+        formulas[["nP2a.aPmin"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c.sq)
+        formulas[["nP2a.aP2min"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c*diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq + ppt.normal_c.sq)
+        formulas[["pP2mina"]] <- formula(response.var ~ adult.ba.agg_c + ppt.post.min_c + ppt.post.min_c.sq)
+        formulas[["nPa.aPminni"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.min.z_c)
+        formulas[["nPa.aP2minni"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+        formulas[["nP2a.aPminni"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c.sq)
+        formulas[["nP2a.aP2minni"]] <- formula(response.var ~ adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq + ppt.normal_c.sq)
+
+
+
+        formulas[["n0a.aDmax"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.def.max.z_c)
+        formulas[["n0a.aD2max"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.def.max.z_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+
+
+        formulas[["nDa.aDmax"]] <- formula(response.var ~ adult.ba.agg_c + def.normal_c*diff.norm.def.max.z_c)
+        formulas[["nDa.aD2max"]] <- formula(response.var ~ adult.ba.agg_c + def.normal_c*diff.norm.def.max.z_c + def.normal_c*diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+        formulas[["pDmaxa"]] <- formula(response.var ~ adult.ba.agg_c + def.post.max_c)
+        formulas[["nD2a.aDmax"]] <- formula(response.var ~ adult.ba.agg_c + def.normal_c*diff.norm.def.max.z_c + def.normal_c.sq)
+        formulas[["nD2a.aD2max"]] <- formula(response.var ~ adult.ba.agg_c + def.normal_c*diff.norm.def.max.z_c + def.normal_c*diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq + def.normal_c.sq)
+        formulas[["pD2maxa"]] <- formula(response.var ~ adult.ba.agg_c + def.post.max_c + def.post.max_c.sq)
+        formulas[["nDa.aDmaxni"]] <- formula(response.var ~ adult.ba.agg_c + def.normal_c + diff.norm.def.max.z_c)
+        formulas[["nDa.aD2maxni"]] <- formula(response.var ~ adult.ba.agg_c + def.normal_c + diff.norm.def.max.z_c + def.normal_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+        formulas[["nD2a.aDmaxni"]] <- formula(response.var ~ adult.ba.agg_c + def.normal_c + diff.norm.def.max.z_c + def.normal_c.sq)
+        formulas[["nD2a.aD2maxni"]] <- formula(response.var ~ adult.ba.agg_c + def.normal_c + diff.norm.def.max.z_c + def.normal_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq + def.normal_c.sq)
+
+
+        formulas[["n0a.aAmin"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.aet.min.z_c)
+        formulas[["n0a.aA2min"]] <- formula(response.var ~ adult.ba.agg_c + diff.norm.aet.min.z_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+
+
+        formulas[["nAa.aAmin"]] <- formula(response.var ~ adult.ba.agg_c + aet.normal_c*diff.norm.aet.min.z_c)
+        formulas[["nAa.aA2min"]] <- formula(response.var ~ adult.ba.agg_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+        formulas[["pAmina"]] <- formula(response.var ~ adult.ba.agg_c + aet.post.min_c)
+        formulas[["nA2a.aAmin"]] <- formula(response.var ~ adult.ba.agg_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c.sq)
+        formulas[["nA2a.aA2min"]] <- formula(response.var ~ adult.ba.agg_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+        formulas[["pA2mina"]] <- formula(response.var ~ adult.ba.agg_c + aet.post.min_c + aet.post.min_c.sq)
+        formulas[["nAa.aAminni"]] <- formula(response.var ~ adult.ba.agg_c + aet.normal_c + diff.norm.aet.min.z_c)
+        formulas[["nAa.aA2minni"]] <- formula(response.var ~ adult.ba.agg_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+        formulas[["nA2a.aAminni"]] <- formula(response.var ~ adult.ba.agg_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c.sq)
+        formulas[["nA2a.aA2minni"]] <- formula(response.var ~ adult.ba.agg_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+
+
+        
+        
+        
+        
+        #### With seed tree ####
+        
+        formulas[["n0s.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + 1)
+        formulas[["n0as.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c)
+        
+        ## PPT
+        
+        formulas[["n0as.aP"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.ppt.z_c)
+        formulas[["n0s.aP"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.ppt.z_c)
+        formulas[["n0as.aP2"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.ppt.z_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+        formulas[["n0s.aP2"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.ppt.z_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+        
+        formulas[["nPas.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c)
+        formulas[["nPas.aP"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.z_c)
+        formulas[["nPas.aP2"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+        formulas[["pPas"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.post_c)
+        formulas[["nP2as.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + ppt.normal_c.sq)
+        formulas[["nP2as.aP"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq)
+        formulas[["nP2as.aP2"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq)
+        formulas[["pP2as"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.post_c + ppt.post_c.sq)
+        formulas[["nPas.aPni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c)
+        formulas[["nPas.aP2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+        formulas[["nP2as.aPni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c.sq)
+        formulas[["nP2as.aP2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq)
+        
+        formulas[["nPs.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.normal_c)
+        formulas[["nPs.aP"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.normal_c*diff.norm.ppt.z_c)
+        formulas[["nPs.aP2"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+        formulas[["pPs"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.post_c)
+        formulas[["nP2s.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.normal_c + ppt.normal_c.sq)
+        formulas[["nP2s.aP"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c.sq)
+        formulas[["nP2s.aP2"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.normal_c*diff.norm.ppt.z_c + ppt.normal_c*diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq)
+        formulas[["pP2s"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.post_c + ppt.post_c.sq)
+        formulas[["nPs.aPni"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.normal_c + diff.norm.ppt.z_c)
+        formulas[["nPs.aP2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq)
+        formulas[["nP2s.aPni"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c.sq)
+        formulas[["nP2s.aP2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.normal_c + diff.norm.ppt.z_c + ppt.normal_c + diff.norm.ppt.z_c.sq + diff.norm.ppt.z_c.sq + ppt.normal_c.sq)
+        
+        
+        
   
-  loos <- loo(m.nofire,m.fire)$ic_diffs__
-  loos <- as.data.frame(loos)
-  loos$sp <- sp
+  
+        ## Snow
+  # 
+  #       formulas[["n0as.aS"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.snow.z_c)
+  #       formulas[["n0s.aS"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.snow.z_c)
+  #       formulas[["n0as.aS2"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.snow.z_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+  #       formulas[["n0s.aS2"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.snow.z_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+  # 
+  #       formulas[["nSas.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c)
+  #       formulas[["nSas.aS"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c)
+  #       formulas[["nSas.aS2"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+  #       formulas[["pSas"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.post_c)
+  #       formulas[["nS2as.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + snow.normal_c.sq)
+  #       formulas[["nS2as.aS"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c.sq)
+  #       formulas[["nS2as.aS2"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
+  #       formulas[["pS2as"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.post_c + snow.post_c.sq)
+  #       formulas[["nSas.aSni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c)
+  #       formulas[["nSas.aS2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+  #       formulas[["nS2as.aSni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c.sq)
+  #       formulas[["nS2as.aS2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
+  # 
+  #       formulas[["nSs.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c)
+  #       formulas[["nSs.aS"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.z_c)
+  #       formulas[["nSs.aS2"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+  #       formulas[["pSs"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.post_c)
+  #       formulas[["nS2s.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + snow.normal_c.sq)
+  #       formulas[["nS2s.aS"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c.sq)
+  #       formulas[["nS2s.aS2"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.z_c + snow.normal_c*diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
+  #       formulas[["pS2s"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.post_c + snow.post_c.sq)
+  #       formulas[["nSs.aSni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.z_c)
+  #       formulas[["nSs.aS2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq)
+  #       formulas[["nS2s.aSni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c.sq)
+  #       formulas[["nS2s.aS2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.z_c + snow.normal_c + diff.norm.snow.z_c.sq + diff.norm.snow.z_c.sq + snow.normal_c.sq)
+  
+  
   
 
-  # calc AUC or Rsq
-  predicted.nofire <- predict(m.nofire)[,1]
-  predicted.fire <- predict(m.fire)[,1]
 
+        ##DEF
+
+        formulas[["n0as.aD"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.def.z_c)
+        formulas[["n0as.aD2"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.def.z_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+        formulas[["n0s.aD"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.def.z_c)
+        formulas[["n0s.aD2"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.def.z_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+
+
+        formulas[["nDas.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c)
+        formulas[["nDas.aD"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c*diff.norm.def.z_c)
+        formulas[["nDas.aD2"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+        formulas[["pDas"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.post_c)
+        formulas[["nD2as.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c + def.normal_c.sq)
+        formulas[["nD2as.aD"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c*diff.norm.def.z_c + def.normal_c.sq)
+        formulas[["nD2as.aD2"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq)
+        formulas[["pD2as"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.post_c + def.post_c.sq)
+        formulas[["nDas.aDni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c + diff.norm.def.z_c)
+        formulas[["nDas.aD2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c + diff.norm.def.z_c + def.normal_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+        formulas[["nD2as.aDni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c + diff.norm.def.z_c + def.normal_c.sq)
+        formulas[["nD2as.aD2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c + diff.norm.def.z_c + def.normal_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq)
+
+        formulas[["nDs.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + def.normal_c)
+        formulas[["nDs.aD"]] <- formula(response.var ~ seed_tree_distance_general_c + def.normal_c*diff.norm.def.z_c)
+        formulas[["nDs.aD2"]] <- formula(response.var ~ seed_tree_distance_general_c + def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+        formulas[["pDs"]] <- formula(response.var ~ seed_tree_distance_general_c + def.post_c)
+        formulas[["nD2s.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + def.normal_c + def.normal_c.sq)
+        formulas[["nD2s.aD"]] <- formula(response.var ~ seed_tree_distance_general_c + def.normal_c*diff.norm.def.z_c + def.normal_c.sq)
+        formulas[["nD2s.aD2"]] <- formula(response.var ~ seed_tree_distance_general_c + def.normal_c*diff.norm.def.z_c + def.normal_c*diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq)
+        formulas[["pD2s"]] <- formula(response.var ~ seed_tree_distance_general_c + def.post_c + def.post_c.sq)
+        formulas[["nDs.aDni"]] <- formula(response.var ~ seed_tree_distance_general_c + def.normal_c + diff.norm.def.z_c)
+        formulas[["nDs.aD2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + def.normal_c + diff.norm.def.z_c + def.normal_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq)
+        formulas[["nD2s.aDni"]] <- formula(response.var ~ seed_tree_distance_general_c + def.normal_c + diff.norm.def.z_c + def.normal_c.sq)
+        formulas[["nD2s.aD2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + def.normal_c + diff.norm.def.z_c + def.normal_c + diff.norm.def.z_c.sq + diff.norm.def.z_c.sq + def.normal_c.sq)
+
+
+
+        ##AET
+
+        formulas[["n0as.aA"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.aet.z_c)
+        formulas[["n0as.aA2"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.aet.z_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+
+        formulas[["n0s.aA"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.aet.z_c)
+        formulas[["n0s.aA2"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.aet.z_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+
+        formulas[["nAas.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c)
+        formulas[["nAas.aA"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c*diff.norm.aet.z_c)
+        formulas[["nAas.aA2"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        formulas[["pAas"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.post_c)
+        formulas[["nA2as.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c + aet.normal_c.sq)
+        formulas[["nA2as.aA"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq)
+        formulas[["nA2as.aA2"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+        formulas[["pA2as"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.post_c + aet.post_c.sq)
+        formulas[["nAas.aAni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c + diff.norm.aet.z_c)
+        formulas[["nAas.aA2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        formulas[["nA2as.aAni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c.sq)
+        formulas[["nA2as.aA2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+
+        formulas[["nAs.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c)
+        formulas[["nAs.aA"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.z_c)
+        formulas[["nAs.aA2"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        formulas[["pAs"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.post_c)
+        formulas[["nA2s.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + aet.normal_c.sq)
+        formulas[["nA2s.aA"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq)
+        formulas[["nA2s.aA2"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+        formulas[["pA2s"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.post_c + aet.post_c.sq)
+        formulas[["nAs.aAni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c)
+        formulas[["nAs.aA2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        formulas[["nA2s.aAni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c.sq)
+        formulas[["nA2s.aA2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+
+
+
+        
+        
+        
+        ## PPT
+        
+        formulas[["n0as.aPmin"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.ppt.min.z_c)
+        formulas[["n0as.aP2min"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.ppt.min.z_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+        formulas[["n0s.aPmin"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.ppt.min.z_c)
+        formulas[["n0s.aP2min"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.ppt.min.z_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+        
+        
+        
+        formulas[["nPas.aPmin"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.min.z_c)
+        formulas[["nPas.aP2min"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c*diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+        formulas[["pPminas"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.post.min_c)
+        formulas[["nP2as.aPmin"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c.sq)
+        formulas[["nP2as.aP2min"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c*diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq + ppt.normal_c.sq)
+        formulas[["pP2minas"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.post.min_c + ppt.post.min_c.sq)
+        formulas[["nPas.aPminni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.min.z_c)
+        formulas[["nPas.aP2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+        formulas[["nP2as.aPminni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c.sq)
+        formulas[["nP2as.aP2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq + ppt.normal_c.sq)
+        
+        formulas[["nPs.aPmin"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.normal_c*diff.norm.ppt.min.z_c)
+        formulas[["nPs.aP2min"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c*diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+        formulas[["pPmins"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.post.min_c)
+        formulas[["nP2s.aPmin"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c.sq)
+        formulas[["nP2s.aP2min"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.normal_c*diff.norm.ppt.min.z_c + ppt.normal_c*diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq + ppt.normal_c.sq)
+        formulas[["pP2mins"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.post.min_c + ppt.post.min_c.sq)
+        formulas[["nPs.aPminni"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.normal_c + diff.norm.ppt.min.z_c)
+        formulas[["nPs.aP2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq)
+        formulas[["nP2s.aPminni"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c.sq)
+        formulas[["nP2s.aP2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + ppt.normal_c + diff.norm.ppt.min.z_c + ppt.normal_c + diff.norm.ppt.min.z_c.sq + diff.norm.ppt.min.z_c.sq + ppt.normal_c.sq)
+        
+        
+        
   
-  if(sp %in% cover.opts) {
-    observed <- d.c$response.var
-    auc.nofire <- cor(observed,predicted.nofire)^2
-    auc.fire <- cor(observed,predicted.fire)^2
-  } else {
-    observed <- d.c$regen.presab.old.01
-    auc.nofire <- auc(observed,predicted.nofire)
-    auc.fire <- auc(observed,predicted.fire)
+  
+        ## Snow
+  # 
+  #       formulas[["n0as.aSmin"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.snow.min.z_c)
+  #       formulas[["n0as.aS2min"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.snow.min.z_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+  #       formulas[["n0s.aSmin"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.snow.min.z_c)
+  #       formulas[["n0s.aS2min"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.snow.min.z_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+  # 
+  # 
+  # 
+  #       formulas[["nSas.aSmin"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c)
+  #       formulas[["nSas.aS2min"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+  #       formulas[["pSminas"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.post.min_c)
+  #       formulas[["nS2as.aSmin"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c.sq)
+  #       formulas[["nS2as.aS2min"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
+  #       formulas[["pS2minas"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.post.min_c + snow.post.min_c.sq)
+  #       formulas[["nSas.aSminni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c)
+  #       formulas[["nSas.aS2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+  #       formulas[["nS2as.aSminni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c.sq)
+  #       formulas[["nS2as.aS2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
+  # 
+  #       formulas[["nSs.aSmin"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.min.z_c)
+  #       formulas[["nSs.aS2min"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+  #       formulas[["pSmins"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.post.min_c)
+  #       formulas[["nS2s.aSmin"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c.sq)
+  #       formulas[["nS2s.aS2min"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c*diff.norm.snow.min.z_c + snow.normal_c*diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
+  #       formulas[["pS2mins"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.post.min_c + snow.post.min_c.sq)
+  #       formulas[["nSs.aSminni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.min.z_c)
+  #       formulas[["nSs.aS2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq)
+  #       formulas[["nS2s.aSminni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c.sq)
+  #       formulas[["nS2s.aS2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + snow.normal_c + diff.norm.snow.min.z_c + snow.normal_c + diff.norm.snow.min.z_c.sq + diff.norm.snow.min.z_c.sq + snow.normal_c.sq)
+  # 
+  
+
+
+        ##DEF
+
+        formulas[["n0as.aDmax"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.def.max.z_c)
+        formulas[["n0as.aD2max"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.def.max.z_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+
+        formulas[["n0s.aDmax"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.def.max.z_c)
+        formulas[["n0s.aD2max"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.def.max.z_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+
+        formulas[["nDas.aDmax"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c*diff.norm.def.max.z_c)
+        formulas[["nDas.aD2max"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c*diff.norm.def.max.z_c + def.normal_c*diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+        formulas[["pDmaxas"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.post.max_c)
+        formulas[["nD2as.aDmax"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c*diff.norm.def.max.z_c + def.normal_c.sq)
+        formulas[["nD2as.aD2max"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c*diff.norm.def.max.z_c + def.normal_c*diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq + def.normal_c.sq)
+        formulas[["pDmax2as"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.post.max_c + def.post.max_c.sq)
+        formulas[["nDas.aDmaxni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c + diff.norm.def.max.z_c)
+        formulas[["nDas.aD2maxni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c + diff.norm.def.max.z_c + def.normal_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+        formulas[["nD2as.aDmaxni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c + diff.norm.def.max.z_c + def.normal_c.sq)
+        formulas[["nD2as.aD2maxni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + def.normal_c + diff.norm.def.max.z_c + def.normal_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq + def.normal_c.sq)
+
+        formulas[["nDs.aDmax"]] <- formula(response.var ~ seed_tree_distance_general_c + def.normal_c*diff.norm.def.max.z_c)
+        formulas[["nDs.aD2max"]] <- formula(response.var ~ seed_tree_distance_general_c + def.normal_c*diff.norm.def.max.z_c + def.normal_c*diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+        formulas[["pDmaxs"]] <- formula(response.var ~ seed_tree_distance_general_c + def.post.max_c)
+        formulas[["nD2s.aDmax"]] <- formula(response.var ~ seed_tree_distance_general_c + def.normal_c*diff.norm.def.max.z_c + def.normal_c.sq)
+        formulas[["nD2s.aD2max"]] <- formula(response.var ~ seed_tree_distance_general_c + def.normal_c*diff.norm.def.max.z_c + def.normal_c*diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq + def.normal_c.sq)
+        formulas[["pD2maxs"]] <- formula(response.var ~ seed_tree_distance_general_c + def.post.max_c + def.post.max_c.sq)
+        formulas[["nDs.aDmaxni"]] <- formula(response.var ~ seed_tree_distance_general_c + def.normal_c + diff.norm.def.max.z_c)
+        formulas[["nDs.aD2maxni"]] <- formula(response.var ~ seed_tree_distance_general_c + def.normal_c + diff.norm.def.max.z_c + def.normal_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq)
+        formulas[["nD2s.aDmaxni"]] <- formula(response.var ~ seed_tree_distance_general_c + def.normal_c + diff.norm.def.max.z_c + def.normal_c.sq)
+        formulas[["nD2s.aD2maxni"]] <- formula(response.var ~ seed_tree_distance_general_c + def.normal_c + diff.norm.def.max.z_c + def.normal_c + diff.norm.def.max.z_c.sq + diff.norm.def.max.z_c.sq + def.normal_c.sq)
+
+
+
+        ##AET
+
+        formulas[["n0as.aAmin"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.aet.min.z_c)
+        formulas[["n0as.aA2min"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + diff.norm.aet.min.z_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+
+        formulas[["n0s.aAmin"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.aet.min.z_c)
+        formulas[["n0s.aA2min"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.aet.min.z_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+
+
+        formulas[["nAas.aAmin"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c*diff.norm.aet.min.z_c)
+        formulas[["nAas.aA2min"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+        formulas[["pAminas"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.post.min_c)
+        formulas[["nA2as.aAmin"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c.sq)
+        formulas[["nA2as.aA2min"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+        formulas[["pA2minas"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.post.min_c + aet.post.min_c.sq)
+        formulas[["nAas.aAminni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c + diff.norm.aet.min.z_c)
+        formulas[["nAas.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+        formulas[["nA2as.aAminni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c.sq)
+        formulas[["nA2as.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+
+        formulas[["nAs.aAmin"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.min.z_c)
+        formulas[["nAs.aA2min"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+        formulas[["pAmins"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.post.min_c)
+        formulas[["nA2s.aAmin"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c.sq)
+        formulas[["nA2s.aA2min"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+        formulas[["pA2mins"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.post.min_c + aet.post.min_c.sq)
+        formulas[["nAs.aAminni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c)
+        formulas[["nAs.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+        formulas[["nA2s.aAminni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c.sq)
+        formulas[["nA2s.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+      }
+    }
+    
+    
+    
+    
+    
+    
+    cv.results <- data.frame()
+    
+    cat("\n")
+    
+    for(i in 1:length(formulas)) {
+      
+      #cat("\rEvaluating model ",i," of ",length(formulas))
+      
+      formula.name <- names(formulas)[i]
+      cv.result <- cvfun.fire(formulas[[i]],data=d.c)
+      cv.result.named <- data.frame(model=names(formulas)[i],cv.result,stringsAsFactors=FALSE)
+      cv.results <- rbind(cv.results,cv.result.named)
+      
+    }
+    
+    cv.results$model <- as.character(cv.results$model)
+    
+    
+    
+    
+    
+    
+    
+    ## finding the best normal and then the corresponding best anomaly and post
+    
+    ## normal models
+    search <- ".a0"
+    normal.model.names <- cv.results[grep(search,cv.results$model,fixed=TRUE),]$mod
+    # normal.model.names <- normal.model.names[normal.model.names != "n0.a0"] # exclude null model
+
+    if(sp %in% cover.opts) { # don't allow a normal with adults in it if this is a cover model
+      norm.search.opts <- c(Pmean = "n(P|0)2?\\.a0",
+                            Dmean = "n(D|0)2?\\.a0",
+                            Amean = "n(A|0)2?\\.a0",
+                            # # Smean = "n(S|0)2?\\.a0",
+                            Pmin = "n(P|0)2?\\.a0",
+                            Dmax = "n(D|0)2?\\.a0",
+                            Amin = "n(A|0)2?\\.a0"
+                            # 
+                            # ,
+                            # Smin = "n(S|0)2?\\.a0"
+                            )
+    } else {
+      norm.search.opts <- c(Pmean = "n(P|0)2?a?s?\\.a0",
+                            Dmean = "n(D|0)2?a?s?\\.a0",
+                            Amean = "n(A|0)2?a?s?\\.a0",
+                            # Smean = "n(S|0)2?a?s?\\.a0",
+                            Pmin = "n(P|0)2?a?s?\\.a0",
+                            Dmax = "n(D|0)2?a?s?\\.a0",
+                            Amin = "n(A|0)2?a?s?\\.a0"
+                            # ,
+                            # Smin = "n(S|0)2?a?s?\\.a0"
+                            )
+    }
+
+    anom.search.opts <- c(Pmean = "aP2?(ni)?$",
+                          Dmean = "aD2?(ni)?$",
+                          Amean = "aA2?(ni)?$",
+                          # Smean = "aS2?(ni)?$",
+                          Pmin = "aP2?min(ni)?$",
+                          Dmax = "aD2?max(ni)?$",
+                          Amin = "aA2?min(ni)?$"
+                          # ,
+                          # Smin = "aS2?min(ni)?$"
+    )
+
+
+    post.search.opts <- c(Pmean = "pP2?a?s?$",
+                          Dmean = "pD2?a?s?$",
+                          Amean = "pA2?a?s?$",
+                          # Smean = "pS2?a?s?$",
+                          Pmin = "pP2?mina?s?$",
+                          Dmax = "pD2?maxa?s?$",
+                          Amin = "pA2?mina?s?$"
+                          # ,
+                          # Smin = "pS2?mina?s?$"
+    )
+
+
+    
+    
+    # ## For ppt only
+    # 
+    # if(sp %in% cover.opts) { # don't allow a normal with adults in it if this is a cover model
+    #   norm.search.opts <- c(Pmean = "n(P|0)2?\\.a0",
+    #                         Pmin = "n(P|0)2?\\.a0")
+    # } else {
+    #   norm.search.opts <- c(Pmean = "n(P|0)2?a?s?\\.a0",
+    #                         Pmin = "n(P|0)2?a?s?\\.a0")
+    # }
+    # 
+    # anom.search.opts <- c(Pmean = "aP2?(ni)?$",
+    #                       Pmin = "aP2?min(ni)?$")
+    # 
+    # 
+    # post.search.opts <- c(Pmean = "pP2?a?s?$",
+    #                       Pmin = "pP2?mina?s?$")
+    # 
+
+
+
+
+
+    
+    
+    d.maes.anoms.sp <- data.frame()
+    
+    
+    for(i in 1:length(anom.search.opts)) {
+      
+      anom.name <- names(norm.search.opts)[i]
+      norm.search <- norm.search.opts[i]
+      anom.search <- anom.search.opts[i]
+      null.names <- c("n0.a0","n0a.a0","n0s.a0","n0as.a0")
+      normal.model.names <- cv.results[grep(norm.search,cv.results$model,fixed=FALSE),]$model
+      
+      d.cv.normal <- cv.results[cv.results$model %in% normal.model.names,]
+      best.normal.mod <- d.cv.normal[which(d.cv.normal$mae == min(d.cv.normal$mae,na.rm=TRUE)),]$mod[1]
+      
+      #what is the best anomaly model for that normal, sticking with whichever anom we have
+      best.normal.normal.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
+      best.normal.anom.search <- paste0(best.normal.normal.part,"\\.",anom.search)
+      anom.model.names <- cv.results[grep(best.normal.anom.search,cv.results$model,fixed=FALSE),]$model
+      d.cv.anom <- cv.results[cv.results$model %in% anom.model.names,]
+      best.anom.mod <- d.cv.anom[which(d.cv.anom$mae == min(d.cv.anom$mae,na.rm=TRUE)),]$mod[1]
+      
+      #what is the best normal, excluding null models
+      normal.model.names.nonull <- normal.model.names[!(normal.model.names %in% null.names)]
+      d.cv.normal.nonull <- cv.results[cv.results$model %in% normal.model.names.nonull,]
+      best.normal.nonull.mod <- d.cv.normal.nonull[which(d.cv.normal.nonull$mae == min(d.cv.normal.nonull$mae,na.rm=TRUE)),]$mod[1]
+      
+      
+  
+      
+      
+      #what is the best post model for that normal, sticking with whichever anom we have
+      post.mod.name.1 <- gsub("^n","p",best.normal.nonull.mod)
+      post.mod.name.2 <- substr(post.mod.name.1,1,nchar(post.mod.name.1)-3)
+      extreme.text <- "(min)?(max)?"
+      post.mod.name.p1 <- substr(post.mod.name.2,1,2)
+      post.mod.name.p2 <- substr(post.mod.name.2,3,3)
+      post.mod.name.p3 <- substr(post.mod.name.2,4,100)
+      post.mod.search <- paste0(post.mod.name.p1,extreme.text,post.mod.name.p2,extreme.text,post.mod.name.p3)
+      post.model.names <- cv.results[grep(post.mod.search,cv.results$model,fixed=FALSE),]$model
+      d.cv.post <- cv.results[cv.results$model %in% post.model.names,]
+      best.post.mod <- d.cv.post[which(d.cv.post$mae == min(d.cv.post$mae,na.rm=TRUE)),]$mod[1]
+      
+      
+      ## get maes of best normal, best anomal, best normal.nonull, best.post
+      best.anom.mae <- cv.results[cv.results$model == best.anom.mod,"mae"]
+      best.anom.normal.mae <- cv.results[cv.results$model == best.normal.mod,"mae"]
+      best.normal.nonull.mae <- cv.results[cv.results$model == best.normal.nonull.mod,"mae"]
+      best.post.mae <- cv.results[cv.results$model == best.post.mod,"mae"]
+      
+      
+      ### Store MAEs of the best models
+      best.anomaly.mod <- best.anom.mod
+      best.anom.normal <- best.normal.mod
+      best.normal.nonull <- best.normal.nonull.mod
+      best.post <- best.post.mod
+      
+      
+      d.maes.anoms.sp.anom <- data.frame(best.anomaly.mod,best.anom.normal,best.normal.nonull,best.post,
+                                         best.anom.mae,best.anom.normal.mae,best.normal.nonull.mae,best.post.mae,
+                                         sp,anom.name,stringsAsFactors=FALSE)
+      
+      d.maes.anoms.sp <- rbind(d.maes.anoms.sp,d.maes.anoms.sp.anom)
+      
+    }
+    
+    d.maes.anoms <- rbind(d.maes.anoms,d.maes.anoms.sp)
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    ## Now for each anom model , make predictions
+    
+    
+    
+    
+    ### Function to find the center of a "fixed" predictor variable within the species distribution
+    mid.val.fun <- function(var) {
+      mid.val <- mean(d.c[,var],na.rm=TRUE)
+      return(mid.val)
+    }
+    
+    low.val.fun <- function(var) {
+      a <- quantile(d.c[,var],0.25,na.rm=TRUE)
+      #a <- min(d.c[,var])
+      return(a)
+    }
+    
+    high.val.fun <- function(var) {
+      a <- quantile(d.c[,var],0.75,na.rm=TRUE)
+      #a <- max(d.c[,var])
+      return(a)
+    }
+    
+    vars <- c("ppt.normal_c","ppt.normal_c.sq","diff.norm.ppt.z_c","diff.norm.ppt.z_c.sq","tmean.normal_c","tmean.normal_c.sq",
+              "diff.norm.tmean.z_c","diff.norm.tmean.z_c.sq",
+              "snow.normal_c","diff.norm.snow.z_c","diff.norm.snow.z_c.sq","diff.norm.snow.min.z_c","diff.norm.snow.min.z_c.sq",
+              "aet.normal_c","aet.normal_c.sq","diff.norm.aet.z_c","diff.norm.aet.z_c.sq","def.normal_c","def.normal_c.sq",
+              "diff.norm.def.z_c","diff.norm.def.z_c.sq",
+              "seed_tree_distance_general_c","rad.march_c","adult.ba.agg_c"
+    )
+    
+    
+    
+    mid.val <- sapply(vars,mid.val.fun,USE.NAMES=TRUE)
+    
+    low.val <- sapply(vars,low.val.fun,USE.NAMES=TRUE)
+    names(low.val) <- vars
+    
+    high.val <- sapply(vars,high.val.fun,USE.NAMES=TRUE)
+    names(high.val) <- vars
+    
+    
+    
+    diff.norm.seq <- seq(from=-1.5,to=1.5,length.out=100)
+    diff.norm.seq.rev <- rev(diff.norm.seq)
+    
+    newdat <- data.frame(
+      ppt.normal_c = c(rep(low.val["ppt.normal_c"],100),rep(mid.val["ppt.normal_c"],100),rep(high.val["ppt.normal_c"],100)),
+      ppt.normal_c.sq = c(rep(low.val["ppt.normal_c"]^2,100),rep(mid.val["ppt.normal_c"]^2,100),rep(high.val["ppt.normal_c"]^2,100)),
+      tmean.normal_c = c(rep(low.val["tmean.normal_c"],100),rep(mid.val["tmean.normal_c"],100),rep(high.val["tmean.normal_c"],100)),
+      tmean.normal_c.sq = c(rep(low.val["tmean.normal_c"]^2,100),rep(mid.val["tmean.normal_c"]^2,100),rep(high.val["tmean.normal_c"]^2,100)),
+      def.normal_c = c(rep(low.val["def.normal_c"],100),rep(mid.val["def.normal_c"],100),rep(high.val["def.normal_c"],100)),
+      def.normal_c.sq = c(rep(low.val["def.normal_c"]^2,100),rep(mid.val["def.normal_c"]^2,100),rep(high.val["def.normal_c"]^2,100)),
+      aet.normal_c = c(rep(low.val["aet.normal_c"],100),rep(mid.val["aet.normal_c"],100),rep(high.val["aet.normal_c"],100)),
+      aet.normal_c.sq = c(rep(low.val["aet.normal_c"]^2,100),rep(mid.val["aet.normal_c"]^2,100),rep(high.val["aet.normal_c"]^2,100)),
+      snow.normal_c = c(rep(low.val["snow.normal_c"],100),rep(mid.val["snow.normal_c"],100),rep(high.val["snow.normal_c"],100)),
+      snow.normal_c.sq = c(rep(low.val["snow.normal_c"]^2,100),rep(mid.val["snow.normal_c"]^2,100),rep(high.val["snow.normal_c"]^2,100)),
+      
+      norm.level = c(rep("low",100),rep("mid",100),rep("high",100)),
+      
+      diff.norm.ppt.z_c = rep(diff.norm.seq,3),
+      diff.norm.ppt.z_c.sq = rep(diff.norm.seq^2,3),
+      diff.norm.tmean.z_c = rep(diff.norm.seq.rev,3),
+      diff.norm.tmean.z_c.sq = rep(diff.norm.seq.rev,3)^2,
+      diff.norm.aet.z_c = rep(diff.norm.seq,3),
+      diff.norm.aet.z_c.sq = rep(diff.norm.seq^2,3),
+      diff.norm.def.z_c = rep(diff.norm.seq.rev,3),
+      diff.norm.def.z_c.sq = rep(diff.norm.seq.rev,3)^2,
+      diff.norm.snow.z_c = rep(diff.norm.seq.rev,3),
+      diff.norm.snow.z_c.sq = rep(diff.norm.seq.rev,3)^2,
+      
+      diff.norm.ppt.min.z_c = rep(diff.norm.seq,3),
+      diff.norm.ppt.min.z_c.sq = rep(diff.norm.seq^2,3),
+      diff.norm.tmean.max.z_c = rep(diff.norm.seq.rev,3),
+      diff.norm.tmean.max.z_c.sq = rep(diff.norm.seq.rev,3)^2,
+      diff.norm.aet.min.z_c = rep(diff.norm.seq,3),
+      diff.norm.aet.min.z_c.sq = rep(diff.norm.seq^2,3),
+      diff.norm.def.max.z_c = rep(diff.norm.seq.rev,3),
+      diff.norm.def.max.z_c.sq = rep(diff.norm.seq.rev,3)^2,
+      diff.norm.snow.min.z_c = rep(diff.norm.seq.rev,3),
+      diff.norm.snow.min.z_c.sq = rep(diff.norm.seq.rev,3)^2,
+      
+      seed_tree_distance_general_c = mid.val["seed_tree_distance_general_c"],
+      rad.march_c = mid.val["rad.march_c"],
+      adult.ba.agg_c = mid.val["adult.ba.agg_c"]
+      
+    )
+    
+    for(j in 1:nrow(d.maes.anoms.sp)) {
+      
+      d.maes.anoms.sp.row <- d.maes.anoms.sp[j,]
+      best.anom.mod <- d.maes.anoms.sp.row$best.anomaly.mod
+      best.anom.normal.mod <- d.maes.anoms.sp.row$best.anom.normal
+      
+  
+      ##predict to new data
+      
+      if(sp %in% c(cover.opts,prop.opts)) {
+      
+        
+        d.c.complete <- d.c[!is.na(d.c$response.var),]
+        
+        nboot <- 30
+        nobs <- nrow(d.c.complete)
+        npred <- nrow(newdat)
+        preds.anom.boot <- matrix(nrow=npred,ncol=nboot)
+        preds.norm.boot <- matrix(nrow=npred,ncol=nboot)
+        
+        for(k in 1:nboot) {
+        
+          ## use bootstrapping to fit betareg models to get CIs
+          d.c.boot <- d.c.complete[sample(nobs,size=nobs,replace=TRUE),]
+          
+          #fit the anom and normal models
+          mod.anom <- try(betareg(formulas[[best.anom.mod]],data=d.c.boot))
+          if(class(mod.anom) == "try-error") {
+            message <- paste0("Model error in bootstrapping for ",sp," ",formula.name,"\n")
+            print(message)
+            next()
+          }
+          
+          mod.norm <- try(betareg(formulas[[best.anom.normal.mod]],data=d.c.boot))
+          if(class(mod.norm) == "try-error") {
+            message <- paste0("Model error in bootstrapping for ",sp," ",formula.name,"\n")
+            print(message)
+            next()
+          }
+          
+          #predict the median
+          pred.anom <-predict(mod.anom,newdat,type="response")
+          pred.norm <- predict(mod.norm,newdat,type="response")
+          
+          preds.anom.boot[,k] <- pred.anom
+          preds.norm.boot[,k] <- pred.norm
+        
+        }
+        
+        pred.anom.mid <- apply(preds.anom.boot,1,quantile,probs=0.5,na.rm=TRUE)
+        pred.anom.lwr <- apply(preds.anom.boot,1,quantile,probs=0.025,na.rm=TRUE)
+        pred.anom.upr <- apply(preds.anom.boot,1,quantile,probs=0.975,na.rm=TRUE)
+        
+        pred.anom <- data.frame(pred.low=pred.anom.lwr,pred.mid=pred.anom.mid,pred.high=pred.anom.upr)
+        
+        pred.norm.mid <- apply(preds.norm.boot,1,quantile,probs=0.5,na.rm=TRUE)
+        pred.norm.lwr <- apply(preds.norm.boot,1,quantile,probs=0.025,na.rm=TRUE)
+        pred.norm.upr <- apply(preds.norm.boot,1,quantile,probs=0.975,na.rm=TRUE)
+        
+        pred.norm <- data.frame(pred.low=pred.norm.lwr,pred.mid=pred.norm.mid,pred.high=pred.norm.upr)
+        
+  
+      } else if (sp %in% htabs.opts) {
+        
+        
+        d.c.complete <- d.c[!is.na(d.c$response.var),]
+        
+        #fit the anom and normal models
+        mod.anom <- glm(formulas[[best.anom.mod]],data=d.c,family="gaussian")
+        mod.norm <- glm(formulas[[best.anom.normal.mod]],data=d.c,family="gaussian")
+        
+        p <- predict(mod.anom,newdat,type="link",se.fit=TRUE)
+        low <- p$fit - 1.96*p$se
+        high <- p$fit + 1.96*p$se
+        high[high>400] <- 400
+        pred.anom <- data.frame(pred.low=(low),pred.mid=(p$fit),pred.high=(high))
+        
+        p <- predict(mod.norm,newdat,type="link",se.fit=TRUE)
+        low <- p$fit - 1.96*p$se
+        high <- p$fit + 1.96*p$se
+        high[high>400] <- 400
+        pred.norm <- data.frame(pred.low=(low),pred.mid=(p$fit),pred.high=(high))
+        
+      } else {
+        
+        d.c.complete <- d.c[!is.na(d.c$response.var),]
+        
+        #fit the anom and normal models
+        mod.anom <- glm(formulas[[best.anom.mod]],data=d.c,family="binomial")
+        mod.norm <- glm(formulas[[best.anom.normal.mod]],data=d.c,family="binomial")
+        
+        p <- predict(mod.anom,newdat,type="link",se.fit=TRUE)
+        low <- p$fit - 1.96*p$se
+        high <- p$fit + 1.96*p$se
+        high[high>400] <- 400
+        pred.anom <- data.frame(pred.low=inv.logit(low),pred.mid=inv.logit(p$fit),pred.high=inv.logit(high))
+        
+        p <- predict(mod.norm,newdat,type="link",se.fit=TRUE)
+        low <- p$fit - 1.96*p$se
+        high <- p$fit + 1.96*p$se
+        high[high>400] <- 400
+        pred.norm <- data.frame(pred.low=inv.logit(low),pred.mid=inv.logit(p$fit),pred.high=inv.logit(high))
+        
+      }
+      
+
+      #cat("###")
+      print("Anom mod")
+      print(coef(mod.anom))
+      print("Norm mod")
+      print(coef(mod.norm))
+      
+      names(pred.anom) <- c("pred.low","pred.mid","pred.high")
+      names(pred.norm) <- c("pred.low","pred.mid","pred.high")
+      
+      pred.anom.dat <- cbind(pred.anom,newdat)
+      pred.anom.dat$type <- "anom"
+      pred.anom.dat$mod <- d.maes.anoms.sp.row$best.anomaly.mod
+      
+      pred.norm.dat <- cbind(pred.norm,newdat)
+      pred.norm.dat$type <- "norm"
+      pred.norm.dat$mod <- d.maes.anoms.sp.row$best.anom.normal
+      
+      pred.dat.sp <- rbind(pred.norm.dat,pred.anom.dat)
+      #pred.dat.sp <- pred.anom.dat
+      
+      pred.dat.sp$anom <- d.maes.anoms.sp.row$anom.name
+      pred.dat.sp$sp <- d.maes.anoms.sp.row$sp
+      pred.dat.sp$rad.level <- d.maes.anoms.sp.row$rad.level
+      
+      
+      
+      pred.dat <- rbind(pred.dat,pred.dat.sp)  
+      
+      
+      
+      ## get fitted and observed
+      fit.anom <- as.data.frame(predict(mod.anom))
+      fit.norm <- as.data.frame(predict(mod.norm))
+      names(fit.anom) <- names(fit.norm) <- c("fitted")
+      fit.anom$type <- "anom"
+      fit.norm$type <- "norm"
+      
+      d.c.complete <- d.c[!is.na(d.c$response.var),]
+      
+      fit.anom.dat <- cbind(fit.anom,d.c.complete)
+      fit.norm.dat <- cbind(fit.norm,d.c.complete)
+      
+      fit.dat.sp <- rbind(fit.anom.dat,fit.norm.dat)
+      fit.dat.sp$anom <- d.maes.anoms.sp.row$anom.name
+      fit.dat.sp$sp <- sp
+      
+      fit.dat <- rbind.fill(fit.dat,fit.dat.sp)
+      
+      if(! (sp %in% c(prop.opts,cover.opts,htabs.opts))) {
+        
+        fit.dat$fitted <- inv.logit(fit.dat$fitted)
+        
+      }
+      
+      
+      
+      
+      
+    }
   }
   
+  # 
+  # ### run random forest
+  # 
+  # 
+  # pred.names <- c("seed_tree_distance_general_c", "adult.ba.agg_c", "ppt.normal_c", "diff.norm.ppt.z_c", "diff.norm.ppt.min.z_c")
+  # 
+  # data <- d.c[,c(pred.names,"response.var")]
+  # data <- data[complete.cases(data),]
+  # 
+  # if(!(sp %in% c(htabs.opts,prop.opts,cover.opts))) { # if it's not a continuous variable response
+  #   data$response.var <- as.factor(data$response.var)
+  # }
+  # 
+  # m2.mean <- cforest(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.z_c,data=data)
+  # 
+  # rf.importance.sp <- as.data.frame(t(varimp(m2.mean,conditional=TRUE)))
+  # rf.importance.sp$sp <- sp
+  # rf.importance.sp$anom <- "mean"
+  # rf.importance <- rbind.fill(rf.importance,rf.importance.sp)
+  # 
+  # m2.min <- cforest(response.var ~ seed_tree_distance_general_c + adult.ba.agg_c + ppt.normal_c + diff.norm.ppt.min.z_c,data=data)
+  # 
+  # rf.importance.sp <- as.data.frame(t(varimp(m2.min,conditional=TRUE)))
+  # rf.importance.sp$sp <- sp
+  # rf.importance.sp$anom <- "min"
+  # 
+  # 
+  # rf.importance <- rbind.fill(rf.importance,rf.importance.sp)
+  # 
+  # 
+  # ### predict for min
+  # 
+  # preds <- predict(m2.min,newdata=newdat,type="prob")
+  # preds.df <- data.frame()
+  # 
+  # for(k in 1:length(preds)) {
+  #   preds.df <- rbind(preds.df,preds[[k]])  
+  # }
+  # 
+  # if(!(sp %in% c(htabs.opts,prop.opts,cover.opts,ht.opts))) { # if it's not a continuous variable response
+  #   pred <- preds.df$response.var.1
+  # } else if (sp %in% ht.opts) {
+  #   pred <- preds.df$response.var.TRUE
+  # } else {
+  #   pred <- preds.df$response.var
+  # } 
+  # 
+  # pred.newdat <- cbind(pred,newdat)
+  # 
+  # pred.newdat$anom <- "min"
+  # pred.newdat$species <- sp
+  # 
+  # pred.rf <- rbind(pred.rf,pred.newdat)
+  # 
+  # 
+  # 
+  # ### predict for mean
+  # 
+  # preds <- predict(m2.mean,newdata=newdat,type="prob")
+  # preds.df <- data.frame()
+  # 
+  # for(k in 1:length(preds)) {
+  #   preds.df <- rbind(preds.df,preds[[k]])  
+  # }
+  # 
+  # if(!(sp %in% c(htabs.opts,prop.opts,cover.opts,ht.opts))) { # if it's not a continuous variable response
+  #   pred <- preds.df$response.var.1
+  # } else if (sp %in% ht.opts) {
+  #   pred <- preds.df$response.var.TRUE
+  # }  else {
+  #   pred <- preds.df$response.var
+  # }
+  # 
+  # pred.newdat <- cbind(pred,newdat)
+  # 
+  # pred.newdat$anom <- "mean"
+  # pred.newdat$species <- sp
+  # 
+  # pred.rf <- rbind(pred.rf,pred.newdat)
+  # 
+}
+sink(file=NULL)
 
+#write.csv(rf.importance,"rf_importance.csv")
+
+#### Prep for plots etc ####
+
+## make a single factor that combines species and rad level
+pred.dat$sp.rad <- paste(pred.dat$sp,pred.dat$rad.level,sep=".")
+
+
+#for each sp-rad combo, find which was the best anomaly, which anomalies were better than their corresponding normals, and plot symbols indicating
+d.maes.anoms$anom.better <- d.maes.anoms$best.anom.mae < d.maes.anoms$best.anom.normal.mae
+d.maes.anoms$anom.improvement <-  d.maes.anoms$best.anom.normal.mae - d.maes.anoms$best.anom.mae
+
+d.maes.anoms$best.of.species <- ""
+d.maes.anoms$most.improved <- ""
+
+for(sp in unique(d.maes.anoms$sp)) {
+  d.maes.anoms.sp <- d.maes.anoms[d.maes.anoms$sp == sp,]
+  for(rad in d.maes.anoms.sp$rad.level) {
+    d.maes.anoms.sp.rad <- d.maes.anoms.sp[d.maes.anoms.sp$rad.level == rad,]
+    
+    best.anom <- d.maes.anoms.sp.rad[d.maes.anoms.sp.rad$best.anom.mae == min(d.maes.anoms.sp.rad$best.anom.mae)[1],"anom.name"]
+    d.maes.anoms[(d.maes.anoms$sp==sp) & (d.maes.anoms$rad.level == rad) & (d.maes.anoms$anom.name == best.anom),"best.of.species"] <- ""# "best anom"
+    
+    most.improved <- d.maes.anoms.sp.rad[d.maes.anoms.sp.rad$anom.improvement == max(d.maes.anoms.sp.rad$anom.improvement)[1],"anom.name"]
+    d.maes.anoms[(d.maes.anoms$sp==sp) & (d.maes.anoms$rad.level == rad) & (d.maes.anoms$anom.name == most.improved),"most.improved"] <- ""# "largest improvement"
+  }
+}
+
+d.maes.anoms.short <- d.maes.anoms[,c("sp","anom.name","anom.better","anom.improvement","best.of.species","most.improved")]
+
+pred.dat.comb <- merge(pred.dat,d.maes.anoms.short,all.x=TRUE,by.x=c("sp","anom"),by.y=c("sp","anom.name"))
+pred.dat.comb$anom.improvement <- round(pred.dat.comb$anom.improvement,2)
+pred.dat.comb[pred.dat.comb$anom.improvement < 0 , "anom.improvement"] <- NA
+
+
+#### Compute total MAE across all species, to see which is the best ####
+d.mae.agg <- aggregate(d.maes.anoms[,c("best.anom.mae","best.anom.normal.mae","anom.improvement")],by=list(d.maes.anoms$anom.name),FUN=mean,na.rm=TRUE)
+
+
+
+#### Plot counterfactuals ####
+
+## get rid of mid and get rid of normal predictions
+pred.dat.plotting <- pred.dat.comb[pred.dat.comb$norm.level %in% c("low","high"),]
+#pred.dat.plotting <- pred.dat.comb[pred.dat.comb$norm.level %in% c("mid"),]
+pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$type == "anom",]
+
+#pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$sp=="PILA",]
+#pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$anom=="Amin",]
+
+pred.dat.plotting <- pred.dat.plotting[!(pred.dat.plotting$sp.rad %in% c("HTABS.PIPO.","PIPO.")),]
+
+ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z_c,y=pred.mid,color=norm.level,fill=norm.level)) +
+  geom_point() +
+  geom_ribbon(aes(ymin=pred.low,ymax=pred.high),alpha=0.3,color=NA) +
+  facet_wrap(anom~sp.rad,nrow=6,scales="free_y") +
+  geom_text(aes(0,1,label=best.of.species),size=3,color="black") +
+  geom_text(aes(0,0.9,label=most.improved),size=3,color="black") +
+  geom_text(aes(0,0.8,label=anom.improvement),size=3,color="black")
+
+
+
+
+#### testinttgggg
+
+
+ggplot(d.c,aes(x=diff.norm.aet.min.z_c,y=diff.norm.ppt.min.z_c,color=Fire,shape=Fire)) +
+  geom_point() +
+  scale_shape_manual(values=1:14)
+
+
+ggplot(d.c,aes(x=ppt.normal_c,y=diff.norm.ppt.min.z_c,color=Fire,shape=topoclim.cat)) +
+  geom_point() +
+  scale_shape_manual(values=1:14)
+
+
+
+pred.rf.plot <- pred.rf[pred.rf$norm.level %in% c("low","high"),]
+
+ggplot(pred.rf.plot,aes(x=diff.norm.ppt.z_c,y=pred,color=norm.level,fill=norm.level)) +
+  geom_line() +
+  facet_wrap(anom~species,scales="free_y",nrow=2)
+
+
+
+
+#### Display the normal vs. post analysis ####
+library(reshape)
+
+##calc how much better the post is than the normal
+d.maes.anoms$post.v.norm <- d.maes.anoms$best.normal.nonull.mae - d.maes.anoms$best.post.mae
+d.maes.anoms$post.v.norm[d.maes.anoms$post.v.norm < 0] <- NA
+
+##make a table: species x anom, where value is the normal-post improvement
+
+# positive means post has lower error
+post.table <- cast(d.maes.anoms,anom.name~sp,value='post.v.norm')
+post.table
+
+
+
+
+
+
+
+#### For each species and rad group, plot fitted vs. observed, for normal and anom side by side ####
+
+fit.dat$resid <- fit.dat$response.var-fit.dat$fitted
+
+
+
+
+## AET min only
+fit.dat.ppt <- fit.dat[fit.dat$anom == "Pmin",]
+
+
+
+fit.obs.plots <- list()
+
+for(sp in unique(fit.dat$sp)) {
+  #for(rad.level in unique(fit.dat$rad.level)) {
+    
+    #fit.dat.sp <- fit.dat.aet[fit.dat.aet$sp == sp & fit.dat.aet$rad.level == rad.level,]
+  fit.dat.sp <- fit.dat.ppt[fit.dat.ppt$sp == sp,]
+    
+    fit.dat.sp$type <- factor(fit.dat.sp$type,levels=c("norm","anom"))
+    
+    # dummy points
+    max.xy <- max(c(fit.dat.sp$response.var,fit.dat.sp$fitted))
+    dummy <- data.frame(response.var=c(0,max.xy),fitted=c(0,max.xy))
+    
+    plot.name <- paste0(sp,".",rad.level)
+    
+    fit.obs.plots[[plot.name]] <- ggplot(fit.dat.sp,aes(x=response.var,y=fitted)) +
+      geom_point() +
+      facet_grid(.~type) +
+      geom_abline(slope=1,intercept=0) +
+      geom_point(data=dummy,alpha=0) +
+      labs(x="Observed",y="Fitted",title=plot.name) +
+      theme_bw() +
+      theme(plot.title=element_text(hjust=0.5))
+    
+  #}
+}
+
+library(gridExtra)
+n <- length(fit.obs.plots)
+nCol <- 4
+do.call("grid.arrange",c(fit.obs.plots,ncol=nCol))
+
+
+
+
+#### Plot residuals by fire ####
+fit.dat.plot <- fit.dat[fit.dat$type=="norm",]
+fit.dat.plot <- fit.dat.plot[fit.dat.plot$anom == "Pmin",]
+
+# fit.dat.plot$rad.level <- as.factor(fit.dat.plot$rad.level)
+
+
+plot(fit.dat.plot$diff.norm.aet.min.z.highsev_c~fit.dat.plot$Fire)
+
+
+fit.dat.plot$Fire <- factor(fit.dat.plot$Fire,c("BAGLEY","CHIPS","RALSTON","BASSETTS","MOONLIGHT","ANTELOPE","HARDING","FREDS","POWER","STRAYLOR","RICH","BTU LIGHTENING","CUB","AMERICAN RIVER"))
+
+
+ggplot(fit.dat.plot,aes(x=Fire,y=resid)) +
+  geom_boxplot(position="dodge",width=0.5) +
+  facet_grid(sp~.) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle=90,hjust=1))
+
+ggplot(fit.dat.plot,aes(y=diff.norm.ppt.min.z.highsev_c,x=fit.dat.plot$Fire)) +
+  geom_point()
+
+
+
+
+
+
+
+
+
+
+#### 6.8 Plot-level analaysis decision trees (PARTY)) ####
+
+
+
+library(party)
+
+### prep the data frame
+
+
+
+
+
+
+sp <- "SHADE.ALLSP"
+
+
+
+d.plot <- d.plot.c
+
+d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV %in% c(4,5)),]
+
+## remove an outlier plot with 20 abco that is preventing model conversion
+d.plot <- d.plot[!(d.plot$Regen_Plot == "CHI1248"),]
+
+## remove another potential outlier plot: extremely high normal precip and high numbers of ABCO way above other plots with similar precip
+d.plot <- d.plot[!(d.plot$Regen_Plot == "BTU1300185"),]
+
+## remove a plot that has no grass cover data
+d.plot <- d.plot[!(d.plot$Regen_Plot == "AMR1300445"),]
+
+
+## remove an NA fire value
+d.plot <- d.plot[!is.na(d.plot$Fire),]
+# 
+# 
+# #Dry fires
+# dry.fires <- c("STRAYLOR","HARDING","ANTELOPE","MOONLIGHT")
+# d.plot <- d.plot[!(d.plot$Fire %in% dry.fires),]
+# 
+
+
+
+if(sp %in% cover.opts) {
+  d.sp.curr.agg <- d.sp.2[d.sp.2$species=="ABCO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
+  d.sp.curr.plt <- d.sp[d.sp$species=="ABCO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
+} else {
+  d.sp.curr.agg <- d.sp.2[d.sp.2$species==sp,]
+  d.sp.curr.plt <- d.sp[d.sp$species==sp,]
+}
+
+d <- merge(d.plot,d.plot.3,by=c("Fire","topoclim.cat")) # this effectively thins to plots that belong to a topoclimate category that has enough plots in it
+
+d <- merge(d,d.sp.curr.plt,by=c("Regen_Plot"))
+
+names(d.sp.curr.agg) <- paste0(names(d.sp.curr.agg),".agg")
+d <- merge(d,d.sp.curr.agg,by.x=c("Fire","topoclim.cat"),by.y=c("Fire.agg","topoclim.cat.agg")) # add the aggregated species data (from this we just want adult BA from the control plot)
+
+
+
+
+vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
+vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z", "def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","def.post","aet.post","adult.ba.agg")
+d <- d[complete.cases(d[,vars.focal]),]
+d.c <- center.df(d,vars.leave)
+
+d.c$ppt.normal_c.sq <- d.c$ppt.normal_c^2
+d.c$tmean.normal_c.sq <- d.c$tmean.normal_c^2
+d.c$snow.normal_c.sq <- d.c$snow.normal_c^2
+
+d.c$def.normal_c.sq <- d.c$def.normal_c^2
+d.c$aet.normal_c.sq <- d.c$aet.normal_c^2
+
+# ####!!!! trick model: make diff.norm into diff.norm.min
+# d.c$diff.norm.ppt.z_c <- d.c$diff.norm.ppt.min.z_c
+# d.c$diff.norm.tmean.z_c <- d.c$diff.norm.tmean.max.z_c
+# d.c$diff.norm.aet.z_c <- d.c$diff.norm.aet.min.z_c
+# d.c$diff.norm.def.z_c <- d.c$diff.norm.def.max.z_c
+# #### end trick model
+
+
+d.c$diff.norm.ppt.z_c.sq <- d.c$diff.norm.ppt.z_c^2
+d.c$diff.norm.tmean.z_c.sq <- d.c$diff.norm.tmean.z_c^2
+d.c$diff.norm.snow.z_c.sq <- d.c$diff.norm.snow.z_c^2
+
+d.c$diff.norm.def.z_c.sq <- d.c$diff.norm.def.z_c^2
+d.c$diff.norm.aet.z_c.sq <- d.c$diff.norm.aet.z_c^2
+
+
+
+d.c$diff.norm.ppt.min.z_c.sq <- d.c$diff.norm.ppt.min.z_c^2
+d.c$diff.norm.tmean.max.z_c.sq <- d.c$diff.norm.tmean.max.z_c^2
+d.c$diff.norm.snow.min.z_c.sq <- d.c$diff.norm.snow.min.z_c^2
+
+
+d.c$diff.norm.def.max.z_c.sq <- d.c$diff.norm.def.max.z_c^2
+d.c$diff.norm.aet.min.z_c.sq <- d.c$diff.norm.aet.min.z_c^2
+
+
+
+
+d.c$ppt.post_c.sq <- d.c$ppt.post_c^2
+d.c$tmean.post_c.sq <- d.c$tmean.post_c^2
+
+d.c$def.post_c.sq <- d.c$def.post_c^2
+d.c$aet.post_c.sq <- d.c$aet.post_c^2
+
+d.c$regen.presab.all.01 <- ifelse(d.c$regen.presab.all == TRUE,1,0)
+d.c$regen.presab.old.01 <- ifelse(d.c$regen.presab.old == TRUE,1,0)
+
+
+vars.focal.c <- paste0(vars.focal[-6],"_c")
+
+## transform cover so it does not include 0 or 1 (for Beta distrib)
+d.c$SHRUB.p <- d.c$SHRUB/100
+d.c$SHRUB.pt <- (d.c$SHRUB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+
+d.c$GRASS.p <- d.c$GRASS/100
+d.c$GRASS.pt <- (d.c$GRASS.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+
+d.c$HARDWOOD.p <- d.c$HARDWOOD/100
+d.c$HARDWOOD.pt <- (d.c$HARDWOOD.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+
+d.c$FORB.p <- d.c$FORB/100
+d.c$FORB.pt <- (d.c$FORB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+
+d.c$CONIFER.p <- d.c$CONIFER/100
+d.c$CONIFER.pt <- (d.c$CONIFER.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+
+
+d.c$Fire <- as.factor(d.c$Fire)
+
+#d.c <- d.c[!(d.c$Fire == "RICH"),]
+
+d.c$regen.count.all.int <- ceiling(d.c$regen.count.all)
+d.c$regen.count.old.int <- ceiling(d.c$regen.count.old)
+
+
+if(sp %in% cover.opts) {
   
-  loos$auc.nofire <- auc.nofire
-  loos$auc.fire <- auc.fire
+  sp.cov <- substr(sp,5,100)
+  sp.cov <- paste0(sp.cov,".pt")
   
-  loos.fire <- rbind(loos.fire,loos)
+  d.c$response.var <- d.c[,sp.cov]
+  
+} else {
+  
+  d.c$response.var <- d.c$regen.presab.old.01
   
 }
 
 
-write.csv(loos.fire,"loos_fire.csv",row.names=FALSE)
-
-## Plot the LOOS associated with adding fire
 
 
-sp.names <- c(
-  "PIPO"="Ponderosa pine",
-  "PILA"="Sugar pine",
-  "ABCO"="White fir",    
-  "QUKE"="Black oak",  
-  "QUCH2"="Canyon live oak",
-  "PINUS.ALLSP"="Pines",
-  "SHADE.ALLSP"="Shade tolerant conifers",
-  "COV.SHRUB"="Shrub cover",
-  "COV.GRASS"="Grass cover",
-  "COV.FORB"="Forb cover",
-  "HDWD.ALLSP"="Hardwoods"
-)
+d.c$response.var <- ifelse(d.c$response.var==1,"present","absent")
+d.c$response.var <- as.factor(d.c$response.var)
 
-loos.fire$upr <- loos.fire$LOOIC + loos.fire$SE*1.96
-loos.fire$lwr <- loos.fire$LOOIC - loos.fire$SE*1.96
+a <- ctree(response.var ~ ppt.normal_c + tmean.normal_c + snow.normal_c + aet.normal_c + def.normal_c +
+             diff.norm.ppt.z_c + diff.norm.tmean.z_c + diff.norm.snow.z_c + diff.norm.aet.z_c + diff.norm.def.z_c +
+             seed_tree_distance_general_c + adult.ba.agg_c, data=d.c)
 
-loos.fire$sp <- factor(loos.fire$sp,levels=rev(c("PIPO","PILA","ABCO","QUKE","QUCH2","PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","COV.SHRUB","COV.GRASS","COV.FORB")))
 
-  p <- ggplot(loos.fire,aes(y=sp,x=LOOIC)) +
-    geom_point() +
-    geom_errorbarh(aes(xmax=upr,xmin=lwr),height=.2) +
-    theme_bw(18) +
-    geom_vline(xintercept=0,color="red") +
-    scale_y_discrete(labels=as_labeller(sp.names)) +
-    labs(x="Model improvement (delta LOOIC)",y="") +
-    theme(axis.text.x = element_text(size=18),axis.text.y=element_text(size=18),axis.title.x=element_text(size=18))
-  
-  Cairo(file=paste0("../Figures/Fig5_fireLoos_",Sys.Date(),".png"),width=1400,height=1600,ppi=200,res=200,dpi=200)
-  print(p)
-  dev.off()
+a <- ctree(response.var ~ def.normal_c +
+             diff.norm.def.z_c +
+             seed_tree_distance_general_c + adult.ba.agg_c + rad.march_c, data=d.c)
+
+
+a <- ctree(response.var ~ ppt.normal_c + 
+           diff.norm.ppt.min.z_c +
+           seed_tree_distance_general_c + adult.ba.agg_c, data=d.c)
+
+
+
+#control=ctree_control(testtype=c("Univariate"),mincriterion=0.80)
+
+plot(a)
 
 
 
@@ -1498,173 +2186,14 @@ loos.fire$sp <- factor(loos.fire$sp,levels=rev(c("PIPO","PILA","ABCO","QUKE","QU
 
 
 
-  
-  
-  
-#### 7.1 Plot model random effects ####
- 
-  sp.names <- c(
-    "PIPO"="Ponderosa pine",
-    "PILA"="Sugar pine",
-    "ABCO"="White fir",    
-    "QUKE"="Black oak",  
-    "QUCH2"="Canyon live oak",
-    "PINUS.ALLSP"="Pines",
-    "SHADE.ALLSP"="Shade\ntolerant\nconifers",
-    "COV.SHRUB"="Shrub cover",
-    "COV.GRASS"="Grass cover",
-    "COV.FORB"="Forb cover",
-    "HDWD.ALLSP"="Hardwoods"
-  )
-  
-  
-  
-  
-  d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV %in% c(4,5)),]
-  
-  ## remove an outlier plot with 20 abco that is preventing model conversion
-  d.plot <- d.plot[!(d.plot$Regen_Plot == "CHI1248"),]
-  
-  ## remove another potential outlier plot: extremely high normal precip and high numbers of ABCO way above other plots with similar precip
-  d.plot <- d.plot[!(d.plot$Regen_Plot == "BTU1300185"),]
-  
-  sp.opts <- c("SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP") # reduced
-  #sp.opts <- c("PIPO","ABCO","PILA","PSME","QUKE")
-  #cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB")
-  #sp.opts <- c(sp.opts,cover.opts)
-  
-  ranef.df <- data.frame()
-  
-  for(sp in sp.opts) {
-    
-    cat("\n\n#####")
-    cat("Running ranef computation for: ",sp,"")
-    cat("#####\n\n")
-    
-    # if(sp %in% cover.opts) {
-    #   d.sp.curr <- d.sp[d.sp$species=="PIPO",]
-    # } else {
-      d.sp.curr <- d.sp[d.sp$species==sp,]
-    # }
-    d <- merge(d.plot,d.sp.curr,all.x=TRUE,by="Regen_Plot")
-    vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
-    vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z")
-    d <- d[complete.cases(d[,vars.focal]),]
-    d.c <- center.df(d,vars.leave)
-    
-    d.c$ppt.normal_c.sq <- d.c$ppt.normal_c^2
-    d.c$tmean.normal_c.sq <- d.c$tmean.normal_c^2
-    
-    # ####!!!! trick model: make diff.norm into diff.norm.min
-    # d.c$diff.norm.ppt.z_c <- d.c$diff.norm.ppt.min.z_c
-    # d.c$diff.norm.tmean.z_c <- d.c$diff.norm.tmean.max.z_c
-    # #### end trick model
-    
-    
-    d.c$diff.norm.ppt.z_c.sq <- d.c$diff.norm.ppt.z_c^2
-    d.c$diff.norm.tmean.z_c.sq <- d.c$diff.norm.tmean.z_c^2
-    
-    d.c$ppt.post_c.sq <- d.c$ppt.post_c^2
-    d.c$tmean.post_c.sq <- d.c$tmean.post_c^2
-    
-    d.c$regen.presab.all.01 <- ifelse(d.c$regen.presab.all == TRUE,1,0)
-    d.c$regen.presab.old.01 <- ifelse(d.c$regen.presab.old == TRUE,1,0)
-    
-    # ## transform cover so it does not include 0 or 1 (for Beta distrib)
-    # d.c$SHRUB.p <- d.c$SHRUB/100
-    # d.c$SHRUB.pt <- (d.c$SHRUB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-    # 
-    # d.c$GRASS.p <- d.c$GRASS/100
-    # d.c$GRASS.pt <- (d.c$GRASS.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-    # 
-    # d.c$HARDWOOD.p <- d.c$HARDWOOD/100
-    # d.c$HARDWOOD.pt <- (d.c$HARDWOOD.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-    # 
-    # d.c$FORB.p <- d.c$FORB/100
-    # d.c$FORB.pt <- (d.c$FORB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-    # 
-    # d.c$CONIFER.p <- d.c$CONIFER/100
-    # d.c$CONIFER.pt <- (d.c$CONIFER.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-    
-    
-    d.c$Fire <- as.factor(d.c$Fire)
-    
-    d.c$regen.count.all.int <- ceiling(d.c$regen.count.all)
-    d.c$regen.count.old.int <- ceiling(d.c$regen.count.old)
-    
-    # if(sp %in% cover.opts) {
-    #   
-    #   sp.cov <- substr(sp,5,100)
-    #   sp.cov <- paste0(sp.cov,".pt")
-    #   
-    #   d.c$cov.response <- d.c[,sp.cov]
-    #   
-    #   d.c$response.var <- d.c$cov.response
-    #   
-    #   mod.family <- "Beta"
-    #   
-    # } else {
-    #   
-      d.c$response.var <- round(d.c$regen.presab.old.01)
-      
-      mod.family <- "bernoulli"
-      
-    # }
-    
-    m.fire <- brm(response.var ~ ppt.normal_c + ppt.normal_c.sq + tmean.normal_c + tmean.normal_c.sq + seed_tree_distance_general_c + rad.march_c + (1|Fire),family=mod.family,data=d.c,iter=2000,control = list(adapt_delta = 0.90),cores=3,chains=3)
-    
 
-    post <- posterior_samples(m.fire)
-    
-    post.names <- names(post)
-    
-    ranef.names <- grep("r_Fire[",post.names,fixed=TRUE)
-    post.ranef <- post[,ranef.names]
-    
-    fit <- apply(post.ranef,2,median)
-    int <- apply(post.ranef,2,quantile,probs=c(0.05,0.95))
-    rownames(int) <- c("lwr","upr")
-    
-    ranef.df.sp <- as.data.frame(t(rbind(fit,int)))
-    
-    name.p1 <- unlist(strsplit(row.names(ranef.df.sp),"[",fixed=TRUE))
-    name.p2 <- name.p1[2*(1:nrow(ranef.df.sp))]
-    name.p3 <- unlist(strsplit(name.p2,",",fixed=TRUE))
-    ranef.names <- name.p3[(2*(1:nrow(ranef.df.sp)))-1]
-    ranef.df.sp$Fire <- ranef.names
-    ranef.df.sp$sp <- sp
-    
-    ranef.df <- rbind(ranef.df,ranef.df.sp)  
-    
-  }
-  
-  ranef.df$Fire <- factor(ranef.df$Fire,c("BAGLEY","CHIPS","RALSTON","BASSETTS","MOONLIGHT","ANTELOPE","HARDING","RICH","BTU.LIGHTNING","STRAYLOR","CUB","AMERICAN.RIVER","FREDS","POWER"))
-  
-  ranef.df$sp <- factor(ranef.df$sp,levels=c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP"))
-  
-  ggplot(ranef.df,aes(x=Fire,y=fit,color=sp)) +
-    geom_point(position=position_dodge(width=0.5),size=3) +
-    theme_bw(20) +
-    geom_errorbar(position=position_dodge(width=0.5),aes(ymin=lwr,ymax=upr),width=0.1) +
-    facet_grid(sp~.,scales="free",labeller=as_labeller(sp.names)) +
-    theme(axis.text.x = element_text(angle=90,hjust=1,vjust=0.5)) +
-    guides(color=FALSE) +
-    labs(y="Fire-level intercept")
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+
+
+
+
+
+
+
 
 
 
@@ -1688,7 +2217,7 @@ focal.sp <- c("PIPO","ABCO","PILA","QUKE","QUCH2","LIDE3","ABMA")
 #focal.sp <- c("PIPO","ABCO","PILA","PSME","QUKE","LIDE3","QUCH2","CADE27")
 #focal.sp <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP")
 focal.cols <- c("Fire","topoclim.cat","species","regen.presab.old","regen.presab.all","adult.ba")
-focal.cols <- c("Fire","topoclim.cat","species","regen.count.old","regen.count.all","adult.ba")
+#focal.cols <- c("Fire","topoclim.cat","species","regen.count.old","regen.count.all","adult.ba")
 
 
 d.sp.simp <- d.sp.2[d.sp.2$species %in% focal.sp,focal.cols]
@@ -1703,6 +2232,11 @@ d.sp.cast <- dcast(d.sp.simp,topoclim.cat + Fire~species,value.var=c("r.old","r.
 regen.var <- "r.old"
 
 d.all <- merge(d.plot.3,d.sp.cast,by=c("Fire","topoclim.cat"))
+
+# #Dry fires
+# dry.fires <- c("STRAYLOR","HARDING","ANTELOPE","MOONLIGHT")
+# d.all <- d.all[!(d.all$Fire %in% dry.fires),]
+
 sp.cols <- grep(regen.var,names(d.all))
 d.all.sp <- d.all[,sp.cols]
 d.all.sp.tot <- rowSums(d.all.sp)
@@ -1783,6 +2317,9 @@ d.all$NormalTemp <- d.all$temp.norm
 
 d.all$PrecipAnom <- d.all$ppt.anom
 d.all$TempAnom <- d.all$temp.anom
+
+
+
 
 
 # all non-anomaly, excluding species
@@ -1945,1578 +2482,7 @@ adult.dist <- vegdist(d.all.a,method="jaccard")
 mantel(regen.dist,adult.dist)
 
 
-
-
-
-
-
-d.sp.curr <- d.sp[d.sp$species==sp,]
-d <- merge(d.plot,d.sp.curr,all.x=TRUE,by="Regen_Plot")
-vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
-vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z")
-d <- d[complete.cases(d[,vars.focal]),]
-d.c <- center.df(d,vars.leave)
-
-d.c$ppt.normal_c.sq <- d.c$ppt.normal_c^2
-d.c$tmean.normal_c.sq <- d.c$tmean.normal_c^2
-
-# ####!!!! trick model: make diff.norm into diff.norm.min
-# d.c$diff.norm.ppt.z_c <- d.c$diff.norm.ppt.min.z_c
-# d.c$diff.norm.tmean.z_c <- d.c$diff.norm.tmean.max.z_c
-# #### end trick model
-
-
-d.c$diff.norm.ppt.z_c.sq <- d.c$diff.norm.ppt.z_c^2
-d.c$diff.norm.tmean.z_c.sq <- d.c$diff.norm.tmean.z_c^2
-
-d.c$ppt.post_c.sq <- d.c$ppt.post_c^2
-d.c$tmean.post_c.sq <- d.c$tmean.post_c^2
-
-d.c$regen.presab.all.01 <- ifelse(d.c$regen.presab.all == TRUE,1,0)
-d.c$regen.presab.old.01 <- ifelse(d.c$regen.presab.old == TRUE,1,0)
-
-
-vars.focal.c <- paste0(vars.focal[-6],"_c")
-pairs(d.c[,vars.focal.c])
-
-## transform cover so it does not include 0 or 1 (for Beta distrib)
-d.c$SHRUB.p <- d.c$SHRUB/100
-d.c$SHRUB.pt <- (d.c$SHRUB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-
-d.c$GRASS.p <- d.c$GRASS/100
-d.c$GRASS.pt <- (d.c$GRASS.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-
-d.c$HARDWOOD.p <- d.c$HARDWOOD/100
-d.c$HARDWOOD.pt <- (d.c$HARDWOOD.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-
-d.c$FORB.p <- d.c$FORB/100
-d.c$FORB.pt <- (d.c$FORB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-
-d.c$CONIFER.p <- d.c$CONIFER/100
-d.c$CONIFER.pt <- (d.c$CONIFER.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-
-
-d.c$Fire <- as.factor(d.c$Fire)
-
-d.c <- d.c[!(d.c$Fire == "RICH"),]
-
-d.c$regen.count.all.int <- ceiling(d.c$regen.count.all)
-d.c$regen.count.old.int <- ceiling(d.c$regen.count.old)
-
-
-
-
-
-#### 10. Cluster-level analysis with tobit and betareg ####
-
-
-
-d.plot.3
-d.sp.2
-
-
-
-library(VGAM)
-m <- list()
-m[["n0.a0"]] <- betareg(response.var~1, data=d.mod)
-m[["nP.a0"]] <- betareg(response.var ~ ppt.normal.highsev + ppt.normal.highsev.sq  + tmean.normal.highsev + tmean.normal.highsev.sq + seed_tree_distance_general.highsev + rad.march.highsev,data=d.mod)
-m[["nP.aP"]] <- betareg(response.var ~ ppt.normal.highsev*diff.norm.ppt.z.highsev + ppt.normal.highsev.sq   + tmean.normal.highsev + tmean.normal.highsev.sq + seed_tree_distance_general.highsev + rad.march.highsev,data=d.mod)
-m[["nP.aP2"]] <- betareg(response.var ~ ppt.normal.highsev*diff.norm.ppt.z.highsev + ppt.normal.highsev*diff.norm.ppt.z.highsev.sq + diff.norm.ppt.z.highsev.sq + ppt.normal.highsev.sq   + tmean.normal.highsev + tmean.normal.highsev.sq + seed_tree_distance_general.highsev + rad.march.highsev,data=d.mod)
-m[["pP"]] <- betareg(response.var ~ ppt.post.highsev + ppt.post.highsev.sq   + tmean.post.highsev + tmean.post.highsev.sq + seed_tree_distance_general.highsev + rad.march.highsev,data=d.mod)
-m[["nP.a0.nt"]] <- betareg(response.var ~ ppt.normal.highsev + ppt.normal.highsev.sq + seed_tree_distance_general.highsev + rad.march.highsev,data=d.mod)
-m[["nP.aP.nt"]] <- betareg(response.var ~ ppt.normal.highsev*diff.norm.ppt.z.highsev + ppt.normal.highsev.sq + seed_tree_distance_general.highsev + rad.march.highsev,data=d.mod)
-m[["nP.aP2.nt"]] <- betareg(response.var ~ ppt.normal.highsev*diff.norm.ppt.z.highsev + ppt.normal.highsev*diff.norm.ppt.z.highsev.sq + diff.norm.ppt.z.highsev.sq + ppt.normal.highsev.sq + seed_tree_distance_general.highsev + rad.march.highsev,data=d.mod)
-m[["pP.nt"]] <- betareg(response.var ~ ppt.post.highsev + ppt.post.highsev.sq + seed_tree_distance_general.highsev + rad.march.highsev,data=d.mod)
-
-
-
-
-
-
-#sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PIPO","ABCO","ABMA","CONIF.ALLSP","PSME","PILA","CADE27","PIJE","PIPJ")
-sp.opts <- c("PIPO","ABCO","PILA","SHADE.ALLSP","QUKE","PINUS.ALLSP","QUCH2","HDWD.ALLSP","PSME") # reduced
-sp.opts <- c("PIPO","ABCO","PILA","QUKE","QUCH2","PSME") # reduced
-
-sp.opts <- c("PIPO","ABCO") # reduced
-#sp.opts <- c("PIPO","ABCO") # reduced
-#sp.opts <- c("SHADE.ALLSP","PSME","QUKE","QUCH2")
-
-
-#cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB","COV.HARDWOOD","COV.CONIFER")
-cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB") # reduced
-cover.opts <- c("COV.SHRUB","COV.GRASS") # reduced
-cover.opts <- c("COV.SHRUB") # reduced
-
-#cover.opts <- NULL
-sp.opts <- c(sp.opts,cover.opts)
-
-m.p <- list()
-
-loos <- list()
-
-dat.preds <- data.frame()
-pred.obs <- data.frame()
-
-d.loos.all <- data.frame()
-d.loo.comps <- data.frame()
-
-mods.best <- data.frame()
-
-rsqs <- data.frame()
-
-d.maes <- data.frame()
-d.maes.anoms <- data.frame()
-
-pred.dat <- data.frame()
-
-fit.dat <- data.frame()
-
-rad.levels <- c(1,2)
-
-for(sp in sp.opts) {
-  for(rad.level in rad.levels) {
-    
-    cat("\n")
-    cat("Running model for: ",sp,"")
-
-    
-    if(sp %in% cover.opts) {
-      d.sp.curr <- d.sp.2[d.sp.2$species=="PIPO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
-    } else {
-      d.sp.curr <- d.sp.2[d.sp.2$species==sp,]
-    }
-    
-  
-    d.mod <- merge(d.plot.3,d.sp.curr,by=c("Fire","topoclim.cat"),all.x=TRUE)
-    
-    d.mod$regen.presab.old.t <- (d.mod$regen.presab.old*(nrow(d.mod)-1) + 0.5) / nrow(d.mod)
-    
-    # d.mod$response.var <- d.mod$regen.presab.old.t
-    # d.mod$ppt.normal.highsev.sq <- d.mod$ppt.normal.highsev^2
-    # d.mod$tmean.normal.highsev.sq <- d.mod$tmean.normal.highsev^2
-    # d.mod$diff.norm.ppt.z.highsev.sq <- d.mod$diff.norm.ppt.z.highsev^2
-    # d.mod$ppt.post.highsev.sq <- d.mod$ppt.post.highsev^2
-    # d.mod$tmean.post.highsev.sq <- d.mod$tmean.post.highsev^2
-    # 
-    # 
-    # 
-    
-    
-    vars.leave <- c("fire.year.highsev","FORB.highsev","SHRUB.highsev","GRASS.highsev","CONIFER.highsev","HARDWOOD.highsev","FIRE_SEV.highsev","fire.year.highsev","firesev.highsev","survey.years.post.highsev","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
-    vars.focal <- c("ppt.normal.highsev","diff.norm.ppt.z.highsev","ppt.normal.sq.highsev","rad.march.highsev","seed_tree_distance_general.highsev","SHRUB.highsev","tmean.post.highsev","tmean.normal.highsev","diff.norm.tmean.z.highsev","diff.norm.tmean.max.z.highsev", "def.normal.highsev","aet.normal.highsev","diff.norm.def.z.highsev","diff.norm.aet.z.highsev","def.post.highsev","aet.post.highsev")
-    d.mod <- d.mod[complete.cases(d.mod[,vars.focal]),]
-    d.c <- center.df(d.mod,vars.leave)
-    
-    d.c$ppt.normal.highsev_c.sq <- d.c$ppt.normal.highsev_c^2
-    d.c$tmean.normal.highsev_c.sq <- d.c$tmean.normal.highsev_c^2
-    
-    d.c$def.normal.highsev_c.sq <- d.c$def.normal.highsev_c^2
-    d.c$aet.normal.highsev_c.sq <- d.c$aet.normal.highsev_c^2
-    
-    # ####!!!! trick model: make diff.norm into diff.norm.min
-    # d.c$diff.norm.ppt.z.highsev_c <- d.c$diff.norm.ppt.min.z.highsev_c
-    # d.c$diff.norm.tmean.z.highsev_c <- d.c$diff.norm.tmean.max.z.highsev_c
-    # d.c$diff.norm.aet.z.highsev_c <- d.c$diff.norm.aet.min.z.highsev_c
-    # d.c$diff.norm.def.z.highsev_c <- d.c$diff.norm.def.max.z.highsev_c
-    # #### end trick model
-    
-    
-    d.c$diff.norm.ppt.z.highsev_c.sq <- d.c$diff.norm.ppt.z.highsev_c^2
-    d.c$diff.norm.tmean.z.highsev_c.sq <- d.c$diff.norm.tmean.z.highsev_c^2
-    
-    d.c$diff.norm.def.z.highsev_c.sq <- d.c$diff.norm.def.z.highsev_c^2
-    d.c$diff.norm.aet.z.highsev_c.sq <- d.c$diff.norm.aet.z.highsev_c^2
-    
-    d.c$diff.norm.ppt.min.z.highsev_c.sq <- d.c$diff.norm.ppt.min.z.highsev_c^2
-    d.c$diff.norm.tmean.max.z.highsev_c.sq <- d.c$diff.norm.tmean.max.z.highsev_c^2
-    
-    d.c$diff.norm.def.max.z.highsev_c.sq <- d.c$diff.norm.def.max.z.highsev_c^2
-    d.c$diff.norm.aet.min.z.highsev_c.sq <- d.c$diff.norm.aet.min.z.highsev_c^2
-    
-    
-    
-    d.c$ppt.post.highsev_c.sq <- d.c$ppt.post.highsev_c^2
-    d.c$tmean.post.highsev_c.sq <- d.c$tmean.post.highsev_c^2
-    
-    d.c$def.post.highsev_c.sq <- d.c$def.post.highsev_c^2
-    d.c$aet.post.highsev_c.sq <- d.c$aet.post.highsev_c^2
-    
-  
-    vars.focal.c <- paste0(vars.focal[-6],"_c")
-    #pairs(d.c[,vars.focal.c])
-    
-    ## transform cover so it does not include 0 or 1 (for Beta distrib)
-    d.c$SHRUB.highsev.p <- d.c$SHRUB.highsev/100
-    d.c$SHRUB.highsev.pt <- (d.c$SHRUB.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-    
-    d.c$GRASS.highsev.p <- d.c$GRASS.highsev/100
-    d.c$GRASS.highsev.pt <- (d.c$GRASS.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-    
-    d.c$HARDWOOD.highsev.p <- d.c$HARDWOOD.highsev/100
-    d.c$HARDWOOD.highsev.pt <- (d.c$HARDWOOD.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-    
-    d.c$FORB.highsev.p <- d.c$FORB.highsev/100
-    d.c$FORB.highsev.pt <- (d.c$FORB.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-    
-    d.c$CONIFER.highsev.p <- d.c$CONIFER.highsev/100
-    d.c$CONIFER.highsev.pt <- (d.c$CONIFER.highsev.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-    
-    ## transform regen proportion so it does not include 0 or 1
-    d.c$regen.presab.old.t <- (d.c$regen.presab.old*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-    
-    
-    d.c$Fire <- as.factor(d.c$Fire)
-    
-    #d.c <- d.c[!(d.c$Fire == "RICH"),]
-    
-    if(sp %in% cover.opts) {
-      
-      sp.cov <- substr(sp,5,100)
-      sp.cov <- paste0(sp.cov,".highsev.pt")
-      d.c$response.var <- d.c[,sp.cov]
-      
-    } else {
-      
-      d.c$response.var <- d.c$regen.presab.old.t
-      
-    }
-    
-    m <- list()
-    
-    
-    if(rad.level==1) {
-      d.c <- d.c[d.c$topoclim.cat == "P.2_R.1",]
-    } else {
-      d.c <- d.c[d.c$topoclim.cat == "P.2_R.2",]
-    }
-    
-  
-    
-    ## trying a super simple set (no seed tree)
-    
-    formulas <- list()
-    
-    
-    #### No seed tree ####
-    
-    formulas[["n0.a0"]] <- formula(response.var ~ 1)
-    formulas[["n0a.a0"]] <- formula(response.var ~ adult.ba_c)
-    
-    ## PPT
-
-    formulas[["n0a.aP"]] <- formula(response.var ~ adult.ba_c + diff.norm.ppt.z.highsev_c)
-    formulas[["n0.aP"]] <- formula(response.var ~ diff.norm.ppt.z.highsev_c)
-    formulas[["n0a.aP2"]] <- formula(response.var ~ adult.ba_c + diff.norm.ppt.z.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
-    formulas[["n0.aP2"]] <- formula(response.var ~ diff.norm.ppt.z.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
-    
-    formulas[["nPa.a0"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c)
-    formulas[["nPa.aP"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c)
-    formulas[["nPa.aP2"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
-    formulas[["pPa"]] <- formula(response.var ~ adult.ba_c + ppt.post.highsev_c)
-    formulas[["nP2a.a0"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2a.aP"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2a.aP2"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq)
-    formulas[["pP2a"]] <- formula(response.var ~ adult.ba_c + ppt.post.highsev_c + ppt.post.highsev_c.sq)
-    formulas[["nPa.aPni"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c)
-    formulas[["nPa.aP2ni"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
-    formulas[["nP2a.aPni"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2a.aP2ni"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq)
-
-    formulas[["nP.a0"]] <- formula(response.var ~ ppt.normal.highsev_c)
-    formulas[["nP.aP"]] <- formula(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c)
-    formulas[["nP.aP2"]] <- formula(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
-    formulas[["pP"]] <- formula(response.var ~ ppt.post.highsev_c)
-    formulas[["nP2.a0"]] <- formula(response.var ~ ppt.normal.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2.aP"]] <- formula(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2.aP2"]] <- formula(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq)
-    formulas[["pP2"]] <- formula(response.var ~ ppt.post.highsev_c + ppt.post.highsev_c.sq)
-    formulas[["nP.aPni"]] <- formula(response.var ~ ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c)
-    formulas[["nP.aP2ni"]] <- formula(response.var ~ ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
-    formulas[["nP2.aPni"]] <- formula(response.var ~ ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2.aP2ni"]] <- formula(response.var ~ ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq)
-
-
-    ##DEF
-
-    formulas[["n0a.aD"]] <- formula(response.var ~ adult.ba_c + diff.norm.def.z.highsev_c)
-    formulas[["n0a.aD2"]] <- formula(response.var ~ adult.ba_c + diff.norm.def.z.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
-    formulas[["n0.aD"]] <- formula(response.var ~ diff.norm.def.z.highsev_c)
-    formulas[["n0.aD2"]] <- formula(response.var ~ diff.norm.def.z.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
-    
-
-    formulas[["nDa.a0"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c)
-    formulas[["nDa.aD"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c*diff.norm.def.z.highsev_c)
-    formulas[["nDa.aD2"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
-    #formulas[["pDa"]] <- formula(response.var ~ adult.ba_c + def.post.highsev_c)
-    formulas[["nD2a.a0"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2a.aD"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2a.aD2"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq + def.normal.highsev_c.sq)
-    #formulas[["pD2a"]] <- formula(response.var ~ adult.ba_c + def.post.highsev_c + def.post.highsev_c.sq)
-    formulas[["nDa.aDni"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c + diff.norm.def.z.highsev_c)
-    formulas[["nDa.aD2ni"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
-    formulas[["nD2a.aDni"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2a.aD2ni"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq + def.normal.highsev_c.sq)
-
-    formulas[["nD.a0"]] <- formula(response.var ~ def.normal.highsev_c)
-    formulas[["nD.aD"]] <- formula(response.var ~ def.normal.highsev_c*diff.norm.def.z.highsev_c)
-    formulas[["nD.aD2"]] <- formula(response.var ~ def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
-    #formulas[["pD"]] <- formula(response.var ~ def.post.highsev_c)
-    formulas[["nD2.a0"]] <- formula(response.var ~ def.normal.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2.aD"]] <- formula(response.var ~ def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2.aD2"]] <- formula(response.var ~ def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq + def.normal.highsev_c.sq)
-    #formulas[["pP2"]] <- formula(response.var ~ def.post.highsev_c + def.post.highsev_c.sq)
-    formulas[["nD.aDni"]] <- formula(response.var ~ def.normal.highsev_c + diff.norm.def.z.highsev_c)
-    formulas[["nD.aD2ni"]] <- formula(response.var ~ def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
-    formulas[["nD2.aDni"]] <- formula(response.var ~ def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2.aD2ni"]] <- formula(response.var ~ def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq + def.normal.highsev_c.sq)
-
-
-
-    ##AET
-
-    formulas[["n0a.aA"]] <- formula(response.var ~ adult.ba_c + diff.norm.aet.z.highsev_c)
-    formulas[["n0a.aA2"]] <- formula(response.var ~ adult.ba_c + diff.norm.aet.z.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
-
-    formulas[["n0.aA"]] <- formula(response.var ~ diff.norm.aet.z.highsev_c)
-    formulas[["n0.aA2"]] <- formula(response.var ~ diff.norm.aet.z.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
-    
-    formulas[["nAa.a0"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c)
-    formulas[["nAa.aA"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c)
-    formulas[["nAa.aA2"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
-    #formulas[["pDa"]] <- formula(response.var ~ adult.ba_c + def.post.highsev_c)
-    formulas[["nA2a.a0"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2a.aA"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2a.aA2"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq + aet.normal.highsev_c.sq)
-    #formulas[["pD2a"]] <- formula(response.var ~ adult.ba_c + def.post.highsev_c + def.post.highsev_c.sq)
-    formulas[["nAa.aAni"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c)
-    formulas[["nAa.aA2ni"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
-    formulas[["nA2a.aAni"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2a.aA2ni"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq + aet.normal.highsev_c.sq)
-
-    formulas[["nA.a0"]] <- formula(response.var ~ aet.normal.highsev_c)
-    formulas[["nA.aA"]] <- formula(response.var ~ aet.normal.highsev_c*diff.norm.aet.z.highsev_c)
-    formulas[["nA.aA2"]] <- formula(response.var ~ aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
-    #formulas[["pD"]] <- formula(response.var ~ def.post.highsev_c)
-    formulas[["nA2.a0"]] <- formula(response.var ~ aet.normal.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2.aA"]] <- formula(response.var ~ aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2.aA2"]] <- formula(response.var ~ aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq + aet.normal.highsev_c.sq)
-    #formulas[["pP2"]] <- formula(response.var ~ def.post.highsev_c + def.post.highsev_c.sq)
-    formulas[["nA.aAni"]] <- formula(response.var ~ aet.normal.highsev_c + diff.norm.aet.z.highsev_c)
-    formulas[["nA.aA2ni"]] <- formula(response.var ~ aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
-    formulas[["nA2.aAni"]] <- formula(response.var ~ aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2.aA2ni"]] <- formula(response.var ~ aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq + aet.normal.highsev_c.sq)
-
-
-
-
-
-
-    ## PPT
-
-    formulas[["n0a.aPmin"]] <- formula(response.var ~ adult.ba_c + diff.norm.ppt.min.z.highsev_c)
-    formulas[["n0a.aP2min"]] <- formula(response.var ~ adult.ba_c + diff.norm.ppt.min.z.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
-    formulas[["n0.aPmin"]] <- formula(response.var ~ diff.norm.ppt.min.z.highsev_c)
-    formulas[["n0.aP2min"]] <- formula(response.var ~ diff.norm.ppt.min.z.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
-    
-    
-    
-    formulas[["nPa.aPmin"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c)
-    formulas[["nPa.aP2min"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
-    # formulas[["pPa"]] <- formula(response.var ~ adult.ba_c + ppt.post.highsev_c)
-    formulas[["nP2a.aPmin"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2a.aP2min"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq + ppt.normal.highsev_c.sq)
-    # formulas[["pP2a"]] <- formula(response.var ~ adult.ba_c + ppt.post.highsev_c + ppt.post.highsev_c.sq)
-    formulas[["nPa.aPminni"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c)
-    formulas[["nPa.aP2minni"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
-    formulas[["nP2a.aPminni"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2a.aP2minni"]] <- formula(response.var ~ adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq + ppt.normal.highsev_c.sq)
-
-    formulas[["nP.aPmin"]] <- formula(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c)
-    formulas[["nP.aP2min"]] <- formula(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
-    # formulas[["pP"]] <- formula(response.var ~ ppt.post.highsev_c)
-    formulas[["nP2.aPmin"]] <- formula(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2.aP2min"]] <- formula(response.var ~ ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq + ppt.normal.highsev_c.sq)
-    # formulas[["pP2"]] <- formula(response.var ~ ppt.post.highsev_c + ppt.post.highsev_c.sq)
-    formulas[["nP.aPminni"]] <- formula(response.var ~ ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c)
-    formulas[["nP.aP2minni"]] <- formula(response.var ~ ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
-    formulas[["nP2.aPminni"]] <- formula(response.var ~ ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2.aP2minni"]] <- formula(response.var ~ ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq + ppt.normal.highsev_c.sq)
-
-
-    ##DEF
-
-    formulas[["n0a.aDmax"]] <- formula(response.var ~ adult.ba_c + diff.norm.def.max.z.highsev_c)
-    formulas[["n0a.aD2max"]] <- formula(response.var ~ adult.ba_c + diff.norm.def.max.z.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
-
-    formulas[["n0.aDmax"]] <- formula(response.var ~ diff.norm.def.max.z.highsev_c)
-    formulas[["n0.aD2max"]] <- formula(response.var ~ diff.norm.def.max.z.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
-    
-    formulas[["nDa.aDmax"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c)
-    formulas[["nDa.aD2max"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
-    #formulas[["pDa"]] <- formula(response.var ~ adult.ba_c + def.post.highsev_c)
-    formulas[["nD2a.aDmax"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2a.aD2max"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq + def.normal.highsev_c.sq)
-    #formulas[["pD2a"]] <- formula(response.var ~ adult.ba_c + def.post.highsev_c + def.post.highsev_c.sq)
-    formulas[["nDa.aDmaxni"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c)
-    formulas[["nDa.aD2maxni"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
-    formulas[["nD2a.aDmaxni"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2a.aD2maxni"]] <- formula(response.var ~ adult.ba_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq + def.normal.highsev_c.sq)
-
-    formulas[["nD.aDmax"]] <- formula(response.var ~ def.normal.highsev_c*diff.norm.def.max.z.highsev_c)
-    formulas[["nD.aD2max"]] <- formula(response.var ~ def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
-    #formulas[["pD"]] <- formula(response.var ~ def.post.highsev_c)
-    formulas[["nD2.aDmax"]] <- formula(response.var ~ def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2.aD2max"]] <- formula(response.var ~ def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq + def.normal.highsev_c.sq)
-    #formulas[["pP2"]] <- formula(response.var ~ def.post.highsev_c + def.post.highsev_c.sq)
-    formulas[["nD.aDmaxni"]] <- formula(response.var ~ def.normal.highsev_c + diff.norm.def.max.z.highsev_c)
-    formulas[["nD.aD2maxni"]] <- formula(response.var ~ def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
-    formulas[["nD2.aDmaxni"]] <- formula(response.var ~ def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2.aD2maxni"]] <- formula(response.var ~ def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq + def.normal.highsev_c.sq)
-
-
-
-    ##AET
-
-    formulas[["n0a.aAmin"]] <- formula(response.var ~ adult.ba_c + diff.norm.aet.min.z.highsev_c)
-    formulas[["n0a.aA2min"]] <- formula(response.var ~ adult.ba_c + diff.norm.aet.min.z.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
-
-    formulas[["n0.aAmin"]] <- formula(response.var ~ diff.norm.aet.min.z.highsev_c)
-    formulas[["n0.aA2min"]] <- formula(response.var ~ diff.norm.aet.min.z.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
-    
-    
-    formulas[["nAa.aAmin"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c)
-    formulas[["nAa.aA2min"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
-    #formulas[["pDa"]] <- formula(response.var ~ adult.ba_c + def.post.highsev_c)
-    formulas[["nA2a.aAmin"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2a.aA2min"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq + aet.normal.highsev_c.sq)
-    #formulas[["pD2a"]] <- formula(response.var ~ adult.ba_c + def.post.highsev_c + def.post.highsev_c.sq)
-    formulas[["nAa.aAminni"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c)
-    formulas[["nAa.aA2minni"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
-    formulas[["nA2a.aAminni"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2a.aA2minni"]] <- formula(response.var ~ adult.ba_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq + aet.normal.highsev_c.sq)
-
-    formulas[["nA.aAmin"]] <- formula(response.var ~ aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c)
-    formulas[["nA.aA2min"]] <- formula(response.var ~ aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
-    #formulas[["pD"]] <- formula(response.var ~ def.post.highsev_c)
-    formulas[["nA2.aAmin"]] <- formula(response.var ~ aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2.aA2min"]] <- formula(response.var ~ aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq + aet.normal.highsev_c.sq)
-    #formulas[["pP2"]] <- formula(response.var ~ def.post.highsev_c + def.post.highsev_c.sq)
-    formulas[["nA.aAminni"]] <- formula(response.var ~ aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c)
-    formulas[["nA.aA2minni"]] <- formula(response.var ~ aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
-    formulas[["nA2.aAminni"]] <- formula(response.var ~ aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2.aA2minni"]] <- formula(response.var ~ aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq + aet.normal.highsev_c.sq)
-
-    #### With seed tree ####
-    
-    formulas[["n0s.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + 1)
-    formulas[["n0as.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c)
-    
-    ## PPT
-    
-    formulas[["n0as.aP"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.ppt.z.highsev_c)
-    formulas[["n0s.aP"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.ppt.z.highsev_c)
-    formulas[["n0as.aP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.ppt.z.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
-    formulas[["n0s.aP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.ppt.z.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
-    
-    formulas[["nPas.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c)
-    formulas[["nPas.aP"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c)
-    formulas[["nPas.aP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
-    #formulas[["pPa"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.post.highsev_c)
-    formulas[["nP2as.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2as.aP"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2as.aP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq)
-    #formulas[["pP2a"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.post.highsev_c + ppt.post.highsev_c.sq)
-    formulas[["nPas.aPni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c)
-    formulas[["nPas.aP2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
-    formulas[["nP2as.aPni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2as.aP2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq)
-    
-    formulas[["nPs.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c)
-    formulas[["nPs.aP"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c)
-    formulas[["nPs.aP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
-    #formulas[["pPs"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.post.highsev_c)
-    formulas[["nP2s.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2s.aP"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2s.aP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq)
-    #formulas[["pP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.post.highsev_c + ppt.post.highsev_c.sq)
-    formulas[["nPs.aPni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c)
-    formulas[["nPs.aP2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq)
-    formulas[["nP2s.aPni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2s.aP2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.z.highsev_c.sq + diff.norm.ppt.z.highsev_c.sq + ppt.normal.highsev_c.sq)
-    
-    
-    ##DEF
-    
-    formulas[["n0as.aD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.def.z.highsev_c)
-    formulas[["n0as.aD2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.def.z.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
-    formulas[["n0s.aD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.def.z.highsev_c)
-    formulas[["n0s.aD2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.def.z.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
-    
-    
-    formulas[["nDas.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c)
-    formulas[["nDas.aD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c*diff.norm.def.z.highsev_c)
-    formulas[["nDas.aD2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
-    #formulas[["pDa"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.post.highsev_c)
-    formulas[["nD2as.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2as.aD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2as.aD2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq + def.normal.highsev_c.sq)
-    #formulas[["pD2a"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.post.highsev_c + def.post.highsev_c.sq)
-    formulas[["nDas.aDni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c + diff.norm.def.z.highsev_c)
-    formulas[["nDas.aD2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
-    formulas[["nD2as.aDni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2as.aD2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq + def.normal.highsev_c.sq)
-    
-    formulas[["nDs.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c)
-    formulas[["nDs.aD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c)
-    formulas[["nDs.aD2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
-    #formulas[["pD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.post.highsev_c)
-    formulas[["nD2s.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2s.aD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2s.aD2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c + def.normal.highsev_c*diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq + def.normal.highsev_c.sq)
-    #formulas[["pP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.post.highsev_c + def.post.highsev_c.sq)
-    formulas[["nDs.aDni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c)
-    formulas[["nDs.aD2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq)
-    formulas[["nD2s.aDni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2s.aD2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c + def.normal.highsev_c + diff.norm.def.z.highsev_c.sq + diff.norm.def.z.highsev_c.sq + def.normal.highsev_c.sq)
-    
-    
-    
-    ##AET
-    
-    formulas[["n0as.aA"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.aet.z.highsev_c)
-    formulas[["n0as.aA2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.aet.z.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
-    
-    formulas[["n0s.aA"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.aet.z.highsev_c)
-    formulas[["n0s.aA2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.aet.z.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
-    
-    formulas[["nAas.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c)
-    formulas[["nAas.aA"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c)
-    formulas[["nAas.aA2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
-    #formulas[["pDa"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.post.highsev_c)
-    formulas[["nA2as.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2as.aA"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2as.aA2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq + aet.normal.highsev_c.sq)
-    #formulas[["pD2a"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.post.highsev_c + def.post.highsev_c.sq)
-    formulas[["nAas.aAni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c)
-    formulas[["nAas.aA2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
-    formulas[["nA2as.aAni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2as.aA2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq + aet.normal.highsev_c.sq)
-    
-    formulas[["nAs.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c)
-    formulas[["nAs.aA"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c)
-    formulas[["nAs.aA2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
-    #formulas[["pD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.post.highsev_c)
-    formulas[["nA2s.a0"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2s.aA"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2s.aA2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq + aet.normal.highsev_c.sq)
-    #formulas[["pP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.post.highsev_c + def.post.highsev_c.sq)
-    formulas[["nAs.aAni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c)
-    formulas[["nAs.aA2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq)
-    formulas[["nA2s.aAni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2s.aA2ni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.z.highsev_c.sq + diff.norm.aet.z.highsev_c.sq + aet.normal.highsev_c.sq)
-    
-    
-    
-    
-    
-    
-    ## PPT
-    
-    formulas[["n0as.aPmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.ppt.min.z.highsev_c)
-    formulas[["n0as.aP2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.ppt.min.z.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
-    formulas[["n0s.aPmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.ppt.min.z.highsev_c)
-    formulas[["n0s.aP2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.ppt.min.z.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
-    
-    
-    
-    formulas[["nPas.aPmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c)
-    formulas[["nPas.aP2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
-    # formulas[["pPa"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.post.highsev_c)
-    formulas[["nP2as.aPmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2as.aP2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq + ppt.normal.highsev_c.sq)
-    # formulas[["pP2a"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.post.highsev_c + ppt.post.highsev_c.sq)
-    formulas[["nPas.aPminni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c)
-    formulas[["nPas.aP2minni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
-    formulas[["nP2as.aPminni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2as.aP2minni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq + ppt.normal.highsev_c.sq)
-    
-    formulas[["nPs.aPmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c)
-    formulas[["nPs.aP2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
-    # formulas[["pP"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.post.highsev_c)
-    formulas[["nP2s.aPmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2s.aP2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c*diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq + ppt.normal.highsev_c.sq)
-    # formulas[["pP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.post.highsev_c + ppt.post.highsev_c.sq)
-    formulas[["nPs.aPminni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c)
-    formulas[["nPs.aP2minni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq)
-    formulas[["nP2s.aPminni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c.sq)
-    formulas[["nP2s.aP2minni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c + ppt.normal.highsev_c + diff.norm.ppt.min.z.highsev_c.sq + diff.norm.ppt.min.z.highsev_c.sq + ppt.normal.highsev_c.sq)
-    
-    
-    ##DEF
-    
-    formulas[["n0as.aDmax"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.def.max.z.highsev_c)
-    formulas[["n0as.aD2max"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.def.max.z.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
-    
-    formulas[["n0s.aDmax"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.def.max.z.highsev_c)
-    formulas[["n0s.aD2max"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.def.max.z.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
-    
-    formulas[["nDas.aDmax"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c)
-    formulas[["nDas.aD2max"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
-    #formulas[["pDa"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.post.highsev_c)
-    formulas[["nD2as.aDmax"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2as.aD2max"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq + def.normal.highsev_c.sq)
-    #formulas[["pD2a"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.post.highsev_c + def.post.highsev_c.sq)
-    formulas[["nDas.aDmaxni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c)
-    formulas[["nDas.aD2maxni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
-    formulas[["nD2as.aDmaxni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2as.aD2maxni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq + def.normal.highsev_c.sq)
-    
-    formulas[["nDs.aDmax"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c)
-    formulas[["nDs.aD2max"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
-    #formulas[["pD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.post.highsev_c)
-    formulas[["nD2s.aDmax"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2s.aD2max"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c + def.normal.highsev_c*diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq + def.normal.highsev_c.sq)
-    #formulas[["pP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.post.highsev_c + def.post.highsev_c.sq)
-    formulas[["nDs.aDmaxni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c)
-    formulas[["nDs.aD2maxni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq)
-    formulas[["nD2s.aDmaxni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c.sq)
-    formulas[["nD2s.aD2maxni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c + def.normal.highsev_c + diff.norm.def.max.z.highsev_c.sq + diff.norm.def.max.z.highsev_c.sq + def.normal.highsev_c.sq)
-    
-    
-    
-    ##AET
-    
-    formulas[["n0as.aAmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.aet.min.z.highsev_c)
-    formulas[["n0as.aA2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + diff.norm.aet.min.z.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
-    
-    formulas[["n0s.aAmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.aet.min.z.highsev_c)
-    formulas[["n0s.aA2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + diff.norm.aet.min.z.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
-    
-    
-    formulas[["nAas.aAmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c)
-    formulas[["nAas.aA2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
-    #formulas[["pDa"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.post.highsev_c)
-    formulas[["nA2as.aAmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2as.aA2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq + aet.normal.highsev_c.sq)
-    #formulas[["pD2a"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + def.post.highsev_c + def.post.highsev_c.sq)
-    formulas[["nAas.aAminni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c)
-    formulas[["nAas.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
-    formulas[["nA2as.aAminni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2as.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + adult.ba_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq + aet.normal.highsev_c.sq)
-    
-    formulas[["nAs.aAmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c)
-    formulas[["nAs.aA2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
-    #formulas[["pD"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.post.highsev_c)
-    formulas[["nA2s.aAmin"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2s.aA2min"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c*diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq + aet.normal.highsev_c.sq)
-    #formulas[["pP2"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + def.post.highsev_c + def.post.highsev_c.sq)
-    formulas[["nAs.aAminni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c)
-    formulas[["nAs.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq)
-    formulas[["nA2s.aAminni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c.sq)
-    formulas[["nA2s.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c + aet.normal.highsev_c + diff.norm.aet.min.z.highsev_c.sq + diff.norm.aet.min.z.highsev_c.sq + aet.normal.highsev_c.sq)
-    
-    
-    
-    
-    
-    
-    
-  
-    cv.results <- data.frame()
-    
-    for(i in 1:length(formulas)) {
-      
-      formula.name <- names(formulas)[i]
-      cv.result <- cvfun(formulas[[i]],data=d.c)
-      cv.result.named <- data.frame(model=names(formulas)[i],cv.result,stringsAsFactors=FALSE)
-      cv.results <- rbind(cv.results,cv.result.named)
-      
-    }
-    
-    cv.results$model <- as.character(cv.results$model)
-    
-    
-    
-    ### Specify model categories
-    
-    ## normal models
-    search <- ".a0"
-    normal.model.names <- cv.results[grep(search,cv.results$model,fixed=TRUE),]$mod
-    normal.model.names <- normal.model.names[normal.model.names != "n0.a0"] # exclude null model
-    
-    ## anomaly models
-    search <- ".a"
-    null.names <- c("n0.a0","n0a.a0","n0s.a0","n0sa.a0")
-    anomaly.model.names <- cv.results[grep(search,cv.results$model,fixed=TRUE),]$mod
-    anomaly.model.names <- anomaly.model.names[!(anomaly.model.names %in% normal.model.names)]
-    anomaly.model.names <- anomaly.model.names[!(anomaly.model.names %in% null.names)] # exclude null model
-    
-    ### Find the best normal model
-    d.cv.normal <- cv.results[cv.results$model %in% normal.model.names,]
-    best.normal.mod <- d.cv.normal[d.cv.normal$mae == min(d.cv.normal$mae,na.rm=TRUE),]$model[1]
-    
-  
-    ### Get post corresponding to best normal
-    norm.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
-    norm.post.mod <- sub("n","p",norm.part)
-    
-    # ### Compare best normal to corresponding post
-    # comp.normal.post <- loo(m[[as.character(best.normal.mod)]],m[[as.character(norm.post.mod)]])$ic_diffs__
-    # 
-    
-    ### Get anomaly models corresponding to best normal
-    
-    normal.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
-    search <- paste0(normal.part,".")
-    normal.matches <- grepl(search,cv.results$model,fixed=TRUE)
-    search <- paste0(normal.part,".a0")
-    non.anom.match <- grepl(search,cv.results$model,fixed=TRUE)
-    normal.anom <- normal.matches & (!non.anom.match)
-    normal.anom.names <- cv.results[normal.anom,]$model
-    
-    ### Get the best corresponding anomaly model
-    
-    d.cv.anom <- cv.results[cv.results$model %in% normal.anom.names,]
-    best.normal.anom <- d.cv.anom[d.cv.anom$mae == min(d.cv.anom$mae,na.rm=TRUE),]$model[1]
-    
-    ### Get the best anomaly, independent of best normal
-    d.cv.anomaly <- cv.results[cv.results$model %in% anomaly.model.names,]
-    best.anomaly.mod <- d.cv.anomaly[d.cv.anomaly$mae == min(d.cv.anomaly$mae,na.rm=TRUE),]$mod[1]
-    
-    ### Get the normal corresponding to the best anomaly
-    best.anom.normal.part <- strsplit(as.character(best.anomaly.mod),".",fixed=TRUE)[[1]][1]
-    best.anom.normal <- paste0(best.anom.normal.part,".a0")
-    
-    
-    ## get maes of best normal, best anomal, best normal.anom, best.anom.normal
-    best.normal.mae <- cv.results[cv.results$model == best.normal.mod,"mae"]
-    best.normal.anom.mae <- cv.results[cv.results$model == best.normal.anom,"mae"]
-    best.anom.mae <- cv.results[cv.results$model == best.anomaly.mod,"mae"]
-    best.anom.normal.mae <- cv.results[cv.results$model == best.anom.normal,"mae"]
-    
-    
-    
-    ### Store MAEs of the best models
-    d.maes.sp <- data.frame(best.normal.mod,best.normal.anom,best.anomaly.mod,best.anom.normal,
-                            best.normal.mae,best.normal.anom.mae,best.anom.mae,best.anom.normal.mae,sp,rad.level,stringsAsFactors=FALSE)
-  
-    d.maes <- rbind(d.maes,d.maes.sp)
-    
-    
-    
-    
-    
-    
-    ### Get the best implementation of each anomaly term (ppt, aet, def; and max/min or average)
-    
-    # ## normal models
-    # search <- ".a0"
-    # normal.model.names <- cv.results[grep(search,cv.results$model,fixed=TRUE),]$mod
-    # normal.model.names <- normal.model.names[normal.model.names != "n0.a0"] # exclude null model
-    # 
-    # anom.search.opts <- c(Pmean = "aP2?(ni)?$",
-    #                  Dmean = "aD2?(ni)?$",
-    #                  Amean = "aA2?(ni)?$",
-    #                  Pmin = "aP2?min(ni)?$",
-    #                  Dmax = "aD2?max(ni)?$",
-    #                  Amin = "aA2?min(ni)?$"
-    #                  )
-    # 
-    # d.maes.anoms.sp <- data.frame()
-    # 
-    # 
-    # for(i in 1:length(anom.search.opts)) {
-    # 
-    #   anom.name <- names(anom.search.opts)[i]
-    #   anom.search <- anom.search.opts[i]
-    #   null.names <- c("n0.a0","n0a.a0")
-    #   anomaly.model.names <- cv.results[grep(anom.search,cv.results$model,fixed=FALSE),]$model
-    #   anomaly.model.names <- anomaly.model.names[!(anomaly.model.names %in% normal.model.names)]
-    #   anomaly.model.names <- anomaly.model.names[!(anomaly.model.names %in% null.names)] # exclude null model
-    # 
-    #   d.cv.anomaly <- cv.results[cv.results$model %in% anomaly.model.names,]
-    #   best.anomaly.mod <- d.cv.anomaly[d.cv.anomaly$mae == min(d.cv.anomaly$mae,na.rm=TRUE),]$mod[1]
-    # 
-    #   best.anom.normal.part <- strsplit(as.character(best.anomaly.mod),".",fixed=TRUE)[[1]][1]
-    #   best.anom.normal <- paste0(best.anom.normal.part,".a0")
-    # 
-    #   ## get maes of best normal, best anomal, best normal.anom, best.anom.normal
-    #   best.anom.mae <- cv.results[cv.results$model == best.anomaly.mod,"mae"]
-    #   best.anom.normal.mae <- cv.results[cv.results$model == best.anom.normal,"mae"]
-    # 
-    # 
-    #   ### Store MAEs of the best models
-    #   d.maes.anoms.sp.anom <- data.frame(best.anomaly.mod,best.anom.normal,
-    #                           best.anom.mae,best.anom.normal.mae,sp,rad.level,anom.name,stringsAsFactors=FALSE)
-    # 
-    #   d.maes.anoms.sp <- rbind(d.maes.anoms.sp,d.maes.anoms.sp.anom)
-    # 
-    # }
-    # 
-    # d.maes.anoms <- rbind(d.maes.anoms,d.maes.anoms.sp)
-
-
-    ## Repeat, but by first finding the best normal and then the corresponding best anomaly
-
-    ## normal models
-    search <- ".a0"
-    normal.model.names <- cv.results[grep(search,cv.results$model,fixed=TRUE),]$mod
-    normal.model.names <- normal.model.names[normal.model.names != "n0.a0"] # exclude null model
-
-    if(sp %in% cover.opts) { # don't allow a normal with adults in it if this is a cover model
-      norm.search.opts <- c(Pmean = "n(P|0)2?\\.a0",
-                            Dmean = "n(D|0)2?\\.a0",
-                            Amean = "n(A|0)2?\\.a0",
-                            Pmin = "n(P|0)2?\\.a0",
-                            Dmax = "n(D|0)2?\\.a0",
-                            Amin = "n(A|0)2?\\.a0")
-    } else {
-      norm.search.opts <- c(Pmean = "n(P|0)2?a?s?\\.a0",
-                            Dmean = "n(D|0)2?a?s?\\.a0",
-                            Amean = "n(A|0)2?a?s?\\.a0",
-                            Pmin = "n(P|0)2?a?s?\\.a0",
-                            Dmax = "n(D|0)2?a?s?\\.a0",
-                            Amin = "n(A|0)2?a?s?\\.a0")
-    }
-
-    anom.search.opts <- c(Pmean = "aP2?(ni)?$",
-                        Dmean = "aD2?(ni)?$",
-                        Amean = "aA2?(ni)?$",
-                        Pmin = "aP2?min(ni)?$",
-                        Dmax = "aD2?max(ni)?$",
-                        Amin = "aA2?min(ni)?$"
-                        )
-
-    d.maes.anoms.sp <- data.frame()
-
-  
-  for(i in 1:length(anom.search.opts)) {
-  
-    anom.name <- names(norm.search.opts)[i]
-    norm.search <- norm.search.opts[i]
-    anom.search <- anom.search.opts[i]
-    null.names <- c("n0.a0","n0a.a0")
-    normal.model.names <- cv.results[grep(norm.search,cv.results$model,fixed=FALSE),]$model
-  
-    d.cv.normal <- cv.results[cv.results$model %in% normal.model.names,]
-    best.normal.mod <- d.cv.normal[d.cv.normal$mae == min(d.cv.normal$mae,na.rm=TRUE),]$mod[1]
-  
-    #what is the best anomaly model for that normal, sticking with whichever anom we have
-    best.normal.normal.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
-    best.normal.anom.search <- paste0(best.normal.normal.part,"\\.",anom.search)
-    anom.model.names <- cv.results[grep(best.normal.anom.search,cv.results$model,fixed=FALSE),]$model
-    d.cv.anom <- cv.results[cv.results$model %in% anom.model.names,]
-    best.anom.mod <- d.cv.anom[d.cv.anom$mae == min(d.cv.anom$mae,na.rm=TRUE),]$mod[1]
-  
-    ## get maes of best normal, best anomal, best normal.anom, best.anom.normal
-    best.anom.mae <- cv.results[cv.results$model == best.anom.mod,"mae"]
-    best.anom.normal.mae <- cv.results[cv.results$model == best.normal.mod,"mae"]
-  
-  
-    ### Store MAEs of the best models
-    best.anomaly.mod <- best.anom.mod
-    best.anom.normal <- best.normal.mod
-  
-  
-    d.maes.anoms.sp.anom <- data.frame(best.anomaly.mod,best.anom.normal,
-                                       best.anom.mae,best.anom.normal.mae,sp,rad.level,anom.name,stringsAsFactors=FALSE)
-  
-    d.maes.anoms.sp <- rbind(d.maes.anoms.sp,d.maes.anoms.sp.anom)
-
-    }
-
-    d.maes.anoms <- rbind(d.maes.anoms,d.maes.anoms.sp)
-
-
-
-    
-    
-    
-    
-    
-    
-    
-    
-    ## Now for each anom model , make predictions
-    
-    
-    
-    
-    ### Function to find the center of a "fixed" predictor variable within the species distribution
-    mid.val.fun <- function(var) {
-      mid.val <- mean(d.c[,var])
-      return(mid.val)
-    }
-    
-    low.val.fun <- function(var) {
-      a <- quantile(d.c[,var],0.25)
-      #a <- min(d.c[,var])
-      return(a)
-    }
-    
-    high.val.fun <- function(var) {
-      a <- quantile(d.c[,var],0.75)
-      #a <- max(d.c[,var])
-      return(a)
-    }
-    
-    vars <- c("ppt.normal.highsev_c","ppt.normal.highsev_c.sq","diff.norm.ppt.z.highsev_c","diff.norm.ppt.z.highsev_c.sq","tmean.normal.highsev_c","tmean.normal.highsev_c.sq",
-              "diff.norm.tmean.z.highsev_c","diff.norm.tmean.z.highsev_c.sq",
-              "aet.normal.highsev_c","aet.normal.highsev_c.sq","diff.norm.aet.z.highsev_c","diff.norm.aet.z.highsev_c.sq","def.normal.highsev_c","def.normal.highsev_c.sq",
-              "diff.norm.def.z.highsev_c","diff.norm.def.z.highsev_c.sq",
-              "seed_tree_distance_general.highsev_c","rad.march.highsev_c","adult.ba_c"
-    )
-    
-    
-    
-    mid.val <- sapply(vars,mid.val.fun,USE.NAMES=TRUE)
-    
-    low.val <- sapply(vars,low.val.fun,USE.NAMES=TRUE)
-    names(low.val) <- vars
-    
-    high.val <- sapply(vars,high.val.fun,USE.NAMES=TRUE)
-    names(high.val) <- vars
-    
-    
-    
-    diff.norm.seq <- seq(from=-1.5,to=1.5,length.out=100)
-    diff.norm.seq.rev <- rev(diff.norm.seq)
-    
-    newdat <- data.frame(
-      ppt.normal.highsev_c = c(rep(low.val["ppt.normal.highsev_c"],100),rep(mid.val["ppt.normal.highsev_c"],100),rep(high.val["ppt.normal.highsev_c"],100)),
-      ppt.normal.highsev_c.sq = c(rep(low.val["ppt.normal.highsev_c"]^2,100),rep(mid.val["ppt.normal.highsev_c"]^2,100),rep(high.val["ppt.normal.highsev_c"]^2,100)),
-      tmean.normal.highsev_c = c(rep(low.val["tmean.normal.highsev_c"],100),rep(mid.val["tmean.normal.highsev_c"],100),rep(high.val["tmean.normal.highsev_c"],100)),
-      tmean.normal.highsev_c.sq = c(rep(low.val["tmean.normal.highsev_c"]^2,100),rep(mid.val["tmean.normal.highsev_c"]^2,100),rep(high.val["tmean.normal.highsev_c"]^2,100)),
-      def.normal.highsev_c = c(rep(low.val["def.normal.highsev_c"],100),rep(mid.val["def.normal.highsev_c"],100),rep(high.val["def.normal.highsev_c"],100)),
-      def.normal.highsev_c.sq = c(rep(low.val["def.normal.highsev_c"]^2,100),rep(mid.val["def.normal.highsev_c"]^2,100),rep(high.val["def.normal.highsev_c"]^2,100)),
-      aet.normal.highsev_c = c(rep(low.val["aet.normal.highsev_c"],100),rep(mid.val["aet.normal.highsev_c"],100),rep(high.val["aet.normal.highsev_c"],100)),
-      aet.normal.highsev_c.sq = c(rep(low.val["aet.normal.highsev_c"]^2,100),rep(mid.val["aet.normal.highsev_c"]^2,100),rep(high.val["aet.normal.highsev_c"]^2,100)),
-      
-      norm.level = c(rep("low",100),rep("mid",100),rep("high",100)),
-      
-      diff.norm.ppt.z.highsev_c = rep(diff.norm.seq,3),
-      diff.norm.ppt.z.highsev_c.sq = rep(diff.norm.seq^2,3),
-      diff.norm.tmean.z.highsev_c = rep(diff.norm.seq.rev,3),
-      diff.norm.tmean.z.highsev_c.sq = rep(diff.norm.seq.rev,3)^2,
-      diff.norm.aet.z.highsev_c = rep(diff.norm.seq,3),
-      diff.norm.aet.z.highsev_c.sq = rep(diff.norm.seq^2,3),
-      diff.norm.def.z.highsev_c = rep(diff.norm.seq.rev,3),
-      diff.norm.def.z.highsev_c.sq = rep(diff.norm.seq.rev,3)^2,
-      
-      diff.norm.ppt.min.z.highsev_c = rep(diff.norm.seq,3),
-      diff.norm.ppt.min.z.highsev_c.sq = rep(diff.norm.seq^2,3),
-      diff.norm.tmean.max.z.highsev_c = rep(diff.norm.seq.rev,3),
-      diff.norm.tmean.max.z.highsev_c.sq = rep(diff.norm.seq.rev,3)^2,
-      diff.norm.aet.min.z.highsev_c = rep(diff.norm.seq,3),
-      diff.norm.aet.min.z.highsev_c.sq = rep(diff.norm.seq^2,3),
-      diff.norm.def.max.z.highsev_c = rep(diff.norm.seq.rev,3),
-      diff.norm.def.max.z.highsev_c.sq = rep(diff.norm.seq.rev,3)^2,
-      
-      seed_tree_distance_general.highsev_c = mid.val["seed_tree_distance_general.highsev_c"],
-      rad.march.highsev_c = mid.val["rad.march.highsev_c"],
-      adult.ba_c = mid.val["adult.ba_c"]
-      
-    )
-    
-    for(j in 1:nrow(d.maes.anoms.sp)) {
-      
-      d.maes.anoms.sp.row <- d.maes.anoms.sp[j,]
-      best.anom.mod <- d.maes.anoms.sp.row$best.anomaly.mod
-      best.anom.normal.mod <- d.maes.anoms.sp.row$best.anom.normal
-      
-      #fit the anom and normal models
-      mod.anom <- betareg(formulas[[best.anom.mod]],data=d.c)
-      mod.norm <- betareg(formulas[[best.anom.normal.mod]],data=d.c)
-      
-      
-      ##predict to new data
-      
-      pred.anom <- as.data.frame(predict(mod.anom,newdat,type="quantile",at=c(0.025,0.5,0.975)))
-      pred.norm <- as.data.frame(predict(mod.norm,newdat,type="quantile",at=c(0.025,0.5,0.975)))
-      
-      names(pred.anom) <- c("pred.low","pred.mid","pred.high")
-      names(pred.norm) <- c("pred.low","pred.mid","pred.high")
-      
-      pred.anom.dat <- cbind(pred.anom,newdat)
-      pred.anom.dat$type <- "anom"
-      pred.anom.dat$mod <- d.maes.anoms.sp.row$best.anomaly.mod
-      
-      pred.norm.dat <- cbind(pred.norm,newdat)
-      pred.norm.dat$type <- "norm"
-      pred.norm.dat$mod <- d.maes.anoms.sp.row$best.anom.normal
-      
-      pred.dat.sp <- rbind(pred.norm.dat,pred.anom.dat)
-      #pred.dat.sp <- pred.anom.dat
-      
-      pred.dat.sp$anom <- d.maes.anoms.sp.row$anom.name
-      pred.dat.sp$sp <- d.maes.anoms.sp.row$sp
-      pred.dat.sp$rad.level <- d.maes.anoms.sp.row$rad.level
-      
-      
-      
-      pred.dat <- rbind(pred.dat,pred.dat.sp)  
-      
-      
-      
-      ## get fitted and observed
-      fit.anom <- as.data.frame(predict(mod.anom))
-      fit.norm <- as.data.frame(predict(mod.norm))
-      names(fit.anom) <- names(fit.norm) <- c("fitted")
-      fit.anom$type <- "anom"
-      fit.norm$type <- "norm"
-      
-      fit.anom.dat <- cbind(fit.anom,d.c)
-      fit.norm.dat <- cbind(fit.norm,d.c)
-      
-      fit.dat.sp <- rbind(fit.anom.dat,fit.norm.dat)
-      fit.dat.sp$anom <- d.maes.anoms.sp.row$anom.name
-      fit.dat.sp$sp <- sp
-      fit.dat.sp$rad.level <- rad.level
-      
-      fit.dat <- rbind(fit.dat,fit.dat.sp)
-      
-      
-      
-      
-      
-    }
-    
-  }
-}
-  
-
-
-#### Prep for plots etc ####
-
-## make a single factor that combines species and rad level
-pred.dat$sp.rad <- paste(pred.dat$sp,pred.dat$rad.level,sep=".")
-
-
-#for each sp-rad combo, find which was the best anomaly, which anomalies were better than their corresponding normals, and plot symbols indicating
-d.maes.anoms$anom.better <- d.maes.anoms$best.anom.mae < d.maes.anoms$best.anom.normal.mae
-d.maes.anoms$anom.improvement <-  d.maes.anoms$best.anom.normal.mae - d.maes.anoms$best.anom.mae
-
-d.maes.anoms$best.of.species <- ""
-d.maes.anoms$most.improved <- ""
-
-for(sp in unique(d.maes.anoms$sp)) {
-  d.maes.anoms.sp <- d.maes.anoms[d.maes.anoms$sp == sp,]
-  for(rad in d.maes.anoms.sp$rad.level) {
-    d.maes.anoms.sp.rad <- d.maes.anoms.sp[d.maes.anoms.sp$rad.level == rad,]
-    
-    best.anom <- d.maes.anoms.sp.rad[d.maes.anoms.sp.rad$best.anom.mae == min(d.maes.anoms.sp.rad$best.anom.mae)[1],"anom.name"]
-    d.maes.anoms[(d.maes.anoms$sp==sp) & (d.maes.anoms$rad.level == rad) & (d.maes.anoms$anom.name == best.anom),"best.of.species"] <- ""# "best anom"
-    
-    most.improved <- d.maes.anoms.sp.rad[d.maes.anoms.sp.rad$anom.improvement == max(d.maes.anoms.sp.rad$anom.improvement)[1],"anom.name"]
-    d.maes.anoms[(d.maes.anoms$sp==sp) & (d.maes.anoms$rad.level == rad) & (d.maes.anoms$anom.name == most.improved),"most.improved"] <- ""# "largest improvement"
-  }
-}
-
-d.maes.anoms.short <- d.maes.anoms[,c("sp","rad.level","anom.name","anom.better","anom.improvement","best.of.species","most.improved")]
-
-pred.dat.comb <- merge(pred.dat,d.maes.anoms.short,all.x=TRUE,by.x=c("sp","rad.level","anom"),by.y=c("sp","rad.level","anom.name"))
-pred.dat.comb$anom.improvement <- round(pred.dat.comb$anom.improvement,2)
-pred.dat.comb[pred.dat.comb$anom.improvement < 0 , "anom.improvement"] <- NA
-
-
-#### Compute total MAE across all species, to see which is the best ####
-d.mae.agg <- aggregate(d.maes.anoms[,c("best.anom.mae","best.anom.normal.mae","anom.improvement")],by=list(d.maes.anoms$anom.name),FUN=mean)
-
-
-
-#### Plot counterfactuals ####
-
-## get rid of mid and get rid of normal predictions
-pred.dat.plotting <- pred.dat.comb[pred.dat.comb$norm.level %in% c("low","high"),]
-pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$type == "anom",]
-
-ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z.highsev_c,y=pred.mid,color=norm.level,fill=norm.level)) +
-  geom_point() +
-  geom_ribbon(aes(ymin=pred.low,ymax=pred.high),alpha=0.3,color=NA) +
-  facet_grid(anom~sp.rad) +
-  geom_text(aes(0,1,label=best.of.species),size=3,color="black") +
-  geom_text(aes(0,0.9,label=most.improved),size=3,color="black") +
-  geom_text(aes(0,0.8,label=anom.improvement),size=3,color="black")
-
-
-
-
-
-#### For each species and rad group, plot fitted vs. observed, for normal and anom side by side ####
-
-fit.dat$resid <- fit.dat$response.var-fit.dat$fitted
-
-
-
-
-## AET min only
-fit.dat.aet <- fit.dat[fit.dat$anom == "Amin",]
-
-
-
-fit.obs.plots <- list()
-
-for(sp in unique(fit.dat$sp)) {
-  for(rad.level in unique(fit.dat$rad.level)) {
-    
-    fit.dat.sp <- fit.dat.aet[fit.dat.aet$sp == sp & fit.dat.aet$rad.level == rad.level,]
-    
-    fit.dat.sp$type <- factor(fit.dat.sp$type,levels=c("norm","anom"))
-    
-    # dummy points
-    max.xy <- max(c(fit.dat.sp$response.var,fit.dat.sp$fitted))
-    dummy <- data.frame(response.var=c(0,max.xy),fitted=c(0,max.xy))
-    
-    plot.name <- paste0(sp,".",rad.level)
-    
-    fit.obs.plots[[plot.name]] <- ggplot(fit.dat.sp,aes(x=response.var,y=fitted)) +
-      geom_point() +
-      facet_grid(.~type) +
-      geom_abline(slope=1,intercept=0) +
-      geom_point(data=dummy,alpha=0) +
-      labs(x="Observed",y="Fitted",title=plot.name) +
-      theme_bw() +
-      theme(plot.title=element_text(hjust=0.5))
-    
-  }
-}
-
-library(gridExtra)
-n <- length(fit.obs.plots)
-nCol <- 2
-do.call("grid.arrange",c(fit.obs.plots,ncol=nCol))
-
-
-
-
-#### Plot residuals by fire ####
-fit.dat.plot <- fit.dat[fit.dat$type=="norm",]
-fit.dat.plot <- fit.dat.plot[fit.dat.plot$anom == "Pmin",]
-
-fit.dat.plot$rad.level <- as.factor(fit.dat.plot$rad.level)
-
-fit.dat.plot$Fire <- factor(fit.dat.plot$Fire,c("BAGLEY","CHIPS","RALSTON","BASSETTS","MOONLIGHT","ANTELOPE","HARDING","RICH","BTU LIGHTENING","STRAYLOR","CUB","AMERICAN RIVER","FREDS","POWER"))
-
-
-ggplot(fit.dat.plot,aes(x=Fire,y=resid,fill=rad.level)) +
-  geom_bar(stat="identity",position="dodge",width=0.5) +
-  facet_grid(sp~.) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle=90,hjust=1))
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## fit for shrub cover
-
-##make predictions for differing defmax, defmean, ideally also flexible for all anomaly terms assuming there's only one anomaly per prediction
-
-##make sure shrub looks similar whether using precip vs. deficit max.
-
-
-##show predicted vs. observed with and without anom term
-
-##for best normal model, fit residuals
-  
-  
-  if(sp =="COV.SHRUB") {
-    d.c$regen.count.old <- d.c$SHRUB
-  }
-  if(sp =="COV.GRASS") {
-    d.c$regen.count.old <- d.c$GRASS
-  }
-  
-  
-  
-  
-  ### Function to find the center of a "fixed" predictor variable within the species distribution
-  mid.val.fun <- function(var) {
-    d.c.sp <- d.c[d.c$regen.count.old > 0,]
-    #d.c.sp$prod <- d.c.sp[,var] * d.c.sp$regen.count.old
-    #prod.sum <- sum(d.c.sp$prod)
-    #count.tot <- sum(d.c.sp$regen.count.old)
-    #mid.val <- prod.sum/count.tot
-    
-    mid.val <- mean(d.c.sp[,var])
-    
-    return(mid.val)
-  }
-  
-  low.val.fun <- function(var) {
-    d.c.sp <- d.c[d.c$regen.count.old > 0,]
-    
-    # vals.rep <- list()
-    # for(i in 1:nrow(d.c.sp))      {
-    # 
-    #   d.c.sp.row <- d.c.sp[i,]
-    #   vals.rep[[i]] <- rep(d.c.sp.row[,var],round(d.c.sp.row$regen.count.old*3))
-    # }
-    # 
-    # vals.rep <- unlist(vals.rep)
-    # 
-    # a <- quantile(vals.rep,0.25)
-    
-    a <- quantile(d.c.sp[,var],0.25)
-    
-    return(a)
-  }
-  
-  high.val.fun <- function(var) {
-    
-    d.c.sp <- d.c[d.c$regen.count.old > 0,]        
-    # vals.rep <- list()
-    # for(i in 1:nrow(d.c.sp))      {
-    # 
-    #   d.c.sp.row <- d.c.sp[i,]
-    #   vals.rep[[i]] <- rep(d.c.sp.row[,var],round(d.c.sp.row$regen.count.old*3))
-    # }
-    # 
-    # vals.rep <- unlist(vals.rep)
-    # a <- quantile(vals.rep,0.75)
-    # 
-    a <- quantile(d.c.sp[,var],0.75)
-    
-    return(a)
-  }
-  
-  
-  
-  
-  
-  
-  ### For best anomaly model, store predictions for counterfactual plots
-  
-  ### Make counterfactual predictor sets
-  
-  ### For the variables being held constant, set them at the value where the species is most abundant
-  
-  ## For tmean.normal_c, get mean value of plots where the species was present, weighted by number of seedligns
-  
-  vars <- c("ppt.normal_c","ppt.normal_c.sq","diff.norm.ppt.z_c","diff.norm.ppt.z_c.sq","tmean.normal_c","tmean.normal_c.sq",
-            "diff.norm.tmean.z_c","diff.norm.tmean.z_c.sq",
-            "aet.normal_c","aet.normal_c.sq","diff.norm.aet.z_c","diff.norm.aet.z_c.sq","def.normal_c","def.normal_c.sq",
-            "diff.norm.def.z_c","diff.norm.def.z_c.sq",
-            "seed_tree_distance_general_c","rad.march_c"
-  )
-  
-  
-  
-  mid.val <- sapply(vars,mid.val.fun,USE.NAMES=TRUE)
-  
-  low.val <- sapply(vars,low.val.fun,USE.NAMES=TRUE)
-  names(low.val) <- vars
-  
-  high.val <- sapply(vars,high.val.fun,USE.NAMES=TRUE)
-  names(high.val) <- vars
-  
-  
-  
-  diff.norm.seq <- seq(from=-1.5,to=1.5,length.out=100)
-  
-  newdat.ppt <- data.frame(
-    ppt.normal_c = c(rep(low.val["ppt.normal_c"],100),rep(mid.val["ppt.normal_c"],100),rep(high.val["ppt.normal_c"],100)),
-    ppt.normal_c.sq = c(rep(low.val["ppt.normal_c"]^2,100),rep(mid.val["ppt.normal_c"]^2,100),rep(high.val["ppt.normal_c"]^2,100)),
-    norm.level = c(rep("low",100),rep("mid",100),rep("high",100)),
-    diff.norm.ppt.z_c = rep(diff.norm.seq,3),
-    diff.norm.ppt.z_c.sq = rep(diff.norm.seq^2,3),
-    tmean.normal_c = mid.val["tmean.normal_c"],
-    tmean.normal_c.sq = mid.val["tmean.normal_c"]^2,
-    diff.norm.tmean.z_c = mid.val["diff.norm.tmean.z_c"],
-    diff.norm.tmean.z_c.sq = mid.val["diff.norm.tmean.z_c"]^2,
-    scenario = "ppt",
-    
-    aet.normal_c = c(rep(low.val["aet.normal_c"],100),rep(mid.val["aet.normal_c"],100),rep(high.val["aet.normal_c"],100)),
-    aet.normal_c.sq = c(rep(low.val["aet.normal_c"]^2,100),rep(mid.val["aet.normal_c"]^2,100),rep(high.val["aet.normal_c"]^2,100)),
-    diff.norm.aet.z_c = rep(diff.norm.seq,3),
-    diff.norm.aet.z_c.sq = rep(diff.norm.seq^2,3),
-    def.normal_c = mid.val["def.normal_c"],
-    def.normal_c.sq = mid.val["def.normal_c"]^2,
-    diff.norm.def.z_c = mid.val["diff.norm.def.z_c"],
-    diff.norm.def.z_c.sq = mid.val["diff.norm.def.z_c"]^2,
-    
-    seed_tree_distance_general_c = mid.val["seed_tree_distance_general_c"],
-    rad.march_c = mid.val["rad.march_c"]
-  )
-  newdat.tmean <- data.frame(
-    tmean.normal_c = c(rep(low.val["tmean.normal_c"],100),rep(mid.val["tmean.normal_c"],100),rep(high.val["tmean.normal_c"],100)),
-    tmean.normal_c.sq = c(rep(low.val["tmean.normal_c"]^2,100),rep(mid.val["tmean.normal_c"]^2,100),rep(high.val["tmean.normal_c"]^2,100)),
-    norm.level = c(rep("low",100),rep("mid",100),rep("high",100)),
-    diff.norm.tmean.z_c = rep(diff.norm.seq,3),
-    diff.norm.tmean.z_c.sq = rep(diff.norm.seq^2,3),
-    ppt.normal_c = mid.val["ppt.normal_c"],
-    ppt.normal_c.sq = mid.val["ppt.normal_c"]^2,
-    diff.norm.ppt.z_c = mid.val["diff.norm.ppt.z_c"],
-    diff.norm.ppt.z_c.sq = mid.val["diff.norm.ppt.z_c"]^2,
-    scenario = "tmean",
-    
-    def.normal_c = c(rep(low.val["def.normal_c"],100),rep(mid.val["def.normal_c"],100),rep(high.val["def.normal_c"],100)),
-    def.normal_c.sq = c(rep(low.val["def.normal_c"]^2,100),rep(mid.val["def.normal_c"]^2,100),rep(high.val["def.normal_c"]^2,100)),
-    diff.norm.def.z_c = rep(diff.norm.seq,3),
-    diff.norm.def.z_c.sq = rep(diff.norm.seq^2,3),
-    aet.normal_c = mid.val["aet.normal_c"],
-    aet.normal_c.sq = mid.val["aet.normal_c"]^2,
-    diff.norm.aet.z_c = mid.val["diff.norm.aet.z_c"],
-    diff.norm.aet.z_c.sq = mid.val["diff.norm.aet.z_c"]^2,
-    
-    seed_tree_distance_general_c = mid.val["seed_tree_distance_general_c"],
-    rad.march_c = mid.val["rad.march_c"]
-  )
-  
-  newdat <- rbind(newdat.ppt,newdat.tmean)
-  interact.df <- data.frame("Fake"=rep(NA,nrow(newdat)))
-  for(i in 1:ncol(newdat)) { # for each col
-    for(j in 1:ncol(newdat)) {
-      name.i <- names(newdat)[i]
-      name.j <- names(newdat)[j]
-      name.inter <- paste(name.i,name.j,sep=":")
-      val.inter <- newdat[,i] * newdat[,j]
-      interact.df <- cbind(interact.df,val.inter)
-      names(interact.df)[ncol(interact.df)] <- name.inter
-    }
-  }
-  
-  newdat <- cbind(newdat,interact.df)
-  newdat$"(Intercept)" <- 1 # this is the "predictor" value to multiple the intercept by
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  m.sp <- m[[as.character(best.anomaly.mod)]]
-  m.p.sp <- posterior_samples(m.sp,pars="^b")
-  
-  if(sp %in% cover.opts) {
-    m.phi.sp <- posterior_samples(m.sp,pars="^phi")
-  }
-  
-  names(m.p.sp) <- sapply(names(m.p.sp),substr,start=3,stop=1000)
-  names(m.p.sp)[1] <- "(Intercept)"
-  
-  mod.vars <- colnames(m.p.sp)
-  
-  newdat.ordered <- newdat[,mod.vars]
-  
-  # for each row of newdat.ordered, multiply data by all coef values, sum across, and compute median and conf int
-  preds <- matrix(nrow=nrow(newdat.ordered),ncol=6)
-  for(i in 1:nrow(newdat.ordered)) {
-    
-    newdat.row <- as.matrix(newdat.ordered[i,])
-    
-    prod <- sweep(m.p.sp,MARGIN=2,newdat.row,`*`)
-    sums <- rowSums(prod)
-    
-    fit <- median(sums)
-    upr <- quantile(sums,probs=0.975)
-    lwr <- quantile(sums,probs=0.025)
-    
-    
-    
-    
-    
-    
-    ## also compute prediction interval
-    
-    
-    
-    
-    
-    if(sp %in% cover.opts) {
-      
-      phi <- m.phi.sp
-      phi.resp.scale <- exp(phi)
-      
-      fits <- sums
-      fits.resp.scale <- inv.logit(fits)
-      
-      alpha.param <- fits.resp.scale*phi.resp.scale
-      beta.param <- -fits.resp.scale*phi.resp.scale + phi.resp.scale
-      
-      
-      pred.int.preds <- rbeta(n=length(alpha.param$phi),shape1=alpha.param$phi,shape2=beta.param$phi)
-      pred.int.lwr <- quantile(pred.int.preds,probs=0.025)
-      pred.int.upr <- quantile(pred.int.preds,probs=0.975)
-      
-      pred.lwr <- pred.int.lwr
-      pred.upr <- pred.int.upr
-      pred.int.pred <- NA
-      
-      
-      
-    } else {
-      
-      fit.resp.scale <- inv.logit(fit)
-      pred.int.pred <- rbinom(1,1,fit.resp.scale)
-      pred.lwr <- NA
-      pred.upr <- NA
-      
-    }
-    
-    
-    preds[i,] <- c(fit,lwr,upr,pred.lwr,pred.upr,pred.int.pred)
-    
-    
-    
-  }
-  
-  if(sp %in% cover.opts) {
-    preds[,1:3] <- inv.logit(preds[,1:3])
-  } else {
-    preds[,1:3] <- inv.logit(preds[,1:3])
-  }
-  
-  
-  colnames(preds) <- c("fit","lwr","upr","pred.lwr","pred.upr","pred")
-  preds <- as.data.frame(preds)
-  
-  sp.grp <- sp
-  dat.preds.sp <- cbind(newdat,preds,sp.grp,best.anomaly.mod)
-  dat.preds <- rbind(dat.preds,dat.preds.sp)
-  
-  
-  
-  
-  
-  
-  ### store a predicted vs. observed data frame here: one for the best anomaly model and one for the corresponding normal model ###
-  predicted.normal <- predict(m[[as.character(best.anom.normal)]])[,1]
-  predicted.anomaly <- predict(m[[as.character(best.anomaly.mod)]])[,1]
-  
-  observed <- d.c$response.var
-  
-  
-  pred.obs.normal <- data.frame(pred=predicted.normal,obs=observed,mod="normal",sp=sp)
-  pred.obs.anomaly <- data.frame(pred=predicted.anomaly,obs=observed,mod="anomaly",sp=sp)
-  
-  pred.obs.sp <- rbind(pred.obs.normal,pred.obs.anomaly)
-  
-  # if(sp %in% cover.opts) {
-  #   pred.obs.sp$pred <- inv.logit(pred.obs.sp$pred)
-  # } else {
-  #   #pred.obs.sp$pred <- inv.logit(pred.obs.sp$pred)
-  #   
-  # }
-  
-  pred.obs <- rbind(pred.obs,pred.obs.sp)
-  
-  
-  ## Calculate AUC (for bernoulli) or R-sq (for cover)
-  
-  if(sp %in% cover.opts) {
-    auc.normal <- cor(observed,predicted.normal)^2
-    auc.anomaly <- cor(observed,predicted.anomaly)^2
-  } else {
-    auc.normal <- auc(observed,predicted.normal)
-    auc.anomaly <- auc(observed,predicted.anomaly)
-  }
-  
-  aucs.sp <- data.frame(auc.normal,auc.anomaly,sp)
-  
-  aucs <- rbind(aucs,aucs.sp)
-  
-  
-  
-}
-
-
-
-
-## Save the outputs
-
-write.csv(dat.preds,"counterfactual_df.csv",row.names=FALSE)
-write.csv(pred.obs,"pred_obs.csv",row.names=FALSE)
-write.csv(d.loo.comps,"loo_comps.csv",row.names=FALSE)
-write.csv(d.loos.all,"loos.csv",row.names=FALSE)
-write.csv(mods.best,"mods_best.csv",row.names=FALSE)
-write.csv(aucs,"norm_anom_aucs_rsqs.csv",row.names=FALSE)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+## significant relationship between the two, relatively high r
 
 
 

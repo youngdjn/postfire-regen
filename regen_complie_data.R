@@ -110,6 +110,9 @@ plot.comb$seed_tree_distance_general <- pmin(plot.comb$seed_tree_distance_conife
 
 # set survey year
 plot.comb$Date <- "8/10/2016 0:00:00" # it's all 2016; the day doesn't matter
+# except the new plots surveyed in 2017
+surveyed.2017 <- c("CHI2220","CHI2428","CHI2216","CHI2475")
+plot.comb[plot.comb$Regen_Plot %in% surveyed.2017,"Date"] <- "6/21/2017 0:00:00"
 
 
 # Find when only one quadrant was surveyed for seedlings, and multiply counts by 4 when true
@@ -132,7 +135,16 @@ plot.comb <- plot.comb[,! (names(plot.comb) %in% c("Year.of.Fire","Fire"))]
 #merge in the fire name and year
 plot.comb <- merge(plot.comb,fire.years,all.x=TRUE)
 
-#! there are a few plots with no coordinates--need to add
+
+# swapped coords for CUB0409
+plot.comb[which(plot.comb$Regen_Plot == "CUB0409"),c("Longitude","Latitude")] <- plot.comb[which(plot.comb$Regen_Plot == "CUB0409"),c("Latitude","Longitude")]
+
+
+
+
+#there are a few plots with no coordinates written by field crew--add them
+plot.comb[plot.comb$Regen_Plot == "CUB0294",c("Longitude","Latitude")] <- c(121.45444,40.21851)
+plot.comb[plot.comb$Regen_Plot == "CUB0407",c("Longitude","Latitude")] <- c(121.43747,40.17117)
 
 
 ## Change lat/long to easting/northing (for all but power)
@@ -156,8 +168,58 @@ plot.comb <- rbind.fill(plot.comb.lat,plot.comb.utm)
 plot.comb <- plot.comb[,!(names(plot.comb) %in% c("Latitude","Longitude"))]
 
 
-#! when a 2016 plot had a shrub that was actually a hardwood, fake it so it counts as a hardwood (make fake hardwood column that is counted when calculating hardwood presence but not count)
-#! exclude 2016 plots from hardwood count: not 0 but NA, not part of analysis
+### We now have all 2016 plots in plot.comb
+plot.comb.notes <- plot.comb[,c("Regen_Plot","NOTES")]
+
+
+### Change undecertain or incorrect species names based on photos taken by crew
+
+plot.comb[which(toupper(plot.comb$dominant_shrub_1) == "SYMO?"),"dominant_shrub_1"] <- "SYMO"
+
+plot.comb[which(toupper(plot.comb$dominant_shrub_1) == "MANZANITA?"),"dominant_shrub_1"] <- "LIDE3"
+plot.comb[which(toupper(plot.comb$dominant_shrub_2) == "MANZANITA?"),"dominant_shrub_2"] <- "LIDE3"
+plot.comb[which(toupper(plot.comb$dominant_shrub_3) == "MANZANITA?"),"dominant_shrub_3"] <- "LIDE3"
+
+plot.comb[which(toupper(plot.comb$dominant_shrub_1) == "SYRO?"),"dominant_shrub_1"] <- "SYRO"
+plot.comb[which(toupper(plot.comb$dominant_shrub_2) == "SYRO?"),"dominant_shrub_2"] <- "SYRO"
+plot.comb[which(toupper(plot.comb$dominant_shrub_3) == "SYRO?"),"dominant_shrub_3"] <- "SYRO"
+
+plot.comb[which(toupper(plot.comb$dominant_shrub_1) == "PREM?"),"dominant_shrub_1"] <- "SALIX"
+plot.comb[which(toupper(plot.comb$dominant_shrub_2) == "PREM?"),"dominant_shrub_2"] <- "SALIX"
+plot.comb[which(toupper(plot.comb$dominant_shrub_3) == "PREM?"),"dominant_shrub_3"] <- "SALIX"
+
+should.be.ceve <- c("CEIN","CEIN3","CENI")
+plot.comb[which(toupper(plot.comb$dominant_shrub_1) %in% should.be.ceve & plot.comb$Fire == "CUB"),"dominant_shrub_1"] <- "CEVE"
+plot.comb[which(toupper(plot.comb$dominant_shrub_2) %in% should.be.ceve & plot.comb$Fire == "CUB"),"dominant_shrub_2"] <- "CEVE"
+plot.comb[which(toupper(plot.comb$dominant_shrub_3) %in% should.be.ceve & plot.comb$Fire == "CUB"),"dominant_shrub_3"] <- "CEVE"
+
+sap.comb[which(sap.comb$Species == "COSE?"),"Species"] <- "CONU"
+resprout.comb[which(resprout.comb$Species == "COSE?"),"Species"] <- "CONU"
+seedl.comb[which(seedl.comb$Species == "COSE?"),"Species"] <- "CONU"
+
+plot.comb[which(plot.comb$Regen_Plot == "CUB0404"),"dominant_shrub_1"] <- "ARNE"
+
+resprout.comb[which(resprout.comb$Species=="QUKE" & resprout.comb$Regen_Plot == "BAG1360"),"Species"] <- "QUCH2"
+
+plot.comb[which(toupper(plot.comb$dominant_shrub_1) == "SCRUB OAK?"),"dominant_shrub_1"] <- "LIDE3"
+plot.comb[which(toupper(plot.comb$dominant_shrub_2) == "SCRUB OAK?"),"dominant_shrub_2"] <- "LIDE3"
+plot.comb[which(toupper(plot.comb$dominant_shrub_3) == "sCRUB OAK?"),"dominant_shrub_3"] <- "LIDE3"
+
+plot.comb[which(toupper(plot.comb$dominant_shrub_1) == "BEAQ?"),"dominant_shrub_1"] <- "QUCH2"
+plot.comb[which(toupper(plot.comb$dominant_shrub_2) == "BEAQ?"),"dominant_shrub_2"] <- "QUCH2"
+plot.comb[which(toupper(plot.comb$dominant_shrub_3) == "BEAQ?"),"dominant_shrub_3"] <- "QUCH2"
+
+plot.comb[which(plot.comb$Regen_Plot == "PIT0207"),"dominant_shrub_1"] <- "ARME"
+
+plot.comb[which(toupper(plot.comb$dominant_shrub_1) == "ARVI?"),"dominant_shrub_1"] <- "QUVA"
+plot.comb[which(toupper(plot.comb$dominant_shrub_2) == "ARVI?"),"dominant_shrub_2"] <- "QUVA"
+plot.comb[which(toupper(plot.comb$dominant_shrub_3) == "ARVI?"),"dominant_shrub_3"] <- "QUVA"
+
+plot.comb[which(plot.comb$Regen_Plot == "CUB0404"),"dominant_shrub_1"] <- "ARNE"
+
+# LIDE3 as "shrub" in BAG1719,1683 and QUCH2 in BAG1537 is irrelevant even though LIDE3,QUCH2 is not a shrub because shrub cover was low to ground so it would not have been measured as a tree.
+
+
 
 
 plot.welch <- read.csv("../data_survey/Welch/Plot_data.txt",stringsAsFactors=FALSE)
@@ -166,6 +228,22 @@ seedl.welch <- read.csv("../data_survey/Welch/tree_regen.txt",stringsAsFactors=F
 resprout.welch <- read.csv("../data_survey/Welch/Resprouts.txt",stringsAsFactors=FALSE)
 surviving.trees.welch <- read.csv("../data_survey/Welch/surviving_trees.txt",stringsAsFactors=FALSE)
 seed.tree.welch <- read.csv("../data_survey/Welch/seed_tree.txt",stringsAsFactors=FALSE)
+shrub.welch <- read.csv("../data_survey/Welch/shrub_regen.txt",stringsAsFactors=FALSE)
+
+## From Welch plots, get modal height of the dominant shrub species and store it in the plot table
+
+shrub.plots <- unique(shrub.welch$Regen_Plot)
+for(shrub.plot in shrub.plots) {
+  
+  plot.shrubs <- shrub.welch[shrub.welch$Regen_Plot == shrub.plot,]
+  max.cov <- max(plot.shrubs$Cover)
+  max.cov.row <- row.names(plot.shrubs)[which(plot.shrubs$Cover == max.cov)[1]]
+  dom.ht <- plot.shrubs[max.cov.row,]$modal_ht_cm
+  
+  plot.welch[plot.welch$Regen_Plot == shrub.plot,"dominant_shrub_ht_cm"] <- dom.ht
+  
+}
+
 
 
 
@@ -180,9 +258,6 @@ plot.welch <- merge(plot.welch,seed.tree.welch.nearest,all.x=TRUE)
 
 
 
-#! need to remove managed plots
-
-
 ## Merge Welch plots with 2016 plots
 
 plot <- rbind.fill(plot.welch,plot.comb)
@@ -193,9 +268,9 @@ surviving.trees <- rbind.fill(surviving.trees.welch,surviving.trees.comb)
 seed.tree <- seed.tree.welch
 
 
-# Fix species names to have numbers: once tables merged, sort by species name to identify where.
-from <- c("JU","AB","CADE","CONU","LIDE","QUCH")
-to <- c("JUNIPERUS","ABIES","CADE27","CONU4","LIDE3","QUCH2")
+# Fix species names to use USDA PLANTS codes. Also fix an incorrectly-named species
+from <- c("JU","AB","CADE","CONU","LIDE","QUCH","NODE","COSE","PRVI?","ACGI")
+to <- c("JUNIPERUS","ABIES","CADE27","CONU4","LIDE3","QUCH2","LIDE3","CONU","PRVI","ACMA")
 
 
 surviving.trees$Species <- mapvalues(surviving.trees$Species,from=from,to=to)
@@ -204,14 +279,26 @@ seedl$Species <- mapvalues(seedl$Species,from=from,to=to)
 resprout$Species <- mapvalues(resprout$Species,from=from,to=to)
 seed.tree$Species <- mapvalues(seed.tree$Species,from=from,to=to)
 
+
+## there is a surviving tree called "CAPIM?" in PIT0164. No notes. Don't know what it is. Must drop plot.
+plot <- plot[plot$Regen_Plot != "PIT0164",]
+
+
+## add two resprouts that were incorrectly considered "shrubs" by the crew
+resprout.add <- data.frame(ID=c(10001,10002),Regen_Plot=c("BAG1382","PIT0207"),COUNT.TOTAL=c(1000,1000),Species=c("LIDE3","ARME"),X5yr=c(1000,1000),._sprouts=c(1000,1000),DBH..cm.=c(1000,1000),talst_age=c(5,5),tallest_ht_cm=c(137,NA),tallest_lastyr_cm=c(NA,NA))
+resprout <- rbind.fill(resprout,resprout.add)
+
+
+
 # Calculate live BA
 plot$BA.Live1 <- plot$BA_live_count * plot$BAF
 
 
-#populate seedling unk_yr column with values for CADE and all hardwoods
+#populate seedling unk_yr column with values for all hardwoods (but NOT CADE)
 seedl.count.columns <- grep("yr$",names(seedl))
-hardwoods <- c("QUKE","QUCH2","ARME","LIDE3","CHCH","QUGA4","ACMA","CEMO2","CONU4","POTR5","QUBE5","QUJO3","QUWI","UMCA")
-not.ageable <- c("CADE27",hardwoods)
+hardwoods<- c("QUKE","QUCH2","ARME","LIDE3","CHCH","QUGA4","ACMA","CEMO2","CONU4","POTR5","QUBE5","QUJO3","QUWI","UMCA")
+#not.ageable <- c("CADE27",hardwoods)
+not.ageable <- c(hardwoods)
 seedl$Count_total <- rowSums(seedl[,seedl.count.columns],na.rm=TRUE) #this includes unk_yr (incase some of the seedlings were considered ageable and others not)
 seedl[seedl$Species %in% not.ageable,"unk_yr"] <- seedl$Count_total[seedl$Species %in% not.ageable]
 seedl.known.age.count.cols <- seedl.count.columns[1:(length(seedl.count.columns)-1)]
@@ -233,7 +320,7 @@ write.csv(seed.tree,"../data_survey/Compiled/seed_tree.csv",row.names=FALSE)
 
 
 
-#### 0.5 Operations that apply to all eteps below #####
+#### 0.5 Operations that apply to all steps below #####
 
 
 
@@ -319,6 +406,36 @@ for(year in years) {
 }
 
 
+### MODIS snow cover monthly-by-yearly ###
+
+snow.yr.mo <- list()
+
+snow.brick <- brick("C:/Users/DYoung/Documents/UC Davis/GIS/Snowpack/n5eil01u.ecs.nsidc.org/MOST/snow_monthly_regen/snow_monthly_regen.grd")
+
+for(year in years) {
+  for(month in 1:12) {
+    layer.index <- paste("snow",year,mo.chr[month],sep=".")
+    snow.yr.mo[[layer.index]] <- snow.brick[[layer.index]]
+  }
+}
+
+## get monthly normal out of this
+
+snow.normal.mo <- list()
+for(month in mo.chr) {
+  
+  mo.search <- paste0(month,"$")
+  month.indices <- grep(mo.search,names(snow.yr.mo))
+  month.layers <- snow.yr.mo[month.indices]
+  layer.name <- paste0("snow.normal.",month)
+  snow.normal.mo[[layer.name]] <- mean(brick(month.layers),na.rm=TRUE)
+
+}
+
+
+
+
+
 ### TopoWx tmin and tmax monthly normal ###
 
 tmax.normal.mo <- list()
@@ -360,15 +477,19 @@ for(month in 1:12) {
 temp.800m.rast <- unlist(list(tmin.yr.mo,tmax.yr.mo,tmin.normal.mo,tmax.normal.mo))
 ppt.4km.rast <- unlist(list(ppt.yr.mo))
 ppt.800m.rast <- unlist(list(ppt.normal.mo))
+snow.5km.rast <- unlist(list(snow.yr.mo,snow.normal.mo))
+
 
 
 ### Extract climate values for points ###
 ppt.4km <- sapply(X = ppt.4km.rast,FUN = extract.single, plots = plots) # takes ~1 min
 ppt.800m <- sapply(X = ppt.800m.rast,FUN = extract.single, plots = plots)
 temp.800m <- sapply(X = temp.800m.rast,FUN = extract.single, plots = plots) # takes ~10 min
+snow.5km <- sapply(X = snow.5km.rast,FUN = extract.single, plots = plots) # takes ~10 sec
 
-plots.clim <- data.frame(Regen_Plot=plots$Regen_Plot,temp.800m,ppt.4km,ppt.800m)
-plots.clim <- plots.clim[complete.cases(plots.clim),]
+
+plots.clim <- data.frame(Regen_Plot=plots$Regen_Plot,temp.800m,ppt.4km,ppt.800m,snow.5km)
+#plots.clim <- plots.clim[complete.cases(plots.clim),]
 
 
 write.csv(plots.clim,"../data_intermediate_processing_local/plot_climate_monthly.csv",row.names=FALSE)
@@ -400,14 +521,18 @@ all.mo.yr <- c(first.year.mo.yr,inter.mos.mo.yr,last.year.mo.yr)
 all.mo.yr.tmin <- paste("tmin",all.mo.yr,sep=".")
 all.mo.yr.tmax <- paste("tmax",all.mo.yr,sep=".")
 all.mo.yr.ppt <- paste("ppt",all.mo.yr,sep=".")
+all.mo.yr.snow <- paste("snow",all.mo.yr,sep=".")
 
 tmin.col.nums <- sapply(all.mo.yr.tmin,function(x) {grep(x,names(plots.clim))})
 tmax.col.nums <- sapply(all.mo.yr.tmax,function(x) {grep(x,names(plots.clim))})
 ppt.col.nums <- sapply(all.mo.yr.ppt,function(x) {grep(x,names(plots.clim))})
+snow.col.nums <- sapply(all.mo.yr.snow,function(x) {grep(x,names(plots.clim))})
 
 tmin.col.nums.mat <- matrix(tmin.col.nums,ncol=12,byrow=TRUE)
 tmax.col.nums.mat <- matrix(tmax.col.nums,ncol=12,byrow=TRUE)
 ppt.col.nums.mat <- matrix(ppt.col.nums,ncol=12,byrow=TRUE)
+snow.col.nums.mat <- matrix(snow.col.nums,ncol=12,byrow=TRUE)
+
 
 water.year.summary.annual <- matrix(nrow=nrow(plots.clim),ncol=0)
 for (i in 1:n.water.years) {
@@ -424,22 +549,26 @@ for (i in 1:n.water.years) {
   
   ppt.col.nums.year <- ppt.col.nums.mat[i,]
   ppt.cols.year <- plots.clim[,ppt.col.nums.year]
+
+  snow.col.nums.year <- snow.col.nums.mat[i,]
+  snow.cols.year <- plots.clim[,snow.col.nums.year]  
+  snow <- snow.cols.year
   
-  ### snow: for each plot, sum ppt from sept (col 1) to may (col 9) for months when avg temp was <=0
-  snow <- ppt.cols.year
-  snow[tmean.cols.year > 0] <- 0 # no snow if temp is > 0
-  
-  ### rain: for each plot, sum ppt from jan (col 5) to aug (col 12) for months when avg temp was >0
-  rain <- ppt.cols.year
-  rain[tmean.cols.year <= 0] <- 0
+  # ### snow: for each plot, sum ppt from sept (col 1) to may (col 9) for months when avg temp was <=0
+  # snow <- ppt.cols.year
+  # snow[tmean.cols.year > 0] <- 0 # no snow if temp is > 0
+  # 
+  # ### rain: for each plot, sum ppt from jan (col 5) to aug (col 12) for months when avg temp was >0
+  # rain <- ppt.cols.year
+  # rain[tmean.cols.year <= 0] <- 0
 
   tmin.avg.year <- apply(tmin.cols.year,1,mean)
   tmax.avg.year <- apply(tmax.cols.year,1,mean)
   
   ppt.tot.year <- apply(ppt.cols.year,1,sum)
   
-  snow.tot.year <- apply(snow[c(1:8,12)],1,sum)
-  rain.tot.year <- apply(rain[4:11],1,sum)
+  snow.tot.year <- apply(snow[c(4:11)],1,sum)
+  #rain.tot.year <- apply(rain[4:11],1,sum)
   
   tmean.avg.year <- (tmin.avg.year+tmax.avg.year)/2
   
@@ -449,10 +578,10 @@ for (i in 1:n.water.years) {
   tmean.avg.DJF <- apply(tmean.cols.year[,3:5],1,mean)
 
   ### merge into DF
-  colname.prefixes <- c("tmin","tmax","tmean","tmean.JJA","tmean.DJF","ppt","snow","rain")
+  colname.prefixes <- c("tmin","tmax","tmean","tmean.JJA","tmean.DJF","ppt","snow") #,"rain")
   colnames <- paste(colname.prefixes,water.year.ending,sep=".")
   
-  clim.year <- cbind(tmin.avg.year,tmax.avg.year,tmean.avg.year,tmean.avg.JJA,tmean.avg.DJF,ppt.tot.year,snow.tot.year,rain.tot.year)
+  clim.year <- cbind(tmin.avg.year,tmax.avg.year,tmean.avg.year,tmean.avg.JJA,tmean.avg.DJF,ppt.tot.year,snow.tot.year) #,rain.tot.year)
   colnames(clim.year) <- colnames
   
   water.year.summary.annual <- cbind(water.year.summary.annual,clim.year)
@@ -463,20 +592,22 @@ for (i in 1:n.water.years) {
 tmin.col.nums <- grep("tmin.normal",names(plots.clim))
 tmax.col.nums <- grep("tmax.normal",names(plots.clim))
 ppt.col.nums <- grep("ppt.normal",names(plots.clim))
+snow.col.nums <- grep("snow.normal",names(plots.clim))
 
 tmin.cols <- plots.clim[,tmin.col.nums]
 tmax.cols <- plots.clim[,tmax.col.nums]
 ppt.cols <- plots.clim[,ppt.col.nums]
+snow.cols <- plots.clim[,snow.col.nums]
 
 tmean.cols <- (tmin.cols + tmax.cols)/2
 
-### snow: for each plot, sum ppt from nov (col 3) to may (col 9)
-snow <- ppt.cols
-snow[tmean.cols > 0] <- 0 # no snow if temp is > 0
+### snow: for each plot, sum snow from nov (col 3) to may (col 9)
+snow <- snow.cols
 
-### rain: for each plot, sum ppt from jan (col 5) to aug (col 12) for months when avg temp was >0
-rain <- ppt.cols
-rain[tmean.cols <= 0] <- 0
+
+# ### rain: for each plot, sum ppt from jan (col 5) to aug (col 12) for months when avg temp was >0
+# rain <- ppt.cols
+# rain[tmean.cols <= 0] <- 0
 
 tmin.avg.normal.annual <- apply(tmin.cols,1,mean)
 tmax.avg.normal.annual <- apply(tmax.cols,1,mean)
@@ -487,17 +618,19 @@ tmean.avg.normal.DJF <- apply(tmean.cols[,c(12,1,2)],1,mean)
 tmean.avg.normal.JJA <- apply(tmean.cols[,6:8],1,mean)
 
 ppt.tot.normal.annual <- apply(ppt.cols,1,sum)
-snow.tot.normal.annual <- apply(snow[,c(11,12,1,2,3,4,5)],1,sum)
-rain.tot.normal.annual <- apply(rain[,c(3,4,5,6,7,8,9)],1,sum)
+snow.tot.normal.annual <- apply(snow[,1:7],1,sum)
+# rain.tot.normal.annual <- apply(rain[,c(3,4,5,6,7,8,9)],1,sum)
 
-water.year.summary.normal <- cbind(tmin.avg.normal.annual,tmax.avg.normal.annual,tmean.avg.normal.annual,tmean.avg.normal.JJA,tmean.avg.normal.DJF,ppt.tot.normal.annual,snow.tot.normal.annual,rain.tot.normal.annual)
-colnames(water.year.summary.normal) <- c("tmin.normal.ann","tmax.normal.ann","tmean.normal.ann","tmean.normal.JJA","tmean.normal.DJF","ppt.normal.ann","snow.normal.ann","rain.normal.ann")
+water.year.summary.normal <- cbind(tmin.avg.normal.annual,tmax.avg.normal.annual,tmean.avg.normal.annual,tmean.avg.normal.JJA,tmean.avg.normal.DJF,ppt.tot.normal.annual,snow.tot.normal.annual) #,rain.tot.normal.annual)
+colnames(water.year.summary.normal) <- c("tmin.normal.ann","tmax.normal.ann","tmean.normal.ann","tmean.normal.JJA","tmean.normal.DJF","ppt.normal.ann","snow.normal.ann") #,"rain.normal.ann")
 water.year.summary <- data.frame(Regen_Plot=plots.clim$Regen_Plot,water.year.summary.annual,water.year.summary.normal)
 
 
 
 
-###!!! add water balance values ###
+### add water balance values ###
+
+library(reshape)
 
 plots.wb <- read.csv("../data_water_balance/plots_wb.csv",header=TRUE)
 water.years <- years[-1]
@@ -626,6 +759,7 @@ names(resprout.ag) <- c("species","Regen_Plot",count.yrs)
 regen <- rbind.fill(seedl.ag,sap.ag)
 regen <- rbind.fill(regen,resprout.ag) # add in resprout table (comment out here if desired)
 regen.ag <- aggregate(regen[,3:ncol(regen)],by=list(species=regen$species,Regen_Plot=regen$Regen_Plot),FUN=sum,na.rm=TRUE)
+# for hardwoods, unk_yr is for seedlings/saplings and 5yr is for resprouts
 
 ### aggregate surviving tree table by plot and species
 surviving.trees <- surviving.trees[surviving.trees$DBH > 7.5,] # exclude small trees (it seems sometimes crews put smaller trees as saplings instead of surviving trees)
@@ -642,8 +776,6 @@ regen.ag$surviving.trees.count[is.na(regen.ag$surviving.trees.count)] <- 0
 regen.ag$surviving.trees.ba[is.na(regen.ag$surviving.trees.ba)] <- 0
 
 write.csv(regen.ag,"../data_intermediate_processing_local/tree_summarized_sp.csv",row.names=FALSE)
-
-
 
 
 
@@ -733,6 +865,52 @@ plot.3.regen <- merge(plot.3.regen.pre,plot.3.regen.all)
 seed.tree.sp <- aggregate(seed.tree$Dist_m,by=list(seed.tree$Regen_Plot,seed.tree$Species),FUN=min)
 names(seed.tree.sp) <- c("Regen_Plot","species","seed.tree.sp")
 plot.3.regen <- merge(plot.3.regen,seed.tree.sp,all.x=TRUE)
+
+
+### add the tallest seedling of each species
+
+## append seedling and resprout heights
+seedl.ht <- seedl[,c("Regen_Plot","Species","tallest_ht_cm")]
+respr.ht <- resprout[,c("Regen_Plot","Species","tallest_ht_cm")]
+regen.ht <- rbind(seedl.ht,respr.ht)
+
+# in case there are multiple seedling entries per species-plot combination, aggregate
+regen.ht.agg <- aggregate(regen.ht$tallest_ht_cm,by=list(regen.ht$Regen_Plot,regen.ht$Species),FUN=max)
+names(regen.ht.agg) <- c("Regen_Plot","species","tallest_ht_cm")
+
+## Now do it for species groups
+pinus <- c("PIPO","PIJE","PILA","PIAT","PICO","PINUS","PISA")
+regen.ht.pinus <- regen.ht[regen.ht$Species %in% pinus,]
+regen.ht.pinus.agg <- aggregate(regen.ht.pinus$tallest_ht_cm,by=list(regen.ht.pinus$Regen_Plot),FUN=max)
+names(regen.ht.pinus.agg) <- c("Regen_Plot","tallest_ht_cm")
+regen.ht.pinus.agg$species <- "PINUS.ALLSP"
+
+shade <- c("ABCO","CADE27","ABIES","TAXUS","TOCA","ABMA")
+regen.ht.shade <- regen.ht[regen.ht$Species %in% shade,]
+regen.ht.shade.agg <- aggregate(regen.ht.shade$tallest_ht_cm,by=list(regen.ht.shade$Regen_Plot),FUN=max)
+names(regen.ht.shade.agg) <- c("Regen_Plot","tallest_ht_cm")
+regen.ht.shade.agg$species <- "SHADE.ALLSP"
+
+yellow <- c("PIPO","PIJE")
+regen.ht.yellow <- regen.ht[regen.ht$Species %in% yellow,]
+regen.ht.yellow.agg <- aggregate(regen.ht.yellow$tallest_ht_cm,by=list(regen.ht.yellow$Regen_Plot),FUN=max)
+names(regen.ht.yellow.agg) <- c("Regen_Plot","tallest_ht_cm")
+regen.ht.yellow.agg$species <- "PIPJ"
+
+hdwd <- c("ALNUS","QUKE","QUCH2","ARME","LIDE3","CHCH","QUGA4","ACMA","ACME","CEMO2","CONU4","POTR5","QUBE5","QUJO3","QUWI","UMCA","ALRH")
+regen.ht.hdwd <- regen.ht[regen.ht$Species %in% hdwd,]
+regen.ht.hdwd.agg <- aggregate(regen.ht.hdwd$tallest_ht_cm,by=list(regen.ht.hdwd$Regen_Plot),FUN=max)
+names(regen.ht.hdwd.agg) <- c("Regen_Plot","tallest_ht_cm")
+regen.ht.hdwd.agg$species <- "HDWD.ALLSP"
+
+
+## Append
+regen.ht.agg <- rbind.fill(regen.ht.agg,regen.ht.pinus.agg,regen.ht.shade.agg,regen.ht.yellow.agg,regen.ht.hdwd.agg)
+
+
+
+# merge it in
+plot.3.regen <- merge(plot.3.regen,regen.ht.agg,all.x=TRUE)
 # species table ready for export
 
 
@@ -749,19 +927,50 @@ plot.clim.seedtree$FORB <- plot.clim.seedtree$FORBE
 plot.clim.seedtree <- remove.vars(plot.clim.seedtree,"FORBE")
 
 
+### Bring in dominant vegetation for Welch
+dom.veg.welch <- read.csv("../data_survey/Welch/DominantVegetation.txt",stringsAsFactors=FALSE)
 
-##!! check each individual plot for outliers.
+dom.veg.df <- data.frame()
+
+for(plt.name in unique(dom.veg.welch$Regen_Plot)) {
+  
+  dom.veg.plt <- dom.veg.welch[dom.veg.welch$Regen_Plot == plt.name,]
+  dom.veg.plt.string <- paste(dom.veg.plt$Species,collapse=" ")
+  dom.veg.plt.df <- data.frame(Regen_Plot = plt.name,dom.veg = dom.veg.plt.string)
+  dom.veg.df <- rbind(dom.veg.df,dom.veg.plt.df)
+  
+}
+
+plot.clim.seedtree.2 <- merge(plot.clim.seedtree,dom.veg.df,all.x=TRUE,by="Regen_Plot")
+
+
+## Bring in dominant vegetation for other plots
+plot.clim.seedtree.2$dom.veg.2016 <- paste(plot.clim.seedtree.2$dominant_tree_1,plot.clim.seedtree.2$dominant_tree_2,plot.clim.seedtree.2$dominant_tree_3,sep=" ")
+
+plot.clim.seedtree.2$dom.veg.all <- paste(plot.clim.seedtree.2$dom.veg.2016,plot.clim.seedtree.2$dom.veg,sep=" ")
+
+
+
 
 
 
 ### write plot-level and species-level output files
-write.csv(plot.clim.seedtree,"data_intermediate/plot_level.csv",row.names=FALSE)
+write.csv(plot.clim.seedtree.2,"data_intermediate/plot_level.csv",row.names=FALSE)
 write.csv(plot.3.regen,"data_intermediate/speciesXplot_level.csv",row.names=FALSE)
 
 
 
 
 #### Outlier check ####
+
+
+#test to see if CADE27 is really essentially only present in low sev plots
+
+test <- merge(plot.tree.sp,plot.clim.seedtree[,c("Regen_Plot","FIRE_SEV")])
+
+
+
+
 
 plot.3.regen <- read.csv("data_intermediate/speciesXplot_level.csv",header=TRUE,stringsAsFactors=FALSE)
 plot.clim.seedtree <- read.csv("data_intermediate/plot_level.csv",header=TRUE,stringsAsFactors=FALSE)

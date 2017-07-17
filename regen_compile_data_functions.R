@@ -26,6 +26,7 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
     ppt.cols <- grep("ppt.[0-9][0-9][0-9][0-9]",names(clim.plot))
     def.cols <- grep("def.[0-9][0-9][0-9][0-9]",names(clim.plot))
     aet.cols <- grep("aet.[0-9][0-9][0-9][0-9]",names(clim.plot))
+    snow.cols <- grep("snow.[0-9][0-9][0-9][0-9]",names(clim.plot))
     
     tmean.DJF.plot <- unlist(clim.plot[,tmean.DJF.cols])
     tmean.JJA.plot <- unlist(clim.plot[,tmean.JJA.cols])
@@ -33,6 +34,8 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
     ppt.plot <- unlist(clim.plot[,ppt.cols])
     def.plot <- unlist(clim.plot[,def.cols])
     aet.plot <- unlist(clim.plot[,aet.cols])
+    snow.plot <- unlist(clim.plot[,snow.cols])
+    
     
     tmean.DJF.mean <- mean(tmean.DJF.plot)
     tmean.JJA.mean <- mean(tmean.JJA.plot)
@@ -40,6 +43,7 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
     ppt.mean <- mean(ppt.plot)
     def.mean <- mean(def.plot)
     aet.mean <- mean(aet.plot)
+    snow.mean <- mean(snow.plot)
     
     tmean.DJF.sd <- sd(tmean.DJF.plot)
     tmean.JJA.sd <- sd(tmean.JJA.plot)
@@ -47,6 +51,7 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
     ppt.sd <- sd(ppt.plot)
     def.sd <- sd(def.plot)
     aet.sd <- sd(aet.plot)
+    snow.sd <- sd(snow.plot)
     
     
     ## get the post-fire values of each variable
@@ -61,14 +66,14 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
     aet.cols <- paste("aet.",clim.years,sep="")
     
     snow.cols <- paste("snow.",clim.years,sep="")
-    rain.cols <- paste("rain.",clim.years,sep="")
+    #rain.cols <- paste("rain.",clim.years,sep="")
     
     tmean.plot <- unlist(clim.plot[,tmean.cols])
     tmean.DJF.plot <- unlist(clim.plot[,tmean.DJF.cols])
     tmean.JJA.plot <- unlist(clim.plot[,tmean.JJA.cols])
     ppt.plot <- unlist(clim.plot[,ppt.cols])
     snow.plot <- unlist(clim.plot[,snow.cols])
-    rain.plot <- unlist(clim.plot[,rain.cols])
+    #rain.plot <- unlist(clim.plot[,rain.cols])
     def.plot <- unlist(clim.plot[,def.cols])
     aet.plot <- unlist(clim.plot[,aet.cols])
     
@@ -80,8 +85,8 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
     tmean.JJA.post.max <- max(tmean.JJA.plot)
     ppt.post.mean <- mean(ppt.plot)
     ppt.post.min <- min(ppt.plot)
-    rain.post.min <- min(rain.plot)
-    rain.post.mean <- mean(rain.plot)
+    #rain.post.min <- min(rain.plot)
+    #rain.post.mean <- mean(rain.plot)
     snow.post.min <- min(snow.plot)
     snow.post.max <- max(snow.plot)
     snow.post.mean <- mean(snow.plot)
@@ -94,7 +99,7 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
     tmean.normal <- clim.plot$tmean.normal.ann
     ppt.normal <- clim.plot$ppt.normal
     snow.normal <- clim.plot$snow.normal
-    rain.normal <- clim.plot$rain.normal
+    #rain.normal <- clim.plot$rain.normal
     
     aet.normal <- aet.mean
     def.normal <- def.mean
@@ -106,6 +111,9 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
     
     diff.norm.ppt.z <- (ppt.post.mean-ppt.mean)/ppt.sd
     diff.norm.ppt.min.z <- (ppt.post.min-ppt.mean)/ppt.sd
+    
+    diff.norm.snow.z <- (snow.post.mean-snow.mean)/snow.sd
+    diff.norm.snow.min.z <- (snow.post.min-snow.mean)/snow.sd
     
     diff.norm.tmean.z <- (tmean.post.mean-tmean.mean)/ppt.sd
     diff.norm.tmean.max.z <- (tmean.post.max-tmean.mean)/tmean.sd
@@ -130,7 +138,20 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
     
     diff.norm.tmean <- tmean.post.mean - tmean.normal
     
-    clim.plot.out <- data.frame(Regen_Plot=plot.id,tmean.post=tmean.post.mean,ppt.post=ppt.post.mean,def.post=def.post.mean,aet.post=aet.post.mean,ppt.post.min=ppt.post.min,def.post.max,aet.post.min,tmean.normal=tmean.normal,ppt.normal=ppt.normal,def.normal,aet.normal,perc.norm.ppt=perc.norm.ppt,perc.norm.ppt.min=perc.norm.ppt.min,diff.norm.ppt,diff.norm.ppt.min,diff.norm.tmean=diff.norm.tmean,
+    # clim.plot.out <- data.frame(Regen_Plot=plot.id,tmean.post=tmean.post.mean,ppt.post=ppt.post.mean,def.post=def.post.mean,aet.post=aet.post.mean,ppt.post.min=ppt.post.min,def.post.max,aet.post.min,tmean.normal=tmean.normal,ppt.normal=ppt.normal,def.normal,aet.normal,perc.norm.ppt=perc.norm.ppt,perc.norm.ppt.min=perc.norm.ppt.min,diff.norm.ppt,diff.norm.ppt.min,diff.norm.tmean=diff.norm.tmean,
+    #                             diff.norm.ppt.z,diff.norm.ppt.min.z,diff.norm.tmean.z,diff.norm.tmean.max.z,
+    #                             diff.norm.def.z,diff.norm.def.max.z,diff.norm.aet.z,diff.norm.aet.min.z,
+    #                             diff.norm.tmean.JJA.mean.z, diff.norm.tmean.DJF.mean.z,
+    #                             diff.norm.tmean.JJA.max.z, diff.norm.tmean.DJF.min.z,
+    #                             ppt.plot[1],ppt.plot[2],ppt.plot[3],ppt.plot[4],
+    #                             def.plot[1],def.plot[2],def.plot[3],def.plot[4],
+    #                             aet.plot[1],aet.plot[2],aet.plot[3],aet.plot[4],
+    #                             rain.post.min,rain.post.mean,snow.post.min,snow.post.max,snow.post.mean,
+    #                             snow.plot[1],snow.plot[2],snow.plot[3],snow.plot[4],
+    #                             rain.plot[1],rain.plot[2],rain.plot[3],rain.plot[4],
+    #                             snow.normal,rain.normal, tot.neg.ppt.anom)
+    
+    clim.plot.out <- data.frame(Regen_Plot=plot.id,tmean.post=tmean.post.mean,ppt.post=ppt.post.mean,def.post=def.post.mean,aet.post=aet.post.mean,snow.post=snow.post.mean,ppt.post.min=ppt.post.min,def.post.max,aet.post.min,tmean.normal=tmean.normal,ppt.normal=ppt.normal,def.normal,aet.normal,perc.norm.ppt=perc.norm.ppt,perc.norm.ppt.min=perc.norm.ppt.min,diff.norm.ppt,diff.norm.ppt.min,diff.norm.tmean=diff.norm.tmean,
                                 diff.norm.ppt.z,diff.norm.ppt.min.z,diff.norm.tmean.z,diff.norm.tmean.max.z,
                                 diff.norm.def.z,diff.norm.def.max.z,diff.norm.aet.z,diff.norm.aet.min.z,
                                 diff.norm.tmean.JJA.mean.z, diff.norm.tmean.DJF.mean.z,
@@ -138,10 +159,11 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
                                 ppt.plot[1],ppt.plot[2],ppt.plot[3],ppt.plot[4],
                                 def.plot[1],def.plot[2],def.plot[3],def.plot[4],
                                 aet.plot[1],aet.plot[2],aet.plot[3],aet.plot[4],
-                                rain.post.min,rain.post.mean,snow.post.min,snow.post.max,snow.post.mean,
+                                snow.post.min,snow.post.max,snow.post.mean,
                                 snow.plot[1],snow.plot[2],snow.plot[3],snow.plot[4],
-                                rain.plot[1],rain.plot[2],rain.plot[3],rain.plot[4],
-                                snow.normal,rain.normal, tot.neg.ppt.anom)
+                                snow.normal, tot.neg.ppt.anom,
+                                diff.norm.snow.z,diff.norm.snow.min.z)
+    
     # removed these from above: tmean.plot,ppt.plot
     
     clim.plot.ret <- rbind.fill(clim.plot.ret,clim.plot.out)
@@ -170,9 +192,9 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl
     if(regen.ages == "young") {
       years.regen <- 1:2
     } else if(regen.ages == "old") {
-      years.regen <- plot.survey.years.post - 2:-1 # the third-to-last and last year of the plot before it was surveyed (also the year after it was surveyed, in case of mis-aging)
+      years.regen <- plot.survey.years.post - 2:-2 # the second-to-last and last year of the plot before it was surveyed (also the year after it was surveyed, in case of mis-aging)
     } else if(regen.ages == "all") {
-      years.regen <- 1:(plot.survey.years.post+1) #+1 in case a seedling was over-aged by one year
+      years.regen <- 1:(plot.survey.years.post+2) #+2 in case a seedling was over-aged by one-2 years
     }
 
   }
@@ -213,9 +235,9 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl
     if(regen.ages=="young") {
       regen.nyears <- length(regen.row.cols)
     } else if(regen.ages=="old") {
-      regen.nyears <- length(regen.row.cols) -1 #-1 because added an extra year in case seedlings were over-aged, but in realiy they only came from the the years between the fire and the survey
+      regen.nyears <- length(regen.row.cols) -2 #-2 because added extra years in case seedlings were over-aged, but in realiy they only came from the the years between the fire and the survey
     } else if(regen.ages=="all") {
-      regen.nyears <- length(regen.row.cols) -1 #-1 because added an extra year in case seedlings were over-aged, but in realiy they only came from the the years between the fire and the survey
+      regen.nyears <- length(regen.row.cols) -2 #-2 because added extra years in case seedlings were over-aged, but in realiy they only came from the the years between the fire and the survey
     }
       
     
