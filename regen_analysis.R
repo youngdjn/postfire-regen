@@ -5,31 +5,27 @@ library(ggplot2)
 library(brms)
 library(pROC)
 library(betareg)
-
+library(car)
 
 source("regen_analysis_functions.R")
 
-#### 0. Read in and clean data, thin to focal plots ####
+
+#### 1. Read in and clean data, thin to focal plots ####
 
 # open intermediate data files
 d.plot <- read.csv("data_intermediate/plot_level.csv",header=T,stringsAsFactors=FALSE)
 d.sp <- read.csv("data_intermediate/speciesXplot_level.csv",header=T,stringsAsFactors=FALSE)
 
-
-
 ## Look for plots with incomplete data specified in the comments
 plots.exceptions <- grepl("#.*(INCOMPLETE|INCORRECT)",d.plot$NOTES)
 d.plot <- d.plot[!plots.exceptions,]
 
-
 # only keep the necessary columns
 d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general","seed_tree_distance_conifer","seed_tree_distance_hardwood","diff.norm.ppt.z","diff.norm.ppt.min.z","tmean.post","ppt.post","ppt.post.min","perc.norm.ppt","perc.norm.ppt.min","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z","def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","diff.norm.def.max.z","diff.norm.aet.min.z","def.post","aet.post","def.post.max","aet.post.min","snow.post.min","snow.normal","snow.post","diff.norm.snow.z","diff.norm.snow.min.z","dominant_shrub_ht_cm","dom.veg.all")]
 
-# only Sierra Nevada fires #! removed DEEP
-sierra.fires <- c("STRAYLOR","CUB","RICH","MOONLIGHT","ANTELOPE","BTU LIGHTENING","HARDING","BASSETTS","PENDOLA","AMERICAN RIVER","RALSTON","FREDS","SHOWERS","POWER","BAGLEY","PEAK","CHIPS")
+# only northern Sierra Nevada fires
+sierra.fires <- c("STRAYLOR","CUB","RICH","MOONLIGHT","ANTELOPE","BTU LIGHTENING","HARDING","BASSETTS","AMERICAN RIVER","RALSTON","FREDS","POWER","BAGLEY","CHIPS")
 d.plot <- d.plot[d.plot$Fire %in% sierra.fires,]
-
-d.plot <- d.plot[d.plot$Regen_Plot != "SHR0900015",]
 
 ## Remove managed plots, plots in nonforested locations (e.g. exposed bedrock), etc.
 plots.exclude <- read.csv("data_intermediate/plots_exclude.csv",header=T,stringsAsFactors=FALSE)
@@ -37,16 +33,8 @@ plot.ids.exclude <- plots.exclude[plots.exclude$Exclude != "",]$Regen_Plot
 d.plot <- d.plot[!(d.plot$Regen_Plot %in% plot.ids.exclude),]
 
 
-
-
-# ## Removed this code: because most of the time NA means seed source not visible, and excluding all plots >50 m from seed source
-# # if no data on seed tree distance (or it was recorded as being at/beyond the limit of the laser) use remote-sensing-based value
-# d.plot$seed.tree.any.comb <- ifelse(is.na(d.plot$seed_tree_distance_general) | (d.plot$seed_tree_distance_general >= 150),d.plot$dist.to.low,d.plot$seed_tree_distance_general)
-
-## Replaced with this:
 # Remove any plots > 50m from seed source
 d.plot <- d.plot[which(d.plot$seed_tree_distance_general < 75),]
-
 
 # quadratic climate terms
 d.plot$ppt.normal.sq <- d.plot$ppt.normal^2
@@ -58,30 +46,25 @@ d.sp$regen.presab.young <- ifelse(d.sp$regen.count.young > 0,TRUE,FALSE)
 d.sp$regen.presab.old <- ifelse(d.sp$regen.count.old > 0,TRUE,FALSE)
 d.sp$regen.presab.all <- ifelse(d.sp$regen.count.all > 0,TRUE,FALSE)
 
-# #! TEMPORARY: if there was no radiation data, set it equal to 0
-# d.plot$rad.march <- ifelse(is.na(d.plot$rad.march),0,d.plot$rad.march)
-
+# severity categories
 high.sev <- c(4,5) # which field-assessed severity values are considered high severity
 control <- c(0,1) # which field-assessed severity values are considered controls
+
+# categorize severities
+d.plot$FIRE_SEV.cat <- recode(d.plot$FIRE_SEV,"control='control';high.sev='high.sev';else=NA")
+d.plot <- d.plot[!is.na(d.plot$FIRE_SEV.cat),]
+
+# remove plots that are high severity but not surveyed in years 4-5 post-fire
+d.plot <- d.plot[which(!(d.plot$FIRE_SEV.cat == "high.sev" & !(d.plot$survey.years.post %in% c(4,5)))),]
+
+
+
 
 
 
 
 #### 1. Assign each plot a topoclimatic category ####
-
-#! NOTE that when breaking down plots by factorial combinations topoclimatic variables,
-# it might be important in the future to consider the interaction of variables.
-# E.g., not all levels of a given variable may be available at all levels of another given variables
-# E.g. at high precipitation, maybe there is only north aspects available. Doesn't seem to be the case here, but could potentially be with other variables.
-
-
-## get what average radiation is across all the fires
-avg.rad <- mean(d.plot$rad.march)
-
-
 fires <- unique(d.plot$Fire)
-d.plot$precip.category
-d.plot$rad.category #radiation
 
 for(fire in fires) {
   
@@ -93,7 +76,7 @@ for(fire in fires) {
   # for some fires with a small range of precip, override the precip breaks, so we just have one category per fire
   fires.small.precip.range <- c("AMERICAN RIVER","ANTELOPE","BAGLEY","BASSETTS","BTU LIGHTENING","HARDING","STRAYLOR")
   if(fire %in% fires.small.precip.range) {
-    breaks <- 0
+    breaks <- 9999
   }
   
   # categorize plots based on where they fall between the breakpoints  
@@ -107,65 +90,23 @@ for(fire in fires) {
   # categorize plots based on where they fall between the breakpoints
   
   #override the per-fire breaks
-  breaks <- avg.rad
   breaks <- 6000
   
   categories <- categorize(d.plot[d.plot$Fire==fire,]$rad.march,breaks,name="R")
   # store it into the plot data.frame
   d.plot[d.plot$Fire==fire,"rad.category"] <- categories
   
-  #! To-do: break down the categories further for the fires that have enough plots (may have different number of categories per fire). Goal of ~10 plots per category? Seed tree distance should probably be a category (or else simply exclude plots that are far from seed source)
-
 }
   
-
 ## Create one variable reflecting the all-way factorial combination of topoclimatic categories
 d.plot$topoclim.cat <- paste(d.plot$precip.category,d.plot$rad.category,sep="_")
-# 
-# Removed now that only have one precip category
-# ## Make an exception for Harding: only two categories
-# d.plot[d.plot$Fire == "HARDING","topoclim.cat"] <- ifelse(d.plot[d.plot$Fire=="HARDING","rad.march"] > 6250,"P.1_R.2","P.1_R.1")
 
 
-
-
-  
 
 ### Plot relevant "topoclimate space" for each fire and see how the categories broke them down
-## note that Cub and straylor do not have radiation (yet)
 
-## remove PEAK and PENDOLA
-d.plot <- d.plot[!(d.plot$Fire %in% c("PEAK","PENDOLA","SHOWERS")),]
-
-library(car)
-d.plot$FIRE_SEV.cat <- recode(d.plot$FIRE_SEV,"control='control';high.sev='high.sev';else=NA")
-
-d.plot.cat <- d.plot
 d.plot.precat <- d.plot
 
-
-# remove plots that are high severity but not surveyed in years 4-5 post-fire
-d.plot.precat <- d.plot.precat[!(d.plot.precat$FIRE_SEV.cat == "high.sev" & !(d.plot.precat$survey.years.post %in% c(4,5))),]
-
-
-# plot high sev and control
-ggplot(d.plot.precat[!is.na(d.plot.precat$FIRE_SEV.cat),],aes(x=ppt.normal,y=rad.march,col=FIRE_SEV.cat)) +
-  geom_point(size=3) +
-  facet_wrap(~Fire,scales="fixed") +
-  geom_hline(yintercept=avg.rad) +
-  theme_bw(16)
-
-# look at control only
-ggplot(d.plot.precat[d.plot.precat$FIRE_SEV %in% control,],aes(x=ppt.normal,y=rad.march,col=topoclim.cat)) +
-  geom_point() +
-  facet_wrap(~Fire,scales="free") +
-  theme_bw(16)
-
-# look at high sev only
-ggplot(d.plot.precat[d.plot.precat$FIRE_SEV %in% high.sev,],aes(x=ppt.normal,y=rad.march,col=topoclim.cat)) +
-  geom_point() +
-  facet_wrap(~Fire,scales="free") +
-  theme_bw(16)
 
 # look at both together
 ggplot(d.plot.precat,aes(x=ppt.normal,y=rad.march,col=topoclim.cat,shape=FIRE_SEV.cat)) +
@@ -187,12 +128,6 @@ d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "FREDS") & (d.plot.preca
 d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "POWER") & (d.plot.precat$rad.march < 6000)),]
 d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "RALSTON") & (d.plot.precat$ppt.normal < 1175)),]
 d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "RICH") & (d.plot.precat$topoclim.cat == "P.2_R.1") & (d.plot.precat$rad.march < 5000)),]
-
-d.plot.domveg <- d.plot.precat # save this data frame at this stage for extracting dominant vegetation data (doesn't matter what severity or years post-fire)
-
-
-
-write.csv(d.plot.precat,"../../all_plots.csv",row.names=FALSE)
 
 
 
@@ -254,20 +189,31 @@ d.sp.2 <- d.sp.agg
 ## also adult data only come from the control plots, and seedling data only from the highsev plots
 
 
-#### 3. Steps required prior to any analysis ####
+
+
+#### 3. Remove irrelevant data rows ####
 
 # Remove the topoclimatic categories with too few plots in either burned or control
 d.plot.3 <- d.plot.2[which((d.plot.2$count.control > 4) & (d.plot.2$count.highsev > 0)),]
 
-# Compute additional variables
-d.sp.2$proportion.young <- d.sp.2$regen.count.young / d.sp.2$regen.count.all
+# only want to analyze high-severity plots burned 4-5 years post-fire
+d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV %in% c(4,5)),]
 
 
 
-### Compute dominant vegetation for each remaining topoclimate category, based on stated observed nearby dominants. use all plots regardless of severity
+
+
+
+
+
+
+
+
+
+
+#### 4. Compute dominant vegetation for each remaining topoclimate category, based on stated observed nearby dominants. use all plots regardless of severity ####
 
 non.tree.dom.veg <- c("ARPA6","CEIN3","CECO","CEPR") # species to exclude from list
-
 
 for(fire in unique(d.plot.3$Fire)) {
   
@@ -276,7 +222,7 @@ for(fire in unique(d.plot.3$Fire)) {
   for(topoclim.cat in unique(d.plot.fire$topoclim.cat)) {
     
     
-    d.plot.fire.cat <- d.plot.domveg[(d.plot.domveg$Fire == fire) & (d.plot.domveg$topoclim.cat == topoclim.cat),]
+    d.plot.fire.cat <- d.plot[(d.plot$Fire == fire) & (d.plot$topoclim.cat == topoclim.cat),]
     
     if (nrow(d.plot.fire.cat) < 5) {
       cat("Less than 5 plots in ",fire," ",topoclim.cat,". Skipping.\n")
@@ -325,27 +271,7 @@ for(fire in unique(d.plot.3$Fire)) {
 
 
 
-### Plot histogram of seed tree distance ####
-
-d.plot.highsev <- d.plot[d.plot$FIRE_SEV %in% c(4,5),]
-
-ggplot(d.plot.highsev,aes(seed_tree_distance_general)) +
-  geom_histogram() +
-  facet_wrap(~Fire)
-
-library(plyr)
-
-a <- ddply(d.plot.highsev,~Fire,summarise,mean=mean(seed_tree_distance_general),sd=sd(seed_tree_distance_general))
-
-ggplot(a,aes(x=Fire,y=mean)) +
-  geom_point() +
-  geom_errorbar(ymax=a$mean+a$sd,ymin=a$mean-a$sd) +
-  scale_y_continuous(limits=c(0,50))
-  
-
-
-
-#### 4. Determine dominant adult tree species (from control plots) within each category ####
+#### 5. Determine dominant adult tree species (from control plots) within each category ####
 library(reshape)
 
 d.sp.pre <- d.sp.2[,c("species","topoclim.cat","Fire","adult.ba")]
@@ -399,9 +325,41 @@ d.view <- d.plot.3[,c("Fire","topoclim.cat","dom.tree.sp.ba","dom.tree.sp.obs","
 
 
 
+### Plot histogram of seed tree distance ####
+
+d.plot.highsev <- d.plot[d.plot$FIRE_SEV %in% c(4,5),]
+
+ggplot(d.plot.highsev,aes(seed_tree_distance_general)) +
+  geom_histogram() +
+  facet_wrap(~Fire)
+
+library(plyr)
+
+a <- ddply(d.plot.highsev,~Fire,summarise,mean=mean(seed_tree_distance_general),sd=sd(seed_tree_distance_general))
+
+ggplot(a,aes(x=Fire,y=mean)) +
+  geom_point() +
+  geom_errorbar(ymax=a$mean+a$sd,ymin=a$mean-a$sd) +
+  scale_y_continuous(limits=c(0,50))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #### 6.5 Plot-level analysis with GLM; also run randomForest to get importance scores ####
 
-d.plot.3 <- d.plot.3[d.plot.3$count.control > 4 & d.plot.3$count.highsev > 0,]
+
 
 
 ## Next, fit models ## 
@@ -411,31 +369,16 @@ library(loo)
 
 d.plot <- d.plot.c
 
-d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV %in% c(4,5)),]
-# 
-# ## remove an outlier plot with 20 abco that is preventing model conversion
-# d.plot <- d.plot[!(d.plot$Regen_Plot == "CHI1248"),]
 
-## remove another potential outlier plot: extremely high normal precip and high numbers of ABCO way above other plots with similar precip
-d.plot <- d.plot[!(d.plot$Regen_Plot == "BTU1300185"),]
-
-# ## remove a plot that has no grass cover data
-# d.plot <- d.plot[!(d.plot$Regen_Plot == "AMR1300445"),]
-
-
-## remove an NA fire value
-d.plot <- d.plot[!is.na(d.plot$Fire),]
-
-## other potential plots to remove: BTU1300050, CUB1300305
-
-sp.opts <- c("ABCO","PILA","SHADE.ALLSP","QUKE","PINUS.ALLSP","HDWD.ALLSP","PSME","CADE27","PIPJ")
+sp.opts <- c("ABCO","PILA","SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP","PSME","PIPJ")
 cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB")
 
 # All
-ht.opts <- c("HT.PIPJ","HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP")
+ht.opts <- c("HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP")
 htabs.opts <- c("HTABS.PIPJ","HTABS.SHRUB","HTABS.ABCO","HTABS.PSME","HTABS.PILA","HTABS.QUKE","HTABS.CADE27","HTABS.HDWD.ALLSP","HTABS.PINUS.ALLSP","HTABS.SHADE.ALLSP")
 prop.opts <- c("PROP.CONIF","PROP.PINUS","PROP.SHADE")
 prop.opts <- NULL
+htabs.opts <- NULL
 
 # # sp grps
 # ht.opts <- c("HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP")
@@ -472,18 +415,6 @@ rf.importance <- data.frame()
 pred.rf <- data.frame()
 
 
-
-
-
-
-# #Remove Dry fires
-# dry.fires <- c("STRAYLOR","HARDING","ANTELOPE","MOONLIGHT")
-# d.plot <- d.plot[!(d.plot$Fire %in% dry.fires),]
-
-# Remove Bassetts
-# d.plot <- d.plot[d.plot$Fire != "BASSETTS",]
-
-# d.plot <- d.plot[!is.na(d.plot$diff.norm.snow.z),] #! need to enable this line if running code for snow models
 
 sink("run_output.txt")
 for(sp in resp.opts) {
@@ -2053,6 +1984,10 @@ for(sp in resp.opts) {
    
 }
 sink(file=NULL)
+
+
+
+
 
 #write.csv(rf.importance,"rf_importance.csv")
 
