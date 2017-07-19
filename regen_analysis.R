@@ -206,7 +206,7 @@ d.sp.2 <- d.sp.agg
 d.plot.3 <- d.plot.2[which((d.plot.2$count.control > 4) & (d.plot.2$count.highsev > 0)),]
 
 # only want to analyze high-severity plots burned 4-5 years post-fire
-d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV %in% c(4,5)),]
+d.plot.c <- d.plot.c[(d.plot.c$survey.years.post %in% c(4,5)) & (d.plot.c$FIRE_SEV %in% c(4,5)),]
 
 
 
@@ -231,7 +231,7 @@ for(fire in unique(d.plot.3$Fire)) {
   for(topoclim.cat in unique(d.plot.fire$topoclim.cat)) {
     
     
-    d.plot.fire.cat <- d.plot[(d.plot$Fire == fire) & (d.plot$topoclim.cat == topoclim.cat),]
+    d.plot.fire.cat <- d.plot.c[(d.plot.c$Fire == fire) & (d.plot.c$topoclim.cat == topoclim.cat),]
     
     if (nrow(d.plot.fire.cat) < 5) {
       cat("Less than 5 plots in ",fire," ",topoclim.cat,". Skipping.\n")
@@ -370,13 +370,10 @@ ggplot(a,aes(x=Fire,y=mean)) +
 
 
 
-
 ## Next, fit models ## 
 
 library(brms)
 library(loo)
-
-d.plot <- d.plot.c
 
 
 sp.opts <- c("ABCO","PILA","SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP","PSME","PIPJ")
@@ -447,22 +444,49 @@ for(sp in resp.opts) {
     d.sp.curr.agg <- d.sp.2[d.sp.2$species==sp.name,]
     d.sp.curr.plt <- d.sp[d.sp$species==sp.name,]
   }  else if(sp == "PROP.PINUS") {
-    d.sp.curr.plt <- d.sp[d.sp$species=="PINUS.ALLSP",]
     d.sp.curr.agg <- d.sp.2[d.sp.2$species=="PINUS.ALLSP",]
-    d.sp.all.plt <- d.sp[d.sp$species=="CONIF.ALLSP",]
-    d.sp.curr.plt$regen.count.broader.old <- d.sp.all.plt$regen.count.old
+    d.sp.curr.plt <- d.sp[d.sp$species=="PINUS.ALLSP",]
+    d.sp.conif.plt <- d.sp[d.sp$species=="CONIF.ALLSP",]
+    
+    
+    regen.pinus.old <- d.sp.curr.plt$regen.count.old / d.sp.conif.plt$regen.count.old
+    regen.pinus.all <- d.sp.curr.plt$regen.count.all / d.sp.conif.plt$regen.count.all
+    
+    regen.pinus.old <- ifelse(is.nan(regen.pinus.old),NA,regen.pinus.old)
+    regen.pinus.all <- ifelse(is.nan(regen.pinus.all),NA,regen.pinus.all)
+    
+    d.sp.curr.plt$prop.regen.pinus.old <- regen.pinus.old
+    d.sp.curr.plt$prop.regen.pinus.all <- regen.pinus.all
     
   } else if(sp == "PROP.SHADE") {
-    d.sp.curr.plt <- d.sp[d.sp$species=="SHADE.ALLSP",]
     d.sp.curr.agg <- d.sp.2[d.sp.2$species=="SHADE.ALLSP",]
-    d.sp.all.plt <- d.sp[d.sp$species=="CONIF.ALLSP",]
-    d.sp.curr.plt$regen.count.broader.old <- d.sp.all.plt$regen.count.old
+    d.sp.curr.plt <- d.sp[d.sp$species=="SHADE.ALLSP",]
+    d.sp.conif.plt <- d.sp[d.sp$species=="CONIF.ALLSP",]
+    
+    
+    regen.shade.old <- d.sp.curr.plt$regen.count.old / d.sp.conif.plt$regen.count.old
+    regen.shade.all <- d.sp.curr.plt$regen.count.all / d.sp.conif.plt$regen.count.all
+    
+    regen.shade.old <- ifelse(is.nan(regen.shade.old),NA,regen.shade.old)
+    regen.shade.all <- ifelse(is.nan(regen.shade.all),NA,regen.shade.all)
+    
+    d.sp.curr.plt$prop.regen.shade.old <- regen.shade.old
+    d.sp.curr.plt$prop.regen.shade.all <- regen.shade.all
     
   } else if(sp == "PROP.CONIF") {
-    d.sp.curr.plt <- d.sp[d.sp$species=="CONIF.ALLSP",]
     d.sp.curr.agg <- d.sp.2[d.sp.2$species=="CONIF.ALLSP",]
-    d.sp.all.plt <- d.sp[d.sp$species=="ALL",]
-    d.sp.curr.plt$regen.count.broader.old <- d.sp.all.plt$regen.count.old
+    d.sp.curr.plt <- d.sp[d.sp$species=="CONIF.ALLSP",]
+    d.sp.conif.plt <- d.sp[d.sp$species=="ALL",]
+    
+    
+    regen.conif.old <- d.sp.curr.plt$regen.count.old / d.sp.conif.plt$regen.count.old
+    regen.conif.all <- d.sp.curr.plt$regen.count.all / d.sp.conif.plt$regen.count.all
+    
+    regen.conif.old <- ifelse(is.nan(regen.conif.old),NA,regen.conif.old)
+    regen.conif.all <- ifelse(is.nan(regen.conif.all),NA,regen.conif.all)
+    
+    d.sp.curr.plt$prop.regen.conif.old <- regen.conif.old
+    d.sp.curr.plt$prop.regen.conif.all <- regen.conif.all
     
   }  else  {
     
@@ -470,7 +494,7 @@ for(sp in resp.opts) {
     d.sp.curr.plt <- d.sp[d.sp$species==sp,]
   }
   
-  d <- merge(d.plot,d.plot.3,by=c("Fire","topoclim.cat")) # this effectively thins to plots that belong to a topoclimate category that has enough plots in it
+  d <- merge(d.plot.c,d.plot.3,by=c("Fire","topoclim.cat")) # this effectively thins to plots that belong to a topoclimate category that has enough plots in it
   
   d <- merge(d,d.sp.curr.plt,by=c("Regen_Plot"))
   
@@ -478,7 +502,7 @@ for(sp in resp.opts) {
   d <- merge(d,d.sp.curr.agg,by.x=c("Fire","topoclim.cat"),by.y=c("Fire.agg","topoclim.cat.agg")) # add the aggregated species data (from this we just want adult BA from the control plot)
   
   
-  vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all","dominant_shrub_ht_cm","tallest_ht_cm","prop.regen.pinus.old","prop.regen.pinus.all","prop.regen.shade.old","prop.regen.hdwd.old","prop.regen.hdwd.old","prop.regen.conif.old","regen.count.broader.old")
+  vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all","dominant_shrub_ht_cm","tallest_ht_cm","prop.regen.pinus.old","prop.regen.pinus.all","prop.regen.shade.old","prop.regen.hdwd.old","prop.regen.hdwd.old","prop.regen.conif.old")
   vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z", "def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","def.post","aet.post","adult.ba.agg","snow.post")
   d <- d[complete.cases(d[,vars.focal]),]
   d.c <- center.df(d,vars.leave)
@@ -589,20 +613,33 @@ for(sp in resp.opts) {
   } else if(sp %in% htabs.opts) {
     d.c <- d.c[d.c$regen.presab.old == TRUE, ] # this is where we select whether we want all plots where the species was present or just old seedlings
     d.c$response.var <- d.c$tallest_ht_cm
-  } else if(sp %in% prop.opts) {
+  } else if(sp == "PROP.PINUS") {
     
-    response.var <- cbind(d.c$regen.count.old,d.c$regen.count.broader.old-d.c$regen.count.old)
-    response.var <- response.var * 3
+    prop.regen.pinus.old.pt <- (d.c$prop.regen.pinus.old*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+    d.c$response.var <- prop.regen.pinus.old.pt
     
-    d.c$response.var <- response.var
+  } else if(sp %in% "PROP.SHADE") {
     
-  } else  {
+    prop.regen.shade.old.pt <- (d.c$prop.regen.shade.old*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+    d.c$response.var <- prop.regen.shade.old.pt
+    
+  } else if(sp %in% "PROP.CONIF") {
+    
+    prop.regen.conif.old.pt <- (d.c$prop.regen.conif.old*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+    d.c$response.var <- prop.regen.conif.old.pt
+    
+  } else if(sp %in% "PROP.HDWD") {
+    
+    prop.regen.hdwd.old.pt <- (d.c$prop.regen.hdwd.old*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+    d.c$response.var <- prop.regen.hdwd.old.pt
+    
+  }  else  {
     
     d.c$response.var <- d.c$regen.presab.old.01
     
   }
   
-  
+  if(do.regression) { 
     
     if(TRUE) {
       
@@ -1793,7 +1830,7 @@ for(sp in resp.opts) {
   
       ##predict to new data
       
-      if(sp %in% c(cover.opts)) {
+      if(sp %in% c(cover.opts,prop.opts)) {
       
         
         d.c.complete <- d.c[!is.na(d.c$response.var),]
@@ -1869,7 +1906,7 @@ for(sp in resp.opts) {
         
       } else {
         
-        d.c.complete <- d.c[complete.cases(d.c$response.var),]
+        d.c.complete <- d.c[!is.na(d.c$response.var),]
         
         #fit the anom and normal models
         mod.anom <- glm(formulas[[best.anom.mod]],data=d.c,family="binomial")
@@ -1927,7 +1964,7 @@ for(sp in resp.opts) {
       fit.anom$type <- "anom"
       fit.norm$type <- "norm"
       
-      d.c.complete <- d.c[complete.cases(d.c$response.var),]
+      d.c.complete <- d.c[!is.na(d.c$response.var),]
       
       fit.anom.dat <- cbind(fit.anom,d.c.complete)
       fit.norm.dat <- cbind(fit.norm,d.c.complete)
@@ -1948,7 +1985,7 @@ for(sp in resp.opts) {
       
       
       
-    
+    }
   }
    
 }
