@@ -447,49 +447,22 @@ for(sp in resp.opts) {
     d.sp.curr.agg <- d.sp.2[d.sp.2$species==sp.name,]
     d.sp.curr.plt <- d.sp[d.sp$species==sp.name,]
   }  else if(sp == "PROP.PINUS") {
-    d.sp.curr.agg <- d.sp.2[d.sp.2$species=="PINUS.ALLSP",]
     d.sp.curr.plt <- d.sp[d.sp$species=="PINUS.ALLSP",]
-    d.sp.conif.plt <- d.sp[d.sp$species=="CONIF.ALLSP",]
-    
-    
-    regen.pinus.old <- d.sp.curr.plt$regen.count.old / d.sp.conif.plt$regen.count.old
-    regen.pinus.all <- d.sp.curr.plt$regen.count.all / d.sp.conif.plt$regen.count.all
-    
-    regen.pinus.old <- ifelse(is.nan(regen.pinus.old),NA,regen.pinus.old)
-    regen.pinus.all <- ifelse(is.nan(regen.pinus.all),NA,regen.pinus.all)
-    
-    d.sp.curr.plt$prop.regen.pinus.old <- regen.pinus.old
-    d.sp.curr.plt$prop.regen.pinus.all <- regen.pinus.all
+    d.sp.curr.agg <- d.sp.2[d.sp.2$species=="PINUS.ALLSP",]
+    d.sp.all.plt <- d.sp[d.sp$species=="CONIF.ALLSP",]
+    d.sp.curr.plt$regen.count.broader.old <- d.sp.all.plt$regen.count.old
     
   } else if(sp == "PROP.SHADE") {
-    d.sp.curr.agg <- d.sp.2[d.sp.2$species=="SHADE.ALLSP",]
     d.sp.curr.plt <- d.sp[d.sp$species=="SHADE.ALLSP",]
-    d.sp.conif.plt <- d.sp[d.sp$species=="CONIF.ALLSP",]
-    
-    
-    regen.shade.old <- d.sp.curr.plt$regen.count.old / d.sp.conif.plt$regen.count.old
-    regen.shade.all <- d.sp.curr.plt$regen.count.all / d.sp.conif.plt$regen.count.all
-    
-    regen.shade.old <- ifelse(is.nan(regen.shade.old),NA,regen.shade.old)
-    regen.shade.all <- ifelse(is.nan(regen.shade.all),NA,regen.shade.all)
-    
-    d.sp.curr.plt$prop.regen.shade.old <- regen.shade.old
-    d.sp.curr.plt$prop.regen.shade.all <- regen.shade.all
+    d.sp.curr.agg <- d.sp.2[d.sp.2$species=="SHADE.ALLSP",]
+    d.sp.all.plt <- d.sp[d.sp$species=="CONIF.ALLSP",]
+    d.sp.curr.plt$regen.count.broader.old <- d.sp.all.plt$regen.count.old
     
   } else if(sp == "PROP.CONIF") {
-    d.sp.curr.agg <- d.sp.2[d.sp.2$species=="CONIF.ALLSP",]
     d.sp.curr.plt <- d.sp[d.sp$species=="CONIF.ALLSP",]
-    d.sp.conif.plt <- d.sp[d.sp$species=="ALL",]
-    
-    
-    regen.conif.old <- d.sp.curr.plt$regen.count.old / d.sp.conif.plt$regen.count.old
-    regen.conif.all <- d.sp.curr.plt$regen.count.all / d.sp.conif.plt$regen.count.all
-    
-    regen.conif.old <- ifelse(is.nan(regen.conif.old),NA,regen.conif.old)
-    regen.conif.all <- ifelse(is.nan(regen.conif.all),NA,regen.conif.all)
-    
-    d.sp.curr.plt$prop.regen.conif.old <- regen.conif.old
-    d.sp.curr.plt$prop.regen.conif.all <- regen.conif.all
+    d.sp.curr.agg <- d.sp.2[d.sp.2$species=="CONIF.ALLSP",]
+    d.sp.all.plt <- d.sp[d.sp$species=="ALL",]
+    d.sp.curr.plt$regen.count.broader.old <- d.sp.all.plt$regen.count.old
     
   }  else  {
     
@@ -505,7 +478,7 @@ for(sp in resp.opts) {
   d <- merge(d,d.sp.curr.agg,by.x=c("Fire","topoclim.cat"),by.y=c("Fire.agg","topoclim.cat.agg")) # add the aggregated species data (from this we just want adult BA from the control plot)
   
   
-  vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all","dominant_shrub_ht_cm","tallest_ht_cm","prop.regen.pinus.old","prop.regen.pinus.all","prop.regen.shade.old","prop.regen.hdwd.old","prop.regen.hdwd.old","prop.regen.conif.old")
+  vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all","dominant_shrub_ht_cm","tallest_ht_cm","prop.regen.pinus.old","prop.regen.pinus.all","prop.regen.shade.old","prop.regen.hdwd.old","prop.regen.hdwd.old","prop.regen.conif.old","regen.count.broader.old")
   vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z", "def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","def.post","aet.post","adult.ba.agg","snow.post")
   d <- d[complete.cases(d[,vars.focal]),]
   d.c <- center.df(d,vars.leave)
@@ -616,33 +589,20 @@ for(sp in resp.opts) {
   } else if(sp %in% htabs.opts) {
     d.c <- d.c[d.c$regen.presab.old == TRUE, ] # this is where we select whether we want all plots where the species was present or just old seedlings
     d.c$response.var <- d.c$tallest_ht_cm
-  } else if(sp == "PROP.PINUS") {
+  } else if(sp %in% prop.opts) {
     
-    prop.regen.pinus.old.pt <- (d.c$prop.regen.pinus.old*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-    d.c$response.var <- prop.regen.pinus.old.pt
+    response.var <- cbind(d.c$regen.count.old,d.c$regen.count.broader.old-d.c$regen.count.old)
+    response.var <- response.var * 3
     
-  } else if(sp %in% "PROP.SHADE") {
+    d.c$response.var <- response.var
     
-    prop.regen.shade.old.pt <- (d.c$prop.regen.shade.old*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-    d.c$response.var <- prop.regen.shade.old.pt
-    
-  } else if(sp %in% "PROP.CONIF") {
-    
-    prop.regen.conif.old.pt <- (d.c$prop.regen.conif.old*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-    d.c$response.var <- prop.regen.conif.old.pt
-    
-  } else if(sp %in% "PROP.HDWD") {
-    
-    prop.regen.hdwd.old.pt <- (d.c$prop.regen.hdwd.old*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-    d.c$response.var <- prop.regen.hdwd.old.pt
-    
-  }  else  {
+  } else  {
     
     d.c$response.var <- d.c$regen.presab.old.01
     
   }
   
-  if(do.regression) { 
+  
     
     if(TRUE) {
       
@@ -1833,7 +1793,7 @@ for(sp in resp.opts) {
   
       ##predict to new data
       
-      if(sp %in% c(cover.opts,prop.opts)) {
+      if(sp %in% c(cover.opts)) {
       
         
         d.c.complete <- d.c[!is.na(d.c$response.var),]
@@ -1909,7 +1869,7 @@ for(sp in resp.opts) {
         
       } else {
         
-        d.c.complete <- d.c[!is.na(d.c$response.var),]
+        d.c.complete <- d.c[complete.cases(d.c$response.var),]
         
         #fit the anom and normal models
         mod.anom <- glm(formulas[[best.anom.mod]],data=d.c,family="binomial")
@@ -1967,7 +1927,7 @@ for(sp in resp.opts) {
       fit.anom$type <- "anom"
       fit.norm$type <- "norm"
       
-      d.c.complete <- d.c[!is.na(d.c$response.var),]
+      d.c.complete <- d.c[complete.cases(d.c$response.var),]
       
       fit.anom.dat <- cbind(fit.anom,d.c.complete)
       fit.norm.dat <- cbind(fit.norm,d.c.complete)
@@ -1988,7 +1948,7 @@ for(sp in resp.opts) {
       
       
       
-    }
+    
   }
    
 }

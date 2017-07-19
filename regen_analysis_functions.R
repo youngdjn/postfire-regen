@@ -87,7 +87,8 @@ cvfun.fire <- function(formula,data) {
   
   by.fire <- TRUE
   
-  data <- data[!is.na(data$response.var),]
+  data <- data[complete.cases(data$response.var),]
+  
   
   
   
@@ -111,7 +112,7 @@ cvfun.fire <- function(formula,data) {
       data.val <- data[i,]
     }
     
-    if(sp %in% c(cover.opts,prop.opts)) {
+    if(sp %in% c(cover.opts)) { # ,prop.opts
       
       data.train <- data.train[!is.na(data.train$response.var),] 
       
@@ -176,27 +177,47 @@ cvfun.fire <- function(formula,data) {
       
       m.fit <- predict(m,type="response")
       
-      ## find the cutoff to use for presence/absence, based on the proportion of plots that had presence in the training dataset
-      prop.present <- mean(data.train$response.var,na.rm=TRUE)
       
-      #sort plots by predicted probability
-      m.fit.sort <- sort(m.fit,decreasing=TRUE)
+      if(sp %in% prop.opts) {
+        
+        ## get actual observed proportion in validation data
+        obs <- data.val$response.var[,1] / (data.val$response.var[,1] + data.val$response.var[,2])
+        
+        m.pred <- predict(m,newdat=data.val,type="response")
+        
+        err <- mean(abs(obs-m.pred),na.rm=TRUE)
+        
+        
+        
+      } else {
+        
+        ## find the cutoff to use for presence/absence, based on the proportion of plots that had presence in the training dataset
+        prop.present <- mean(data.train$response.var,na.rm=TRUE)
+        
+        #sort plots by predicted probability
+        m.fit.sort <- sort(m.fit,decreasing=TRUE)
+        
+        #what number of them should be presences?
+        num.present <- round(prop.present*sum(!is.na(data.train$response.var)))
+        
+        #what is the probability at that point? use it as the cutoff
+        cutoff <- m.fit.sort[num.present]
+        
+        # comp <- getCompSpecAndSens(data.train$response.var,m.fit)
+        comp <- cutoff
+        
+        m.pred <- predict(m,newdat=data.val,type="response")
+        m.pred.presab <- ifelse(m.pred > comp,1,0)
+        
+        obs <- data.val$response.var
+        
+        err <- 1-mean(m.pred.presab == obs,na.rm=TRUE)
+        
+        
+      }
       
-      #what number of them should be presences?
-      num.present <- round(prop.present*sum(!is.na(data.train$response.var)))
       
-      #what is the probability at that point? use it as the cutoff
-      cutoff <- m.fit.sort[num.present]
-      
-      # comp <- getCompSpecAndSens(data.train$response.var,m.fit)
-      comp <- cutoff
-      
-      m.pred <- predict(m,newdat=data.val,type="response")
-      m.pred.presab <- ifelse(m.pred > comp,1,0)
-      
-      obs <- data.val$response.var
-      
-      err <- 1-mean(m.pred.presab == obs,na.rm=TRUE)
+
       
       
     }
