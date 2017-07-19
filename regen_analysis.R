@@ -206,7 +206,7 @@ d.sp.2 <- d.sp.agg
 d.plot.3 <- d.plot.2[which((d.plot.2$count.control > 4) & (d.plot.2$count.highsev > 0)),]
 
 # only want to analyze high-severity plots burned 4-5 years post-fire
-d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV %in% c(4,5)),]
+d.plot.c <- d.plot.c[(d.plot.c$survey.years.post %in% c(4,5)) & (d.plot.c$FIRE_SEV %in% c(4,5)),]
 
 
 
@@ -231,7 +231,7 @@ for(fire in unique(d.plot.3$Fire)) {
   for(topoclim.cat in unique(d.plot.fire$topoclim.cat)) {
     
     
-    d.plot.fire.cat <- d.plot[(d.plot$Fire == fire) & (d.plot$topoclim.cat == topoclim.cat),]
+    d.plot.fire.cat <- d.plot.c[(d.plot.c$Fire == fire) & (d.plot.c$topoclim.cat == topoclim.cat),]
     
     if (nrow(d.plot.fire.cat) < 5) {
       cat("Less than 5 plots in ",fire," ",topoclim.cat,". Skipping.\n")
@@ -370,13 +370,10 @@ ggplot(a,aes(x=Fire,y=mean)) +
 
 
 
-
 ## Next, fit models ## 
 
 library(brms)
 library(loo)
-
-d.plot <- d.plot.c
 
 
 sp.opts <- c("ABCO","PILA","SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP","PSME","PIPJ")
@@ -497,7 +494,7 @@ for(sp in resp.opts) {
     d.sp.curr.plt <- d.sp[d.sp$species==sp,]
   }
   
-  d <- merge(d.plot,d.plot.3,by=c("Fire","topoclim.cat")) # this effectively thins to plots that belong to a topoclimate category that has enough plots in it
+  d <- merge(d.plot.c,d.plot.3,by=c("Fire","topoclim.cat")) # this effectively thins to plots that belong to a topoclimate category that has enough plots in it
   
   d <- merge(d,d.sp.curr.plt,by=c("Regen_Plot"))
   
