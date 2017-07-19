@@ -5,40 +5,40 @@
 
 [1] "Anom mod"
       (Intercept) diff.norm.ppt.z_c 
-       -1.6901800         0.1115835 
+       -1.7384928         0.1056403 
 [1] "Norm mod"
 (Intercept) 
-  -1.685924 
+  -1.734601 
 [1] "Anom mod"
-         (Intercept)    diff.norm.def.z_c diff.norm.def.z_c.sq 
-          -3.1750628           -0.6832203            0.9775011 
+      (Intercept) diff.norm.def.z_c 
+       -1.8326344        -0.5393458 
 [1] "Norm mod"
 (Intercept) 
-  -1.685924 
+  -1.734601 
 [1] "Anom mod"
       (Intercept) diff.norm.aet.z_c 
-       -1.8503181         0.7083159 
+       -1.8381156         0.5500729 
 [1] "Norm mod"
 (Intercept) 
-  -1.685924 
+  -1.734601 
 [1] "Anom mod"
           (Intercept) diff.norm.ppt.min.z_c 
-           -1.9399705             0.8869807 
+           -1.9215717             0.7460251 
 [1] "Norm mod"
 (Intercept) 
-  -1.685924 
+  -1.734601 
 [1] "Anom mod"
           (Intercept) diff.norm.def.max.z_c 
-           -1.9100526            -0.8324278 
+           -1.8974625            -0.6981522 
 [1] "Norm mod"
 (Intercept) 
-  -1.685924 
+  -1.734601 
 [1] "Anom mod"
           (Intercept) diff.norm.aet.min.z_c 
-            -2.040773              1.034269 
+           -1.9159950             0.7241075 
 [1] "Norm mod"
 (Intercept) 
-  -1.685924 
+  -1.734601 
 
 
 #####Running model for:  PILA #####
@@ -46,40 +46,40 @@
 
 [1] "Anom mod"
       (Intercept) diff.norm.ppt.z_c 
-       -2.7704119         0.4656757 
+       -2.7806441         0.5606062 
 [1] "Norm mod"
 (Intercept) 
-  -2.680593 
+  -2.651297 
 [1] "Anom mod"
       (Intercept) diff.norm.def.z_c 
-        -2.882306         -0.703833 
+        -2.952725         -0.873650 
 [1] "Norm mod"
 (Intercept) 
-  -2.680593 
+  -2.651297 
 [1] "Anom mod"
       (Intercept) diff.norm.aet.z_c 
-       -2.9097936         0.7431573 
+       -2.9472867         0.8419552 
 [1] "Norm mod"
 (Intercept) 
-  -2.680593 
+  -2.651297 
 [1] "Anom mod"
           (Intercept) diff.norm.ppt.min.z_c 
-           -3.0220268             0.9007449 
+           -3.0402468             0.9667128 
 [1] "Norm mod"
 (Intercept) 
-  -2.680593 
+  -2.651297 
 [1] "Anom mod"
           (Intercept) diff.norm.def.max.z_c 
-           -2.9257286            -0.7594499 
+           -2.9485553            -0.8451044 
 [1] "Norm mod"
 (Intercept) 
-  -2.680593 
+  -2.651297 
 [1] "Anom mod"
           (Intercept) diff.norm.aet.min.z_c 
-            -3.185795              1.080445 
+           -3.0751063             0.9954981 
 [1] "Norm mod"
 (Intercept) 
-  -2.680593 
+  -2.651297 
 
 
 #####Running model for:  SHADE.ALLSP #####
@@ -87,83 +87,42 @@
 
 [1] "Anom mod"
       (Intercept) diff.norm.ppt.z_c 
-       -1.3791667         0.1625491 
+       -1.3496682         0.1365388 
 [1] "Norm mod"
 (Intercept) 
-  -1.371331 
+  -1.344212 
 [1] "Anom mod"
       (Intercept) diff.norm.def.z_c 
-       -1.5336665        -0.7610822 
+       -1.4561736        -0.6298752 
 [1] "Norm mod"
 (Intercept) 
-  -1.371331 
+  -1.344212 
 [1] "Anom mod"
       (Intercept) diff.norm.aet.z_c 
-       -1.5472031         0.7915909 
+       -1.4550600         0.6262035 
 [1] "Norm mod"
 (Intercept) 
-  -1.371331 
+  -1.344212 
 [1] "Anom mod"
           (Intercept) diff.norm.ppt.min.z_c 
-            -1.654538              1.026553 
+           -1.5440007             0.8549008 
 [1] "Norm mod"
 (Intercept) 
-  -1.371331 
+  -1.344212 
 [1] "Anom mod"
           (Intercept) diff.norm.def.max.z_c 
-           -1.6359273            -0.9935951 
+            -1.513889             -0.788566 
 [1] "Norm mod"
 (Intercept) 
-  -1.371331 
+  -1.344212 
 [1] "Anom mod"
           (Intercept) diff.norm.aet.min.z_c 
-            -1.707659              1.099401 
+           -1.5220567             0.7920962 
 [1] "Norm mod"
 (Intercept) 
-  -1.371331 
+  -1.344212 
 
 
 #####Running model for:  PINUS.ALLSP #####
-
-
-[1] "Anom mod"
-      (Intercept) diff.norm.ppt.z_c 
-      -1.25403415        0.09610092 
-[1] "Norm mod"
-(Intercept) 
-  -1.251475 
-[1] "Anom mod"
-      (Intercept) diff.norm.def.z_c 
-       -1.2605182        -0.1809455 
-[1] "Norm mod"
-(Intercept) 
-  -1.251475 
-[1] "Anom mod"
-      (Intercept) diff.norm.aet.z_c 
-       -1.2724330         0.2760794 
-[1] "Norm mod"
-(Intercept) 
-  -1.251475 
-[1] "Anom mod"
-          (Intercept) diff.norm.ppt.min.z_c 
-           -1.2723396             0.2759746 
-[1] "Norm mod"
-(Intercept) 
-  -1.251475 
-[1] "Anom mod"
-          (Intercept) diff.norm.def.max.z_c 
-           -1.2642271            -0.2153426 
-[1] "Norm mod"
-(Intercept) 
-  -1.251475 
-[1] "Anom mod"
-          (Intercept) diff.norm.aet.min.z_c 
-           -1.2933685             0.3915617 
-[1] "Norm mod"
-(Intercept) 
-  -1.251475 
-
-
-#####Running model for:  HDWD.ALLSP #####
 
 

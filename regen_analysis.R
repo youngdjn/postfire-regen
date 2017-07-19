@@ -63,6 +63,23 @@ d.plot <- d.plot[which(!(d.plot$FIRE_SEV.cat == "high.sev" & !(d.plot$survey.yea
 
 
 
+
+d.plot <- d.plot[!((d.plot$Fire == "AMERICAN RIVER") & (d.plot$ppt.normal < 1700)),]
+d.plot <- d.plot[!((d.plot$Fire == "BTU LIGHTENING") & (d.plot$ppt.normal > 2000)),]
+d.plot <- d.plot[!((d.plot$Fire == "BAGLEY") & (d.plot$rad.march < 4000)),]
+d.plot <- d.plot[!((d.plot$Fire == "CUB") & (d.plot$ppt.normal < 1300)),]
+d.plot <- d.plot[!((d.plot$Fire == "FREDS") & (d.plot$ppt.normal > 1230)),]
+d.plot <- d.plot[!((d.plot$Fire == "POWER") & (d.plot$rad.march < 6000)),]
+d.plot <- d.plot[!((d.plot$Fire == "RALSTON") & (d.plot$ppt.normal < 1175)),]
+d.plot <- d.plot[!((d.plot$Fire == "RICH") & (d.plot$ppt.normal > 1080) & (d.plot$rad.march < 5000)),]
+
+
+
+
+
+
+
+
 #### 1. Assign each plot a topoclimatic category ####
 fires <- unique(d.plot$Fire)
 
@@ -74,7 +91,7 @@ for(fire in fires) {
   
   
   # for some fires with a small range of precip, override the precip breaks, so we just have one category per fire
-  fires.small.precip.range <- c("AMERICAN RIVER","ANTELOPE","BAGLEY","BASSETTS","BTU LIGHTENING","HARDING","STRAYLOR")
+  fires.small.precip.range <- c("AMERICAN RIVER","ANTELOPE","BAGLEY","BASSETTS","BTU LIGHTENING","HARDING","STRAYLOR","RICH")
   if(fire %in% fires.small.precip.range) {
     breaks <- 9999
   }
@@ -120,14 +137,6 @@ ggplot(d.plot.precat,aes(x=ppt.normal,y=rad.march,col=topoclim.cat,shape=FIRE_SE
 ## Remove climatic regions that do not have comparable controls and high sev
 ## NOTE: this is only necessary and recommended when doing an analysis that involves comparing control adults with high sev regen
 
-d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "AMERICAN RIVER") & (d.plot.precat$ppt.normal < 1700)),]
-d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "BTU LIGHTENING") & (d.plot.precat$ppt.normal > 2000)),]
-d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "BAGLEY") & (d.plot.precat$rad.march < 4000)),]
-d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "CUB") & (d.plot.precat$ppt.normal < 1300)),]
-d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "FREDS") & (d.plot.precat$ppt.normal > 1230)),]
-d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "POWER") & (d.plot.precat$rad.march < 6000)),]
-d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "RALSTON") & (d.plot.precat$ppt.normal < 1175)),]
-d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "RICH") & (d.plot.precat$topoclim.cat == "P.2_R.1") & (d.plot.precat$rad.march < 5000)),]
 
 
 
