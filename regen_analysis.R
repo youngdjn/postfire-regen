@@ -6,6 +6,7 @@ library(brms)
 library(pROC)
 library(betareg)
 library(car)
+library(plyr)
 
 source("regen_analysis_functions.R")
 
@@ -16,6 +17,12 @@ source("regen_analysis_functions.R")
 d.plot <- read.csv("data_intermediate/plot_level.csv",header=T,stringsAsFactors=FALSE)
 d.sp <- read.csv("data_intermediate/speciesXplot_level.csv",header=T,stringsAsFactors=FALSE)
 
+d.plot$Fire <- sapply(d.plot$Fire,FUN= function(x) simpleCap(tolower(x)))
+
+d.plot[d.plot$Fire == "Btu Lightening","Fire"] <- "BTU Lightning"
+
+
+
 ## Look for plots with incomplete data specified in the comments
 plots.exceptions <- grepl("#.*(INCOMPLETE|INCORRECT)",d.plot$NOTES)
 d.plot <- d.plot[!plots.exceptions,]
@@ -24,7 +31,7 @@ d.plot <- d.plot[!plots.exceptions,]
 d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general","seed_tree_distance_conifer","seed_tree_distance_hardwood","diff.norm.ppt.z","diff.norm.ppt.min.z","tmean.post","ppt.post","ppt.post.min","perc.norm.ppt","perc.norm.ppt.min","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z","def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","diff.norm.def.max.z","diff.norm.aet.min.z","def.post","aet.post","def.post.max","aet.post.min","snow.post.min","snow.normal","snow.post","diff.norm.snow.z","diff.norm.snow.min.z","dominant_shrub_ht_cm","dom.veg.all")]
 
 # only northern Sierra Nevada fires
-sierra.fires <- c("STRAYLOR","CUB","RICH","MOONLIGHT","ANTELOPE","BTU LIGHTENING","HARDING","BASSETTS","AMERICAN RIVER","RALSTON","FREDS","POWER","BAGLEY","CHIPS")
+sierra.fires <- c("Straylor","Cub","Rich","Moonlight","Antelope","BTU Lightning","Harding","Bassetts","American River","Ralston","Freds","Power","Bagley","Chips")
 d.plot <- d.plot[d.plot$Fire %in% sierra.fires,]
 
 ## Remove managed plots, plots in nonforested locations (e.g. exposed bedrock), etc.
@@ -64,14 +71,14 @@ d.plot <- d.plot[which(!(d.plot$FIRE_SEV.cat == "high.sev" & !(d.plot$survey.yea
 
 
 
-d.plot <- d.plot[!((d.plot$Fire == "AMERICAN RIVER") & (d.plot$ppt.normal < 1700)),]
-d.plot <- d.plot[!((d.plot$Fire == "BTU LIGHTENING") & (d.plot$ppt.normal > 2000)),]
-d.plot <- d.plot[!((d.plot$Fire == "BAGLEY") & (d.plot$rad.march < 4000)),]
-d.plot <- d.plot[!((d.plot$Fire == "CUB") & (d.plot$ppt.normal < 1300)),]
-d.plot <- d.plot[!((d.plot$Fire == "FREDS") & (d.plot$ppt.normal > 1230)),]
-d.plot <- d.plot[!((d.plot$Fire == "POWER") & (d.plot$rad.march < 6000)),]
-d.plot <- d.plot[!((d.plot$Fire == "RALSTON") & (d.plot$ppt.normal < 1175)),]
-d.plot <- d.plot[!((d.plot$Fire == "RICH") & (d.plot$ppt.normal > 1080) & (d.plot$rad.march < 5000)),]
+d.plot <- d.plot[!((d.plot$Fire == "American River") & (d.plot$ppt.normal < 1700)),]
+d.plot <- d.plot[!((d.plot$Fire == "BTU Lightning") & (d.plot$ppt.normal > 2000)),]
+d.plot <- d.plot[!((d.plot$Fire == "Bagley") & (d.plot$rad.march < 4000)),]
+d.plot <- d.plot[!((d.plot$Fire == "Cub") & (d.plot$ppt.normal < 1300)),]
+d.plot <- d.plot[!((d.plot$Fire == "Freds") & (d.plot$ppt.normal > 1230)),]
+d.plot <- d.plot[!((d.plot$Fire == "Power") & (d.plot$rad.march < 6000)),]
+d.plot <- d.plot[!((d.plot$Fire == "Ralston") & (d.plot$ppt.normal < 1175)),]
+d.plot <- d.plot[!((d.plot$Fire == "Rich") & (d.plot$ppt.normal > 1080) & (d.plot$rad.march < 5000)),]
 
 
 
@@ -91,7 +98,7 @@ for(fire in fires) {
   
   
   # for some fires with a small range of precip, override the precip breaks, so we just have one category per fire
-  fires.small.precip.range <- c("AMERICAN RIVER","ANTELOPE","BAGLEY","BASSETTS","BTU LIGHTENING","HARDING","STRAYLOR","RICH")
+  fires.small.precip.range <- c("American River","Antelope","Bagley","Bassetts","BTU Lightning","Harding","Straylor","Rich")
   if(fire %in% fires.small.precip.range) {
     breaks <- 9999
   }
@@ -227,13 +234,19 @@ for(fire in unique(d.plot.3$Fire)) {
   
   d.plot.fire <- d.plot.3[d.plot.3$Fire == fire,]
   
-  for(topoclim.cat in unique(d.plot.fire$topoclim.cat)) {
+  #for(topoclim.cat in unique(d.plot.fire$topoclim.cat)) {
     
     
-    d.plot.fire.cat <- d.plot.c[(d.plot.c$Fire == fire) & (d.plot.c$topoclim.cat == topoclim.cat),] 
+    # d.plot.fire.cat <- d.plot.c[(d.plot.c$Fire == fire) & (d.plot.c$topoclim.cat == topoclim.cat),]
+  d.plot.fire.cat <- d.plot.c[(d.plot.c$Fire == fire),] 
     
     if (nrow(d.plot.fire.cat) < 5) {
       cat("Less than 5 plots in ",fire," ",topoclim.cat,". Skipping.\n")
+      next()
+    }
+  
+    if (nrow(d.plot.fire.cat) < 5) {
+      cat("Less than 5 plots in ",fire," ",". Skipping.\n")
       next()
     }
     
@@ -266,9 +279,10 @@ for(fire in unique(d.plot.3$Fire)) {
     dom.sp <- paste(dom.sp,collapse=", ")
     
     
-    d.plot.3[(d.plot.3$Fire == fire) & (d.plot.3$topoclim.cat == topoclim.cat),"dom.tree.sp.obs"] <- dom.sp
+    #d.plot.3[(d.plot.3$Fire == fire) & (d.plot.3$topoclim.cat == topoclim.cat),"dom.tree.sp.obs"] <- dom.sp
+    d.plot.3[(d.plot.3$Fire == fire),"dom.tree.sp.obs"] <- dom.sp
     
-  }
+  #}
   
 }
 
@@ -284,7 +298,8 @@ library(reshape)
 
 d.sp.pre <- d.sp.2[,c("species","topoclim.cat","Fire","adult.ba")]
 
-d.fire.sp <- cast(d.sp.pre,Fire + topoclim.cat ~ species,value="adult.ba")
+#d.fire.sp <- cast(d.sp.pre,Fire + topoclim.cat ~ species,value="adult.ba")
+d.fire.sp <- cast(d.sp.pre,Fire ~ species,value="adult.ba",fun.aggregate=sum)
 
 d.fire.sp$PIPJ <- d.fire.sp$PIPO + d.fire.sp$PIJE
 
@@ -292,7 +307,7 @@ sp.names <- names(d.fire.sp)
 names.drop <- c("ALL","ALNUS","CONIF.ALLSP","CONIFER","HDWD.ALLSP","JUNIPERUS","PINUS.ALLSP","SHADE.ALLSP","ABIES","PIPO","PIJE")
 sp.names <- sp.names[!(sp.names %in% names.drop)]
 d.fire.sp <- d.fire.sp[,sp.names]
-d.fire.sp[,4:length(names(d.fire.sp))] <- d.fire.sp[,4:length(names(d.fire.sp))] / rowSums(d.fire.sp[,4:length(names(d.fire.sp))])
+d.fire.sp[,3:length(names(d.fire.sp))] <- d.fire.sp[,3:length(names(d.fire.sp))] / rowSums(d.fire.sp[,3:length(names(d.fire.sp))])
 
 d.fire.sp <- d.fire.sp[complete.cases(d.fire.sp),]
 
@@ -302,7 +317,7 @@ d.fire.sp$dom.tree.sp.ba <- ""
 
 for (i in 1:nrow(d.fire.sp)) {
   
-  row.ba <- d.fire.sp[i,4:ncol(d.fire.sp)]
+  row.ba <- d.fire.sp[i,3:ncol(d.fire.sp)]
   
   row.ba <- sort(row.ba,decreasing=TRUE)
   
@@ -321,12 +336,277 @@ for (i in 1:nrow(d.fire.sp)) {
   d.fire.sp[i,"dom.tree.sp.ba"] <- dom.sp.row
 }
 
-d.fire.sp <- d.fire.sp[,c("Fire","topoclim.cat","dom.tree.sp.ba")]
+#d.fire.sp <- d.fire.sp[,c("Fire","topoclim.cat","dom.tree.sp.ba")]
+d.fire.sp <- d.fire.sp[,c("Fire","dom.tree.sp.ba")]
 
 d.plot.3 <- merge(d.plot.3,d.fire.sp,all.x=TRUE)
 
 
-d.view <- d.plot.3[,c("Fire","topoclim.cat","dom.tree.sp.ba","dom.tree.sp.obs","count.control")]
+d.domsp <- d.plot.3[,c("Fire","topoclim.cat","dom.tree.sp.ba","dom.tree.sp.obs","count.control")]
+
+
+### Combine dom sp lists: take ba-based and append any sp from obs-based that are not in list.
+
+d.domsp$domsp.comb <- NULL
+
+for(i in 1:nrow(d.domsp)) {
+  
+  row <- d.domsp[i,]
+  
+  ba <- row$dom.tree.sp.ba
+  obs <- row$dom.tree.sp.obs
+  
+  ba.list <- strsplit(ba,split=", ")[[1]]
+  obs.list <- strsplit(obs,split=", ")[[1]]
+  
+  diff <- setdiff(obs.list,ba.list)
+  
+  full <- paste(c(ba.list,diff),collapse=", ")
+  
+  d.domsp[i,"domsp.comb"] <- full
+  
+  
+}
+
+# add to plot-level data
+
+d.domsp <- d.domsp[!duplicated(d.domsp$Fire),]
+d.domsp <- remove.vars(d.domsp,c("topoclim.cat","count.control"))
+
+d.plot.c <- merge(d.plot.c,d.domsp,all.x=TRUE,by=c("Fire"))
+
+
+
+
+
+
+#### 6. Compile summary statistics and tables ####
+
+
+
+### fire-level ###
+
+#! keep only the plot data that has corresponding topoclim cats that are being kept (i.e. correct severity, etc.)
+d <- as.data.table(d.plot.c)
+d <- merge(d,d.plot.3[,c("Fire","topoclim.cat")])
+
+
+d.fire <- d[,list(fire.year=mean(fire.year),
+                    years.post=paste(sort(unique(survey.years.post)),collapse=", "),
+                    nplots=.N,
+                    ppt.norm=summary.string(ppt.normal,decimals=0),
+                    ppt.anom=summary.string(diff.norm.ppt.min.z,decimals=2),
+                    dom.sp=first(domsp.comb)
+                  ),
+                  by=Fire]
+
+d.fire$Fire <- sapply(d.fire$Fire,FUN= function(x) simpleCap(tolower(x)))
+
+d.fire[d.fire$Fire == "Btu Lightening","Fire"] <- "BTU Lightning"
+
+
+
+
+### topoclim-cat level ###
+
+#! keep only the species data that has corresponding plots that are being kept (i.e. correct severity, etc.)
+d <- d.sp.2
+
+keep.sp <- c("ABCO","PIPJ","PILA","PSME","PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP")
+keep.cols <- c("species","regen.presab.old","adult.ba","topoclim.cat","Fire")
+d <- d[d$species %in% keep.sp,]
+
+d <- as.data.table(d)
+
+d.sp.cast <- dcast(d,Fire + topoclim.cat~species,value.var=c("regen.presab.old","adult.ba"))
+
+# add the other necessary columns
+keep.cols <- c("Fire","topoclim.cat","SHRUB.highsev","GRASS.highsev","FORB.highsev","count.highsev","count.control")
+d2 <- d.plot.3[,keep.cols]
+
+#merge all necessary data together
+d.merge <- merge(d2,d.sp.cast,by=c("Fire","topoclim.cat"))
+
+d.merge <- as.data.table(d.merge)
+
+d.cat <- d.merge[,list(Fire=Fire,
+                       topo.cat=topoclim.cat,
+                       
+                       n.highsev = count.highsev,
+                       n.ref= count.control,
+                       
+                       regen.ABCO = 100*round(regen.presab.old_ABCO,digits=2),
+                       regen.PILA = 100*round(regen.presab.old_PILA,digits=2),
+                       regen.PIPJ = 100*round(regen.presab.old_PIPJ,digits=2),
+                       regen.PSME = 100*round(regen.presab.old_PSME,digits=2),
+                       regen.Pinus = 100*round(regen.presab.old_PINUS.ALLSP,digits=2),
+                       regen.Shade = 100*round(regen.presab.old_SHADE.ALLSP,digits=2),
+                       regen.Hdwd = 100*round(regen.presab.old_HDWD.ALLSP,digits=2),
+                       
+                       ref.ABCO = round(adult.ba_ABCO,digits=0),
+                       ref.PILA = round(adult.ba_PILA,digits=0),
+                       ref.PIPJ = round(adult.ba_PIPJ,digits=0),
+                       ref.PSME = round(adult.ba_PSME,digits=0),
+                       ref.Pinus = round(adult.ba_PINUS.ALLSP,digits=0),
+                       ref.Shade = round(adult.ba_SHADE.ALLSP,digits=0),
+                       ref.Hdwd = round(adult.ba_HDWD.ALLSP,digits=0),
+                       
+                       cov.shrub=round(SHRUB.highsev,digits=0),
+                       cov.forb=round(FORB.highsev,digits=0),
+                       cov.grass=round(GRASS.highsev,digits=0)
+                       )
+                  ]
+
+
+#### 7. Plot highsev vs. reference ####
+
+
+d.plot.keep <- merge(d.plot,d.plot.3[,c("Fire","topoclim.cat")])
+
+
+d.plot.keep$topoclim.cat <- gsub(".","",d.plot.keep$topoclim.cat,fixed=TRUE)
+
+d.plot.keep$FIRE_SEV.cat <- gsub("control","Reference",d.plot.keep$FIRE_SEV.cat,fixed=TRUE)
+d.plot.keep$FIRE_SEV.cat <- gsub("high.sev","High severity",d.plot.keep$FIRE_SEV.cat,fixed=TRUE)
+
+
+
+p <- ggplot(d.plot.keep,aes(x=ppt.normal,y=rad.march,col=topoclim.cat,shape=FIRE_SEV.cat)) +
+  geom_point(size=3) +
+  facet_wrap(~Fire,scales="free") +
+  theme_bw(16) +
+  scale_shape_manual(values=c(1,3)) +
+  labs(x="Normal annual precipitation (mm)",y="Solar exposure (Wh m-2 day-1)",shape="Plot type",color="Topoclimate category")
+
+Cairo(file=paste0("../Figures/FigS1_ref_vs_highsev",Sys.Date(),".png"),width=2800,height=2000,ppi=200,res=200,dpi=200)
+p
+dev.off()
+
+
+#### 8. Plot climate space with fire labels ####
+
+
+### Plot of monitoring plots in climate space: minimum precip ### 
+
+# For each fire, make a point at mean normal precip and mean precip anom 
+fire.centers <- data.frame() 
+fires <- unique(d.plot.c$Fire) 
+for(fire in fires) { 
+  d.fire <- d.plot.c[d.plot.c$Fire == fire,] 
+  norm.mean <- mean(d.fire$ppt.normal) 
+  anom.mean <- mean(d.fire$diff.norm.ppt.min.z) 
+  year <- d.fire$fire.year[1] 
+  
+  fire.center <- data.frame(Fire=fire,year=year,ppt.normal=norm.mean,diff.norm.ppt.min.z=anom.mean) 
+  fire.centers <- rbind(fire.centers,fire.center)   
+} 
+fire.centers$fire.year <- paste0(fire.centers$Fire,", ",fire.centers$year) 
+
+
+lines <- data.frame(rbind(c(1900,-.27,2000,-0.42), # BTU
+               c(1650,-0.25,1500,-0.36), # CUB
+               c(700,-0.8,750,-0.6)
+               ))
+names(lines) <- c("x","y","xend","yend")
+
+##shifts
+
+fire.centers[fire.centers$Fire == "Antelope",c("ppt.normal","diff.norm.ppt.min.z")] <- c(500,-0.95)
+fire.centers[fire.centers$Fire == "Freds",c("ppt.normal","diff.norm.ppt.min.z")] <- c(1170,-0.78)
+fire.centers[fire.centers$Fire == "Power",c("ppt.normal","diff.norm.ppt.min.z")] <- c(1600,-0.85)
+fire.centers[fire.centers$Fire == "Bassetts",c("ppt.normal","diff.norm.ppt.min.z")] <- c(2000,-0.95)
+fire.centers[fire.centers$Fire == "Moonlight",c("ppt.normal","diff.norm.ppt.min.z")] <- c(750,-0.6)
+fire.centers[fire.centers$Fire == "Straylor",c("ppt.normal","diff.norm.ppt.min.z")] <- c(400,-0.74)
+fire.centers[fire.centers$Fire == "American River",c("ppt.normal","diff.norm.ppt.min.z")] <- c(1700,-0.14)
+fire.centers[fire.centers$Fire == "Cub",c("ppt.normal","diff.norm.ppt.min.z")] <- c(1500,-0.43)
+fire.centers[fire.centers$Fire == "BTU Lightning",c("ppt.normal","diff.norm.ppt.min.z")] <- c(2000,-0.5)
+fire.centers[fire.centers$Fire == "Bagley",c("diff.norm.ppt.min.z")] <- -1.48
+
+
+p1 <-  ggplot(d.plot.c,aes(x=ppt.normal,y=diff.norm.ppt.min.z,color=Fire)) + 
+  geom_point(size=3) + 
+  #geom_point(data=fire.centers,size=5,pch=1) + 
+  geom_text(data=fire.centers,aes(label=fire.year),nudge_y=.04,size=6,color="darkgray") + 
+  guides(color=FALSE) + 
+  theme_bw(17) + 
+  labs(x="Normal precipitation (mm)",y="Postfire minimum precipitation anomaly (SD)") + 
+  scale_x_continuous(limits=c(180,2580))+
+  geom_segment(aes(x=x,y=y,xend=xend,yend=yend),data=lines,color="darkgray",size=1.0)
+
+
+
+### Plot of monitoring plots in climate space: mean precip ### 
+
+# For each fire, make a point at mean normal precip and mean precip anom 
+fire.centers <- data.frame() 
+fires <- unique(d.plot.c$Fire) 
+for(fire in fires) { 
+  d.fire <- d.plot.c[d.plot.c$Fire == fire,] 
+  norm.mean <- mean(d.fire$ppt.normal) 
+  anom.mean <- mean(d.fire$diff.norm.ppt.z) 
+  year <- d.fire$fire.year[1] 
+  
+  fire.center <- data.frame(Fire=fire,year=year,ppt.normal=norm.mean,diff.norm.ppt.z=anom.mean) 
+  fire.centers <- rbind(fire.centers,fire.center)   
+} 
+fire.centers$fire.year <- paste0(fire.centers$Fire,", ",fire.centers$year) 
+
+
+
+fire.centers[fire.centers$Fire == "Antelope",c("diff.norm.ppt.z")] <- -0.49
+fire.centers[fire.centers$Fire == "Moonlight",c("diff.norm.ppt.z")] <- -0.62
+fire.centers[fire.centers$Fire == "Chips",c("diff.norm.ppt.z")] <- -0.86
+fire.centers[fire.centers$Fire == "Cub",c("diff.norm.ppt.z")] <- 0.22
+fire.centers[fire.centers$Fire == "American River",c("diff.norm.ppt.z")] <- 0.44
+fire.centers[fire.centers$Fire == "BTU Lightning",c("diff.norm.ppt.z")] <- 0.12
+fire.centers[fire.centers$Fire == "Freds",c("diff.norm.ppt.z")] <- 0.35
+fire.centers[fire.centers$Fire == "Power",c("diff.norm.ppt.z")] <- 0.61
+
+
+lines <- data.frame(rbind(c(1920,0.3,1920,0.2))) # BTU
+names(lines) <- c("x","y","xend","yend")
+
+
+
+
+p2 <- ggplot(d.plot.c,aes(x=ppt.normal,y=diff.norm.ppt.z,color=Fire)) + 
+  geom_point(size=3) + 
+  #geom_point(data=fire.centers,size=5,pch=1) + 
+  geom_text(data=fire.centers,aes(label=fire.year),nudge_y=.04,size=6,color="darkgray") + 
+  guides(color=FALSE) + 
+  theme_bw(17) + 
+  labs(x="Normal precipitation (mm)",y="Postfire mean precipitation anomaly (SD)") + 
+  scale_x_continuous(limits=c(180,2580))+
+  geom_segment(aes(x=x,y=y,xend=xend,yend=yend),data=lines,color="darkgray",size=1.0)
+
+
+library(gridExtra)
+blank<-rectGrob(gp=gpar(col="white")) # make a white spacer grob
+
+Cairo(file=paste0("../Figures/Fig1_climateSpace_2pptanom_",Sys.Date(),".png"),width=3100,height=1500,ppi=200,res=200,dpi=200) 
+grid.arrange(p1,blank,p2,ncol=3,widths=c(0.49,0.02,0.49))
+dev.off()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

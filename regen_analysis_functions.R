@@ -1,3 +1,27 @@
+summary.string <- function(x,decimals) {
+  
+  med <- round(median(x),digits=decimals)
+  
+  lims <- round(quantile(x,probs=c(0.25,0.75)),digits=decimals)
+  range <- paste(lims,collapse=", ")
+  sum.str <- paste0(med," (",range,")")
+  
+  return(sum.str)
+}
+
+
+
+
+
+
+simpleCap <- function(x) {
+  s <- strsplit(x, " ")[[1]]
+  paste(toupper(substring(s, 1,1)), substring(s, 2),
+        sep="", collapse=" ")
+}
+
+
+
 ## Given a variable (vector of values) and a set of breakpoints, determine between which breakpoints each value of the variable falls
 categorize <- function(x,breaks,name) { #name is used as the prefix for all categories output for this variable
   var.bounds <- c(min(x,na.rm=TRUE)-1,breaks,max(x,na.rm=TRUE)+1)
