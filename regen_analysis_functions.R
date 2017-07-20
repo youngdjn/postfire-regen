@@ -1,3 +1,5 @@
+is.odd <- function(x) x %% 2 != 0
+
 summary.string <- function(x,decimals) {
   
   med <- round(median(x),digits=decimals)

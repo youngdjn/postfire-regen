@@ -7,6 +7,7 @@ library(pROC)
 library(betareg)
 library(car)
 library(plyr)
+library(data.table)
 
 source("regen_analysis_functions.R")
 
@@ -590,30 +591,93 @@ dev.off()
 
 
 
+#### 9. Graphical summary of abiotic environment comparing reference vs. highsev ####
+
+keep.vars <- c("Fire","topoclim.cat","ppt.normal","rad.march","diff.norm.ppt.min.z","diff.norm.ppt.z","FIRE_SEV.cat") # removed seed_tree_distance_general
+
+d <- as.data.table(merge(d.plot[,keep.vars],d.plot.3[,c("Fire","topoclim.cat")]))
+
+d.med <- d[,lapply(.SD,median),by=list(Fire,topoclim.cat,FIRE_SEV.cat)]
+d.med$level <- "mid"
+
+d.low <- d[,lapply(.SD,quantile,probs=0.25),by=list(Fire,topoclim.cat,FIRE_SEV.cat)]
+d.low$level <- "low"
+
+d.high <- d[,lapply(.SD,quantile,probs=0.75),by=list(Fire,topoclim.cat,FIRE_SEV.cat)]
+d.high$level <- "high"
+
+d.agg <- rbind(d.med,d.low,d.high)
+
+d.melt <- melt(d.agg,id.vars=c("Fire","topoclim.cat","level","FIRE_SEV.cat"))
+d.cast <- dcast(d.melt,Fire + topoclim.cat + FIRE_SEV.cat + variable ~ level)
+
+d.cast$variable <- gsub("ppt.normal","Normal precipitation (mm)",d.cast$variable)
+d.cast$variable <- gsub("rad.march","Solar exposure (Wh m-2 day-1)",d.cast$variable)
+d.cast$variable <- gsub("diff.norm.ppt.min.z","Minimum precipitation anomaly (SD)",d.cast$variable)
+d.cast$variable <- gsub("diff.norm.ppt.z","Mean precipitation anomaly (SD)",d.cast$variable)
+d.cast$variable <- gsub("seed_tree_distance_general","Seed tree distance (m)",d.cast$variable)
+
+d.cast$FIRE_SEV.cat <- gsub("control","Reference",d.cast$FIRE_SEV.cat)
+d.cast$FIRE_SEV.cat <- gsub("high.sev","High severity",d.cast$FIRE_SEV.cat)
+
+d.cast$fire.cat <- paste(d.cast$Fire,d.cast$topoclim.cat,sep=": ")
+
+plots <- list()
+
+for(i in 1:length(unique(d.cast$variable))) {
+  
+  var <- unique(d.cast$variable)[i]
+  
+  d.var <- d.cast[d.cast$variable == var,]
+  
+  plots[[var]] <-ggplot(d.var,aes(x=fire.cat,y=mid,color=FIRE_SEV.cat)) +
+    geom_point(position=position_dodge(width=.5),size=2) +
+    geom_errorbar(aes(ymin=low,ymax=high),position=position_dodge(width=.5),width=0,size=1) +
+    theme_bw(12) +
+    theme(axis.title.y = element_text(size=8))
+  
+
+  
+  if(i == length(unique(d.cast$variable))) {
+    
+    plots[[var]] <- plots[[var]] +
+      theme(axis.text.x = element_text(angle=90,hjust=1,vjust=0.5)) +
+      labs(x="Fire and topoclimatic category",y=var,color="Plot type")
+    
+  } else {
+    
+    plots[[var]] <- plots[[var]] +
+      theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+      labs(y=var,color="Plot type")
+  }
+  
+
+
+}
+
+a <- ggplot_gtable(ggplot_build(plots[[1]]))
+b <-  ggplot_gtable(ggplot_build(plots[[2]]))
+c <-  ggplot_gtable(ggplot_build(plots[[3]]))
+d <-  ggplot_gtable(ggplot_build(plots[[4]]))
+
+maxWidth = unit.pmax(a$widths[2:3], b$widths[2:3], c$widths[2:3], d$widths[2:3])
+
+a$widths[2:3] <- maxWidth
+b$widths[2:3] <- maxWidth
+c$widths[2:3] <- maxWidth
+d$widths[2:3] <- maxWidth
 
 
 
 
+Cairo(file=paste0("../Figures/Fig1_anom_normal_abiotic_",Sys.Date(),".png"),width=1500,height=2000,ppi=200,res=200,dpi=200) 
+grid.arrange(a,b,c,d,ncol=1,heights=c(1,1,1,1.7))
+dev.off()
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-### Plot histogram of seed tree distance ####
+### 9. Plot histogram of seed tree distance ####
 
 d.plot.highsev <- d.plot[d.plot$FIRE_SEV %in% c(4,5),]
 
@@ -676,7 +740,7 @@ htabs.opts <- NULL
 
 
 resp.opts <- c(prop.opts,htabs.opts,sp.opts,cover.opts,ht.opts)
-
+resp.opts <- c(sp.opts,cover.opts,ht.opts)
 
 do.regression <-TRUE
 
