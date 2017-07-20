@@ -88,6 +88,55 @@ for(i in 1:length(db.dirs)) {
   
 }
 
+
+## Add Richter data
+
+plot.richter <- read.csv("../data_survey/Clark/richter_plot_data.csv",header=TRUE, stringsAsFactors=FALSE)
+resprout.richter <- read.csv("../data_survey/Clark/richter_resprout.csv",header=TRUE, stringsAsFactors=FALSE)
+sapling.richter <- read.csv("../data_survey/Clark/richter_saplings.csv",header=TRUE, stringsAsFactors=FALSE)
+seedling.richter <- read.csv("../data_survey/Clark/richter_seedlings.csv",header=TRUE, stringsAsFactors=FALSE)
+
+plot.richter$Plot.ID <- paste0("richter.",plot.richter$Plot.ID)
+plot.richter <- plot.richter[,c(1:3,6,7,13,14,19,20,21)]
+names(plot.richter)[1:3] <- c("Regen_Plot","Longitude","Latitude")
+plot.richter$Fire <- "POWER"
+
+seedling.richter$Plot_ID <- paste0("richter.",seedling.richter$Plot_ID)
+seedling.richter <- seedling.richter[,-1]
+names(seedling.richter) <- c("Regen_Plot","Species","seed_veg_plant","X0yr","Ct_1yr","Ct_2yr","Ct_3yr","Ct_4yr","Ct_5yr","X6yr","X7yr","X8yr","X9yr","X10yr","X11yr","X12yr","X13yr","X14yr","X15yr","X16yr","X17yr","X18yr","X19yr","X20.yr",paste0("x",21:26,"yr"),"tallest_ht_cm","tallest_age","tallest_lastyr_cm")
+seedling.richter <- seedling.richter[!is.na(seedling.richter$Species) & seedling.richter$Species != "",]
+seedling.richter <- seedling.richter[,which(!is.na(names(seedling.richter)))]
+
+sapling.richter$Plot_ID <- paste0("richter.",sapling.richter$Plot_ID)
+sapling.data.richter <- sapling.richter[,c(-1,-7:-10)]
+names(sapling.data.richter) <- c("Regen_Plot","Species","seed_veg_plant","DBH..cm.","age")
+sapling.tallest.richter <- sapling.richter[,c(2,7:10)]
+sapling.tallest.richter <- sapling.tallest.richter[!is.na(sapling.tallest.richter$TI_Species) & sapling.tallest.richter$TI_Species != "",]
+names(sapling.tallest.richter) <- c("Regen_Plot","Species","tallest_ht_cm","age","tallest_lastyr_cm")
+#only one height per species per age
+sapling.tallest.richter <- as.data.table(sapling.tallest.richter)
+sapling.tallest.richter <- sapling.tallest.richter[,list(tallest_ht_cm = max(tallest_ht_cm),
+                                                         tallest_lastyr_cm = max(tallest_lastyr_cm)),
+                                                   by=list(Regen_Plot,Species,age)]
+sapling.data.richter <- merge(sapling.data.richter,sapling.tallest.richter,by=c("Regen_Plot","Species","age"),all.X=TRUE)
+
+resprout.richter <- resprout.richter[,c(2,24:29)]
+resprout.richter <- resprout.richter[resprout.richter$Resprout_Species != "" & !is.na(resprout.richter$Resprout_Species),]
+resprout.richter$Plot_ID <- paste0("richter.",resprout.richter$Plot_ID)
+names(resprout.richter) <- c("Regen_Plot","Species","._sprouts","DBH..cm.","tallest_ht_cm","tallest_lastyr_cm","talst_age")
+
+
+##merge in all Richter tables
+plot.comb <- rbind.fill(plot.comb,plot.richter)
+resprout.comb <- rbind.fill(resprout.comb,resprout.richter)
+sap.comb <- rbind.fill(sap.comb,sapling.data.richter)
+seedl.comb <- rbind.fill(seedl.comb,seedling.richter)
+
+
+
+
+
+
 # Different methods for computing seed tree; convert into the value that can be obtained from all methods (closest tree regardless of identity)
 # when seed tree distance is 0, >200, or 200, or NA (all indicating not found), make it 999
 plot.comb$seed_tree_distance_conifer[plot.comb$seed_tree_distance_conifer %in% c("0",">200","200")] <- 999
@@ -125,9 +174,9 @@ seedl.comb[!all.quadrants,seedl.count.columns] <- 4*seedl.comb[!all.quadrants,se
 plot.comb$fire.prefix <- sapply(plot.comb$Regen_Plot,substr,start=1,stop=3)
 
 fire.years <- data.frame(
-  fire.prefix = c("BAG","PEA","PIT","STR","CHI","CUB","POW"),
-  Year.of.Fire = c(2012,2012,2008,2004,2012,2008,2004),
-  Fire = c("BAGLEY","PEAK","BTU LIGHTENING","STRAYLOR","CHIPS","CUB","POWER")
+  fire.prefix = c("BAG","PEA","PIT","STR","CHI","CUB","POW","ric"), #ric is from richter data (POWER only)
+  Year.of.Fire = c(2012,2012,2008,2004,2012,2008,2004,2004),
+  Fire = c("BAGLEY","PEAK","BTU LIGHTENING","STRAYLOR","CHIPS","CUB","POWER","POWER")
   )
 
 #remove the fire name and year columns
@@ -269,8 +318,8 @@ seed.tree <- seed.tree.welch
 
 
 # Fix species names to use USDA PLANTS codes. Also fix an incorrectly-named species
-from <- c("JU","AB","CADE","CONU","LIDE","QUCH","NODE","COSE","PRVI?","ACGI")
-to <- c("JUNIPERUS","ABIES","CADE27","CONU4","LIDE3","QUCH2","LIDE3","CONU","PRVI","ACMA")
+from <- c("JU","AB","CADE","CONU","LIDE","QUCH","NODE","COSE","PRVI?","ACGI","CADE ","PIP0")
+to <- c("JUNIPERUS","ABIES","CADE27","CONU4","LIDE3","QUCH2","LIDE3","CONU","PRVI","ACMA","CADE27","PIPO")
 
 
 surviving.trees$Species <- mapvalues(surviving.trees$Species,from=from,to=to)
@@ -664,6 +713,12 @@ plot.firesev <- data.frame(Regen_Plot=NULL,fire.sev=NULL)
 counter <- 1
 for(fire in fires) {
   
+  #disable this
+  if(counter > 2) {
+    cat("Fire severity analysis disabled.\n")
+    next()
+  }
+  
   plots.fire <- plots[plots$Fire == fire,]
   fire.raster.dir <- paste(fire.severity.rasters.dir,fire,"/",sep="")
   
@@ -963,35 +1018,35 @@ write.csv(plot.3.regen,"data_intermediate/speciesXplot_level.csv",row.names=FALS
 
 #### Outlier check ####
 
-
-#test to see if CADE27 is really essentially only present in low sev plots
-
-test <- merge(plot.tree.sp,plot.clim.seedtree[,c("Regen_Plot","FIRE_SEV")])
-
-
-
-
-
-plot.3.regen <- read.csv("data_intermediate/speciesXplot_level.csv",header=TRUE,stringsAsFactors=FALSE)
-plot.clim.seedtree <- read.csv("data_intermediate/plot_level.csv",header=TRUE,stringsAsFactors=FALSE)
-
-
-clim.vars <- c("SHRUB","rad.march","ppt.normal","ppt.post","ppt.post.min","diff.norm.ppt.z","diff.norm.ppt.min.z", "seed_tree_distance_general","def.post","diff.norm.def.z","def.normal")
-
-pairs(plot.clim.seedtree[,clim.vars])
-
-plot.3.regen.conifer <- plot.3.regen[plot.3.regen$species=="CONIF.ALLSP",]
-
-check.df <- merge(plot.clim.seedtree,plot.3.regen.conifer,by="Regen_Plot",all.x=TRUE)
-
-all.vars <- c("SHRUB", "rad.march", "ppt.normal", "ppt.post", "ppt.post.min", "diff.norm.ppt.z", "diff.norm.ppt.min.z", "seed_tree_distance_general","regen.count.all","def.post","diff.norm.def.z","def.normal")
-pairs(check.df[,all.vars])
-
-check.df.abbrev <- check.df[,c("Regen_Plot","seed_tree_distance_general","regen.count.all","SHRUB","diff.norm.ppt.z")]
-
-check.df.abbrev[check.df.abbrev$seed_tree_distance_general>150 & check.df.abbrev$regen.count.all > 80,]
-check.df.abbrev[check.df.abbrev$regen.count.all > 250,]
-
-pairs(check.df.abbrev[,-1])
-
-check.df.abbrev[check.df.abbrev$seed_tree_distance_general > 300 & check.df.abbrev$regen.count.all > 5,]
+# 
+# #test to see if CADE27 is really essentially only present in low sev plots
+# 
+# test <- merge(plot.tree.sp,plot.clim.seedtree[,c("Regen_Plot","FIRE_SEV")])
+# 
+# 
+# 
+# 
+# 
+# plot.3.regen <- read.csv("data_intermediate/speciesXplot_level.csv",header=TRUE,stringsAsFactors=FALSE)
+# plot.clim.seedtree <- read.csv("data_intermediate/plot_level.csv",header=TRUE,stringsAsFactors=FALSE)
+# 
+# 
+# clim.vars <- c("SHRUB","rad.march","ppt.normal","ppt.post","ppt.post.min","diff.norm.ppt.z","diff.norm.ppt.min.z", "seed_tree_distance_general","def.post","diff.norm.def.z","def.normal")
+# 
+# pairs(plot.clim.seedtree[,clim.vars])
+# 
+# plot.3.regen.conifer <- plot.3.regen[plot.3.regen$species=="CONIF.ALLSP",]
+# 
+# check.df <- merge(plot.clim.seedtree,plot.3.regen.conifer,by="Regen_Plot",all.x=TRUE)
+# 
+# all.vars <- c("SHRUB", "rad.march", "ppt.normal", "ppt.post", "ppt.post.min", "diff.norm.ppt.z", "diff.norm.ppt.min.z", "seed_tree_distance_general","regen.count.all","def.post","diff.norm.def.z","def.normal")
+# pairs(check.df[,all.vars])
+# 
+# check.df.abbrev <- check.df[,c("Regen_Plot","seed_tree_distance_general","regen.count.all","SHRUB","diff.norm.ppt.z")]
+# 
+# check.df.abbrev[check.df.abbrev$seed_tree_distance_general>150 & check.df.abbrev$regen.count.all > 80,]
+# check.df.abbrev[check.df.abbrev$regen.count.all > 250,]
+# 
+# pairs(check.df.abbrev[,-1])
+# 
+# check.df.abbrev[check.df.abbrev$seed_tree_distance_general > 300 & check.df.abbrev$regen.count.all > 5,]
