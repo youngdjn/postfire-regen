@@ -176,7 +176,7 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
 
 
 #### summarize regen counts for given ages, with all specified species as separate rows ####
-summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl.unk.age.for.all=FALSE) {
+summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl.unk.age.for.all=FALSE,peryear=TRUE) {
   
   plot.ids <- unique(plot.df$Regen_Plot)
 
@@ -241,8 +241,12 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl
     }
       
     
+    if(peryear == TRUE) {
+      regen.peryr.sp[i] <- regen.tot.sp / regen.nyears #this is not "regen.row.cols.complete" because don't want to consider "unk_yr" as another year to have to divide counts by to get seedlings/yr (when computing all ages, the ages are restricted to the ages assigned to "all", which are all years between the fire and the survey)
+    } else {
+      regen.peryr.sp[i] <- regen.tot.sp
+    }
     
-    regen.peryr.sp[i] <- regen.tot.sp / regen.nyears #this is not "regen.row.cols.complete" because don't want to consider "unk_yr" as another year to have to divide counts by to get seedlings/yr (when computing all ages, the ages are restricted to the ages assigned to "all", which are all years between the fire and the survey)
     
   }
   
