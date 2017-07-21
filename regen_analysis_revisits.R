@@ -71,7 +71,7 @@ fire.multsurveys <- fire.survey.yrs[,list(Fire=Fire,
                                           ),
                                     by=list(Fire)]
 
-fires.focal <- c("BTU Lightning","Straylor","Cub","Freds") #fires with enough revisit plots
+fires.focal <- c("BTU Lightning","Straylor","Cub","Freds","Power") #fires with enough revisit plots
 
 d.plot <- d.plot[d.plot$Fire %in% fires.focal,]
 d.plot <- d.plot[!(d.plot$Fire == "BTU Lightning" & d.plot$survey.years.post == 6),] ## don't want BTU 6-year plots
@@ -83,7 +83,7 @@ d.plot <- d.plot[!(d.plot$Fire == "BTU Lightning" & d.plot$survey.years.post == 
 
 
 #export data to display in GIS
-#write.csv(d.plot,"../geospatial output/plot.csv",row.names=FALSE)
+# write.csv(d.plot,"../geospatial output/plot.csv",row.names=FALSE)
 
 coords <- as.matrix(d.plot[,c("Easting","Northing")])
 plot.spatial <- st_multipoint(x=coords,dim="XY")
@@ -137,9 +137,26 @@ d.plot$revisit.distance <- round(d.plot$revisit.distance)
 
 d.plot.orig <- d.plot[!is.na(d.plot$revisit.distance),]
 d.plot.orig <- d.plot.orig[d.plot.orig$revisit.distance < 100,]
+st_geometry(d.plot.orig) <- NULL
 
 
 
+sp <- "PINUS.ALLSP"
+d.sp.focalsp <- d.sp[d.sp$species == sp,]
+
+
+for(i in 1:nrow(d.plot.orig)) {
+  
+  orig.plt <- d.plot.orig[i,"Regen_Plot"]
+  revisit.plt <- d.plot.orig[i,"revisit.plotname"]
+  orig.sp <- d.sp.focalsp[d.sp.focalsp$Regen_Plot == orig.plt,]
+  revisit.sp <- d.sp.focalsp[d.sp.focalsp$Regen_Plot == revisit.plt,]
+
+  
+  
+  
+  
+}
 
 
 
