@@ -7,6 +7,7 @@ library(reshape2)
 library(plyr)
 library(rgdal)
 library(sp)
+library(data.table)
 
 source("regen_compile_data_functions.R")
 
@@ -940,7 +941,8 @@ regen.ht.pinus.agg <- aggregate(regen.ht.pinus$tallest_ht_cm,by=list(regen.ht.pi
 names(regen.ht.pinus.agg) <- c("Regen_Plot","tallest_ht_cm")
 regen.ht.pinus.agg$species <- "PINUS.ALLSP"
 
-shade <- c("ABCO","CADE27","ABIES","TAXUS","TOCA","ABMA")
+shade <- c("ABCO","CADE27","ABIES","ABMA")
+shade <- c("ABCO","CADE27")
 regen.ht.shade <- regen.ht[regen.ht$Species %in% shade,]
 regen.ht.shade.agg <- aggregate(regen.ht.shade$tallest_ht_cm,by=list(regen.ht.shade$Regen_Plot),FUN=max)
 names(regen.ht.shade.agg) <- c("Regen_Plot","tallest_ht_cm")

@@ -324,7 +324,9 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl
   
   
   ## compute total for all shade sp
-  regen.tot.focal <- regen.tot[regen.tot$species %in% c("ABCO","CADE27","ABIES","TAXUS","TOCA","ABMA"),]
+  #regen.tot.focal <- regen.tot[regen.tot$species %in% c("ABCO","CADE27","ABIES","TAXUS","TOCA","ABMA"),]
+  regen.tot.focal <- regen.tot[regen.tot$species %in% c("ABCO","CADE27"),]
+  
   regen.allsp.tot <- aggregate(regen.tot.focal$regen.count,by=list(regen.tot.focal$Regen_Plot),FUN=sum)
   
   names(regen.allsp.tot) <- c("Regen_Plot","regen.count")
