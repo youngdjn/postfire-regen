@@ -709,7 +709,7 @@ ggplot(a,aes(x=Fire,y=mean)) +
 
 
 
-#### 6.5 Plot-level analysis with GLM; also run randomForest to get importance scores ####
+#### 10 Plot-level analysis with GLM; also run randomForest to get importance scores ####
 
 
 
@@ -1080,7 +1080,7 @@ for(sp in resp.opts) {
       formulas[["nA2.aA2minni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
 
       
-      if(!(sp %in% c(cover.opts,ht.opts,htabs.opts,prop.opts))) {
+      if(FALSE) {     #   (!(sp %in% c(cover.opts,ht.opts,htabs.opts,prop.opts))) {
       
         
         #### With adult ####
@@ -2298,15 +2298,9 @@ sink(file=NULL)
 
 
 
+#### 11. Plot overall exploration plot ####
 
-
-#write.csv(rf.importance,"rf_importance.csv")
-
-#### Prep for plots etc ####
-
-## make a single factor that combines species and rad level
-pred.dat$sp.rad <- paste(pred.dat$sp,pred.dat$rad.level,sep=".")
-
+### Prep  ###
 
 #for each sp-rad combo, find which was the best anomaly, which anomalies were better than their corresponding normals, and plot symbols indicating
 d.maes.anoms$anom.better <- d.maes.anoms$best.anom.mae < d.maes.anoms$best.anom.normal.mae
@@ -2315,19 +2309,6 @@ d.maes.anoms$anom.improvement <-  d.maes.anoms$best.anom.normal.mae - d.maes.ano
 d.maes.anoms$best.of.species <- ""
 d.maes.anoms$most.improved <- ""
 
-for(sp in unique(d.maes.anoms$sp)) {
-  d.maes.anoms.sp <- d.maes.anoms[d.maes.anoms$sp == sp,]
-  for(rad in d.maes.anoms.sp$rad.level) {
-    d.maes.anoms.sp.rad <- d.maes.anoms.sp[d.maes.anoms.sp$rad.level == rad,]
-    
-    best.anom <- d.maes.anoms.sp.rad[d.maes.anoms.sp.rad$best.anom.mae == min(d.maes.anoms.sp.rad$best.anom.mae)[1],"anom.name"]
-    d.maes.anoms[(d.maes.anoms$sp==sp) & (d.maes.anoms$rad.level == rad) & (d.maes.anoms$anom.name == best.anom),"best.of.species"] <- ""# "best anom"
-    
-    most.improved <- d.maes.anoms.sp.rad[d.maes.anoms.sp.rad$anom.improvement == max(d.maes.anoms.sp.rad$anom.improvement)[1],"anom.name"]
-    d.maes.anoms[(d.maes.anoms$sp==sp) & (d.maes.anoms$rad.level == rad) & (d.maes.anoms$anom.name == most.improved),"most.improved"] <- ""# "largest improvement"
-  }
-}
-
 d.maes.anoms.short <- d.maes.anoms[,c("sp","anom.name","anom.better","anom.improvement","best.of.species","most.improved")]
 
 pred.dat.comb <- merge(pred.dat,d.maes.anoms.short,all.x=TRUE,by.x=c("sp","anom"),by.y=c("sp","anom.name"))
@@ -2335,53 +2316,75 @@ pred.dat.comb$anom.improvement <- round(pred.dat.comb$anom.improvement,2)
 pred.dat.comb[pred.dat.comb$anom.improvement < 0 , "anom.improvement"] <- NA
 
 
-#### Compute total MAE across all species, to see which is the best ####
+#Compute total MAE across all species, to see which is the best #
 d.mae.agg <- aggregate(d.maes.anoms[,c("best.anom.mae","best.anom.normal.mae","anom.improvement")],by=list(d.maes.anoms$anom.name),FUN=mean,na.rm=TRUE)
 
 
 
-#### Plot counterfactuals ####
+### Plot counterfactuals ###
 
 ## get rid of mid and get rid of normal predictions
-pred.dat.plotting <- pred.dat.comb[pred.dat.comb$norm.level %in% c("low","high"),]
+#pred.dat.plotting <- pred.dat.comb[pred.dat.comb$norm.level %in% c("low","high"),]
 #pred.dat.plotting <- pred.dat.comb[pred.dat.comb$norm.level %in% c("mid"),]
 pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$type == "anom",]
+
+pred.dat.plotting$anom.improvement <- round(pred.dat.plotting$anom.improvement,2)
 
 #pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$sp=="PILA",]
 #pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$anom=="Amin",]
 
-pred.dat.plotting <- pred.dat.plotting[!(pred.dat.plotting$sp.rad %in% c("HTABS.PIPO.","PIPO.")),]
-
-ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z_c,y=pred.mid,color=norm.level,fill=norm.level)) +
-  geom_point() +
-  geom_ribbon(aes(ymin=pred.low,ymax=pred.high),alpha=0.3,color=NA) +
-  facet_wrap(anom~sp.rad,nrow=6,scales="free_y") +
-  geom_text(aes(0,1,label=best.of.species),size=3,color="black") +
-  geom_text(aes(0,0.9,label=most.improved),size=3,color="black") +
-  geom_text(aes(0,0.8,label=anom.improvement),size=3,color="black")
+# 
+# ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z_c,y=pred.mid,color=norm.level,fill=norm.level)) +
+#   geom_point() +
+#   geom_ribbon(aes(ymin=pred.low,ymax=pred.high),alpha=0.3,color=NA) +
+#   facet_wrap(anom~sp,nrow=6,scales="free_y") +
+#   geom_text(aes(0,0.8,label=anom.improvement),size=3,color="black")
+# 
 
 
 
+#### 12. Plot pub-quality counterfactual fits for the 9 main responses ####
+pred.dat.comb <- data.table(pred.dat.comb)
+pred.dat.comb <- pred.dat.comb[anom=="Pmin"]
 
-#### testinttgggg
+### for those normal models that are not null, include low and high norm levels; for those that are, include only mid
+pred.dat.comb$norm.beg <- substr(pred.dat.comb$mod,1,2)
 
-
-ggplot(d.c,aes(x=diff.norm.aet.min.z_c,y=diff.norm.ppt.min.z_c,color=Fire,shape=Fire)) +
-  geom_point() +
-  scale_shape_manual(values=1:14)
-
-
-ggplot(d.c,aes(x=ppt.normal_c,y=diff.norm.ppt.min.z_c,color=Fire,shape=topoclim.cat)) +
-  geom_point() +
-  scale_shape_manual(values=1:14)
+pred.dat.comb <- pred.dat.comb[(norm.beg != "n0" & norm.level %in% c("low","high")) | (norm.beg == "n0" & norm.level == "mid")]
 
 
 
-pred.rf.plot <- pred.rf[pred.rf$norm.level %in% c("low","high"),]
 
-ggplot(pred.rf.plot,aes(x=diff.norm.ppt.z_c,y=pred,color=norm.level,fill=norm.level)) +
-  geom_line() +
-  facet_wrap(anom~species,scales="free_y",nrow=2)
+
+plot.cats <- c("presab","ht","cov")
+plot.sps <- list(c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP"),
+                 c("HT.PINUS.ALLSP","HT.SHADE.ALLSP","HT.HDWD.ALLSP"),
+                 c("COV.SHRUB","COV.GRASS","COV.FORB"))
+
+p <- list()
+
+for(i in 1:length(plot.cats)) {
+  
+  plot.sp <- plot.sps[[i]]
+
+  pred.dat.plotting <- pred.dat.comb[type == "anom" & sp %in% plot.sp,]
+  
+  pred.dat.plotting$sp <- factor(pred.dat.plotting$sp,plot.sp)
+
+  p[[i]] <- ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z_c,y=pred.mid,color=norm.level,fill=norm.level)) +
+    geom_line(size=2) +
+    geom_ribbon(aes(ymin=pred.low,ymax=pred.high),alpha=0.3,color=NA) +
+    facet_wrap(~sp) +
+    theme_bw(16)
+  
+}
+
+grid.arrange(p[[1]],p[[2]],p[[3]])
+
+
+#x-axis units, align them, 
+
+
 
 
 
@@ -2410,9 +2413,7 @@ post.table
 fit.dat$resid <- fit.dat$response.var-fit.dat$fitted
 
 
-
-
-## AET min only
+## PPT min only
 fit.dat.ppt <- fit.dat[fit.dat$anom == "Pmin",]
 
 
@@ -2431,7 +2432,7 @@ for(sp in unique(fit.dat$sp)) {
     max.xy <- max(c(fit.dat.sp$response.var,fit.dat.sp$fitted))
     dummy <- data.frame(response.var=c(0,max.xy),fitted=c(0,max.xy))
     
-    plot.name <- paste0(sp,".",rad.level)
+    plot.name <- sp
     
     fit.obs.plots[[plot.name]] <- ggplot(fit.dat.sp,aes(x=response.var,y=fitted)) +
       geom_point() +
@@ -2453,32 +2454,26 @@ do.call("grid.arrange",c(fit.obs.plots,ncol=nCol))
 
 
 
-#### Plot residuals by fire ####
+#### Plot residuals of regen fits by fire: are we missing anything? ####
+
+
 fit.dat.plot <- fit.dat[fit.dat$type=="norm",]
 fit.dat.plot <- fit.dat.plot[fit.dat.plot$anom == "Pmin",]
 
 # fit.dat.plot$rad.level <- as.factor(fit.dat.plot$rad.level)
 
 
-plot(fit.dat.plot$diff.norm.aet.min.z.highsev_c~fit.dat.plot$Fire)
+plot(fit.dat.plot$diff.norm.ppt.min.z.highsev_c~fit.dat.plot$Fire)
+ggplot(fit.dat.plot,aes(y=diff.norm.ppt.min.z.highsev_c,x=fit.dat.plot$Fire)) +
+  geom_point()
 
-
-fit.dat.plot$Fire <- factor(fit.dat.plot$Fire,c("BAGLEY","CHIPS","RALSTON","BASSETTS","MOONLIGHT","ANTELOPE","HARDING","FREDS","POWER","STRAYLOR","RICH","BTU LIGHTENING","CUB","AMERICAN RIVER"))
-
+fit.dat.plot$Fire <- factor(fit.dat.plot$Fire,c("Bagley","Chips","Ralston","Bassetts","Moonlight","Antelope","Harding","Freds","Power","Straylor","Rich","Btu Lightning","Cub","American River"))
 
 ggplot(fit.dat.plot,aes(x=Fire,y=resid)) +
   geom_boxplot(position="dodge",width=0.5) +
   facet_grid(sp~.) +
   theme_bw() +
   theme(axis.text.x = element_text(angle=90,hjust=1))
-
-ggplot(fit.dat.plot,aes(y=diff.norm.ppt.min.z.highsev_c,x=fit.dat.plot$Fire)) +
-  geom_point()
-
-
-
-
-
 
 
 
@@ -2497,7 +2492,7 @@ library(party)
 
 
 
-sp <- "SHADE.ALLSP"
+sp <- "PINUS.ALLSP"
 
 
 
@@ -2640,19 +2635,10 @@ if(sp %in% cover.opts) {
 d.c$response.var <- ifelse(d.c$response.var==1,"present","absent")
 d.c$response.var <- as.factor(d.c$response.var)
 
-a <- ctree(response.var ~ ppt.normal_c + tmean.normal_c + snow.normal_c + aet.normal_c + def.normal_c +
-             diff.norm.ppt.z_c + diff.norm.tmean.z_c + diff.norm.snow.z_c + diff.norm.aet.z_c + diff.norm.def.z_c +
-             seed_tree_distance_general_c + adult.ba.agg_c, data=d.c)
-
-
-a <- ctree(response.var ~ def.normal_c +
-             diff.norm.def.z_c +
-             seed_tree_distance_general_c + adult.ba.agg_c + rad.march_c, data=d.c)
-
 
 a <- ctree(response.var ~ ppt.normal_c + 
            diff.norm.ppt.min.z_c +
-           seed_tree_distance_general_c + adult.ba.agg_c, data=d.c)
+           seed_tree_distance_general_c + adult.ba.agg_c + rad.march_c, data=d.c)
 
 
 
