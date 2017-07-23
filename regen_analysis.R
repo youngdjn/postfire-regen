@@ -709,7 +709,7 @@ ggplot(a,aes(x=Fire,y=mean)) +
 
 
 
-#### 10 Plot-level analysis with GLM; also run randomForest to get importance scores ####
+#### 10. Plot-level analysis with GLM; also run randomForest to get importance scores ####
 
 
 
@@ -740,7 +740,7 @@ htabs.opts <- NULL
 
 
 resp.opts <- c(prop.opts,htabs.opts,sp.opts,cover.opts,ht.opts)
-resp.opts <- c(sp.opts,cover.opts,ht.opts)
+
 
 do.regression <-TRUE
 
@@ -812,18 +812,20 @@ for(sp in resp.opts) {
     d.sp.curr.plt <- d.sp[d.sp$species==sp,]
   }
   
-  d <- merge(d.plot.c,d.plot.3,by=c("Fire","topoclim.cat")) # this effectively thins to plots that belong to a topoclimate category that has enough plots in it
+  #d <- merge(d.plot.c,d.plot.3,by=c("Fire","topoclim.cat")) # this effectively thins to plots that belong to a topoclimate category that has enough plots in it
 
+  d <- d.plot.c
+  
   d <- merge(d,d.sp.curr.plt,by=c("Regen_Plot"))
   
-  names(d.sp.curr.agg) <- paste0(names(d.sp.curr.agg),".agg")
-  d <- merge(d,d.sp.curr.agg,by.x=c("Fire","topoclim.cat"),by.y=c("Fire.agg","topoclim.cat.agg")) # add the aggregated species data (from this we just want adult BA from the control plot)
-  
+  # names(d.sp.curr.agg) <- paste0(names(d.sp.curr.agg),".agg")
+  # d <- merge(d,d.sp.curr.agg,by.x=c("Fire","topoclim.cat"),by.y=c("Fire.agg","topoclim.cat.agg")) # add the aggregated species data (from this we just want adult BA from the control plot)
   
   vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all","dominant_shrub_ht_cm","tallest_ht_cm","prop.regen.pinus.old","prop.regen.pinus.all","prop.regen.shade.old","prop.regen.hdwd.old","prop.regen.hdwd.old","prop.regen.conif.old","regen.count.broader.old")
-  vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z", "def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","def.post","aet.post","adult.ba.agg","snow.post")
+  vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z", "def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","def.post","aet.post") # removed snow, adult.ba.agg
   d <- d[complete.cases(d[,vars.focal]),]
   d.c <- center.df(d,vars.leave)
+  d.c$SHRUB_c <- (d.c$SHRUB - mean(d.c$SHRUB))  / sd(d.c$SHRUB)
   
   d.c$ppt.normal_c.sq <- d.c$ppt.normal_c^2
   d.c$tmean.normal_c.sq <- d.c$tmean.normal_c^2
@@ -832,45 +834,27 @@ for(sp in resp.opts) {
   d.c$def.normal_c.sq <- d.c$def.normal_c^2
   d.c$aet.normal_c.sq <- d.c$aet.normal_c^2
   
-  # ####!!!! trick model: make diff.norm into diff.norm.min
-  # d.c$diff.norm.ppt.z_c <- d.c$diff.norm.ppt.min.z_c
-  # d.c$diff.norm.tmean.z_c <- d.c$diff.norm.tmean.max.z_c
-  # d.c$diff.norm.aet.z_c <- d.c$diff.norm.aet.min.z_c
-  # d.c$diff.norm.def.z_c <- d.c$diff.norm.def.max.z_c
-  # #### end trick model
-  
-  
   d.c$diff.norm.ppt.z_c.sq <- d.c$diff.norm.ppt.z_c^2
   d.c$diff.norm.tmean.z_c.sq <- d.c$diff.norm.tmean.z_c^2
   d.c$diff.norm.snow.z_c.sq <- d.c$diff.norm.snow.z_c^2
   
   d.c$diff.norm.def.z_c.sq <- d.c$diff.norm.def.z_c^2
   d.c$diff.norm.aet.z_c.sq <- d.c$diff.norm.aet.z_c^2
-  
-  
-  
+
   d.c$diff.norm.ppt.min.z_c.sq <- d.c$diff.norm.ppt.min.z_c^2
   d.c$diff.norm.tmean.max.z_c.sq <- d.c$diff.norm.tmean.max.z_c^2
-  d.c$diff.norm.snow.min.z_c.sq <- d.c$diff.norm.snow.min.z_c^2
-  
-  
+
   d.c$diff.norm.def.max.z_c.sq <- d.c$diff.norm.def.max.z_c^2
   d.c$diff.norm.aet.min.z_c.sq <- d.c$diff.norm.aet.min.z_c^2
-  
-  
-  
-  
+
   d.c$ppt.post_c.sq <- d.c$ppt.post_c^2
   d.c$tmean.post_c.sq <- d.c$tmean.post_c^2
-  d.c$snow.post_c.sq <- d.c$snow.post_c^2
-  
+
   d.c$def.post_c.sq <- d.c$def.post_c^2
   d.c$aet.post_c.sq <- d.c$aet.post_c^2
   
   d.c$ppt.post.min_c.sq <- d.c$ppt.post.min_c^2
-  #d.c$tmean.post.max_c.sq <- d.c$tmean.post.max_c^2
-  d.c$snow.post.min_c.sq <- d.c$snow.post.min_c^2
-  
+
   d.c$def.post.max_c.sq <- d.c$def.post.max_c^2
   d.c$aet.post.min_c.sq <- d.c$aet.post.min_c^2
   
@@ -2063,10 +2047,9 @@ for(sp in resp.opts) {
     
     vars <- c("ppt.normal_c","ppt.normal_c.sq","diff.norm.ppt.z_c","diff.norm.ppt.z_c.sq","tmean.normal_c","tmean.normal_c.sq",
               "diff.norm.tmean.z_c","diff.norm.tmean.z_c.sq",
-              "snow.normal_c","diff.norm.snow.z_c","diff.norm.snow.z_c.sq","diff.norm.snow.min.z_c","diff.norm.snow.min.z_c.sq",
               "aet.normal_c","aet.normal_c.sq","diff.norm.aet.z_c","diff.norm.aet.z_c.sq","def.normal_c","def.normal_c.sq",
               "diff.norm.def.z_c","diff.norm.def.z_c.sq",
-              "seed_tree_distance_general_c","rad.march_c","adult.ba.agg_c"
+              "seed_tree_distance_general_c","rad.march_c"
     )
     
     
@@ -2324,7 +2307,7 @@ d.mae.agg <- aggregate(d.maes.anoms[,c("best.anom.mae","best.anom.normal.mae","a
 ### Plot counterfactuals ###
 
 ## get rid of mid and get rid of normal predictions
-#pred.dat.plotting <- pred.dat.comb[pred.dat.comb$norm.level %in% c("low","high"),]
+pred.dat.plotting <- pred.dat.comb[pred.dat.comb$norm.level %in% c("low","high"),]
 #pred.dat.plotting <- pred.dat.comb[pred.dat.comb$norm.level %in% c("mid"),]
 pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$type == "anom",]
 
@@ -2333,13 +2316,13 @@ pred.dat.plotting$anom.improvement <- round(pred.dat.plotting$anom.improvement,2
 #pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$sp=="PILA",]
 #pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$anom=="Amin",]
 
-# 
-# ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z_c,y=pred.mid,color=norm.level,fill=norm.level)) +
-#   geom_point() +
-#   geom_ribbon(aes(ymin=pred.low,ymax=pred.high),alpha=0.3,color=NA) +
-#   facet_wrap(anom~sp,nrow=6,scales="free_y") +
-#   geom_text(aes(0,0.8,label=anom.improvement),size=3,color="black")
-# 
+
+ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z_c,y=pred.mid,color=norm.level,fill=norm.level)) +
+  geom_point() +
+  geom_ribbon(aes(ymin=pred.low,ymax=pred.high),alpha=0.3,color=NA) +
+  facet_wrap(anom~sp,nrow=6,scales="free_y") +
+  geom_text(aes(0,0.8,label=anom.improvement),size=3,color="black")
+
 
 
 
@@ -2382,7 +2365,7 @@ for(i in 1:length(plot.cats)) {
 grid.arrange(p[[1]],p[[2]],p[[3]])
 
 
-#x-axis units, align them, 
+#x-axis units, align them,  
 
 
 
