@@ -66,6 +66,9 @@ d.plot <- d.plot[!is.na(d.plot$FIRE_SEV.cat),]
 d.plot <- d.plot[which(!(d.plot$FIRE_SEV.cat == "high.sev" & !(d.plot$survey.years.post %in% c(4,5)))),]
 
 
+# must have shrub cover
+d.plot <- d.plot[!is.na(d.plot$SHRUB),]
+
 
 
 
@@ -724,12 +727,77 @@ ggplot(a,aes(x=Fire,y=mean)) +
 
 
 
-## Next, fit models ## 
+### Center data frame ####
 
-library(brms)
-library(loo)
+d <- d.plot.c
 
 
+vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all","dominant_shrub_ht_cm","tallest_ht_cm","prop.regen.pinus.old","prop.regen.pinus.all","prop.regen.shade.old","prop.regen.hdwd.old","prop.regen.hdwd.old","prop.regen.conif.old","regen.count.broader.old")
+vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z", "def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","def.post","aet.post") # removed snow, adult.ba.agg
+d <- d[complete.cases(d[,vars.focal]),]
+
+d.c <- center.df(d,vars.leave)[["centered.df"]]
+d.center.dat <- center.df(d,vars.leave)[["center.data"]]
+
+d.c$SHRUB_c <- (d.c$SHRUB - mean(d.c$SHRUB))  / sd(d.c$SHRUB)
+
+d.c$ppt.normal_c.sq <- d.c$ppt.normal_c^2
+d.c$tmean.normal_c.sq <- d.c$tmean.normal_c^2
+d.c$snow.normal_c.sq <- d.c$snow.normal_c^2
+
+d.c$def.normal_c.sq <- d.c$def.normal_c^2
+d.c$aet.normal_c.sq <- d.c$aet.normal_c^2
+
+d.c$diff.norm.ppt.z_c.sq <- d.c$diff.norm.ppt.z_c^2
+d.c$diff.norm.tmean.z_c.sq <- d.c$diff.norm.tmean.z_c^2
+d.c$diff.norm.snow.z_c.sq <- d.c$diff.norm.snow.z_c^2
+
+d.c$diff.norm.def.z_c.sq <- d.c$diff.norm.def.z_c^2
+d.c$diff.norm.aet.z_c.sq <- d.c$diff.norm.aet.z_c^2
+
+d.c$diff.norm.ppt.min.z_c.sq <- d.c$diff.norm.ppt.min.z_c^2
+d.c$diff.norm.tmean.max.z_c.sq <- d.c$diff.norm.tmean.max.z_c^2
+
+d.c$diff.norm.def.max.z_c.sq <- d.c$diff.norm.def.max.z_c^2
+d.c$diff.norm.aet.min.z_c.sq <- d.c$diff.norm.aet.min.z_c^2
+
+d.c$ppt.post_c.sq <- d.c$ppt.post_c^2
+d.c$tmean.post_c.sq <- d.c$tmean.post_c^2
+
+d.c$def.post_c.sq <- d.c$def.post_c^2
+d.c$aet.post_c.sq <- d.c$aet.post_c^2
+
+d.c$ppt.post.min_c.sq <- d.c$ppt.post.min_c^2
+
+d.c$def.post.max_c.sq <- d.c$def.post.max_c^2
+d.c$aet.post.min_c.sq <- d.c$aet.post.min_c^2
+
+vars.focal.c <- paste0(vars.focal[-6],"_c")
+
+## transform cover so it does not include 0 or 1 (for Beta distrib)
+d.c$SHRUB.p <- d.c$SHRUB/100
+d.c$SHRUB.pt <- (d.c$SHRUB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+
+d.c$GRASS.p <- d.c$GRASS/100
+d.c$GRASS.pt <- (d.c$GRASS.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+
+d.c$HARDWOOD.p <- d.c$HARDWOOD/100
+d.c$HARDWOOD.pt <- (d.c$HARDWOOD.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+
+d.c$FORB.p <- d.c$FORB/100
+d.c$FORB.pt <- (d.c$FORB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+
+d.c$CONIFER.p <- d.c$CONIFER/100
+d.c$CONIFER.pt <- (d.c$CONIFER.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+
+d.c$Fire <- as.factor(d.c$Fire)
+
+d.c.modfit <- d.c # because the model fitting uses its own d.c
+
+
+
+
+## Set response options and loop through them
 
 sp.opts <- c("ABCO","SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP","PIPJ")
 cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB")
@@ -774,6 +842,10 @@ d.maes.anoms <- data.frame()
 
 rf.importance <- data.frame()
 pred.rf <- data.frame()
+
+
+
+
 
 
 
@@ -824,85 +896,21 @@ for(sp in resp.opts) {
   
   #d <- merge(d.plot.c,d.plot.3,by=c("Fire","topoclim.cat")) # this effectively thins to plots that belong to a topoclimate category that has enough plots in it
 
-  d <- d.plot.c
-  
-  d <- merge(d,d.sp.curr.plt,by=c("Regen_Plot"))
+  #add the data for the current species response to the plot data
+  d.c <- merge(d.c.modfit,d.sp.curr.plt,by=c("Regen_Plot"))
   
   # names(d.sp.curr.agg) <- paste0(names(d.sp.curr.agg),".agg")
   # d <- merge(d,d.sp.curr.agg,by.x=c("Fire","topoclim.cat"),by.y=c("Fire.agg","topoclim.cat.agg")) # add the aggregated species data (from this we just want adult BA from the control plot)
   
-  vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all","dominant_shrub_ht_cm","tallest_ht_cm","prop.regen.pinus.old","prop.regen.pinus.all","prop.regen.shade.old","prop.regen.hdwd.old","prop.regen.hdwd.old","prop.regen.conif.old","regen.count.broader.old")
-  vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z", "def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","def.post","aet.post") # removed snow, adult.ba.agg
-  d <- d[complete.cases(d[,vars.focal]),]
-  d.c <- center.df(d,vars.leave)
-  d.c$SHRUB_c <- (d.c$SHRUB - mean(d.c$SHRUB))  / sd(d.c$SHRUB)
-  
-  d.c$ppt.normal_c.sq <- d.c$ppt.normal_c^2
-  d.c$tmean.normal_c.sq <- d.c$tmean.normal_c^2
-  d.c$snow.normal_c.sq <- d.c$snow.normal_c^2
-  
-  d.c$def.normal_c.sq <- d.c$def.normal_c^2
-  d.c$aet.normal_c.sq <- d.c$aet.normal_c^2
-  
-  d.c$diff.norm.ppt.z_c.sq <- d.c$diff.norm.ppt.z_c^2
-  d.c$diff.norm.tmean.z_c.sq <- d.c$diff.norm.tmean.z_c^2
-  d.c$diff.norm.snow.z_c.sq <- d.c$diff.norm.snow.z_c^2
-  
-  d.c$diff.norm.def.z_c.sq <- d.c$diff.norm.def.z_c^2
-  d.c$diff.norm.aet.z_c.sq <- d.c$diff.norm.aet.z_c^2
 
-  d.c$diff.norm.ppt.min.z_c.sq <- d.c$diff.norm.ppt.min.z_c^2
-  d.c$diff.norm.tmean.max.z_c.sq <- d.c$diff.norm.tmean.max.z_c^2
-
-  d.c$diff.norm.def.max.z_c.sq <- d.c$diff.norm.def.max.z_c^2
-  d.c$diff.norm.aet.min.z_c.sq <- d.c$diff.norm.aet.min.z_c^2
-
-  d.c$ppt.post_c.sq <- d.c$ppt.post_c^2
-  d.c$tmean.post_c.sq <- d.c$tmean.post_c^2
-
-  d.c$def.post_c.sq <- d.c$def.post_c^2
-  d.c$aet.post_c.sq <- d.c$aet.post_c^2
-  
-  d.c$ppt.post.min_c.sq <- d.c$ppt.post.min_c^2
-
-  d.c$def.post.max_c.sq <- d.c$def.post.max_c^2
-  d.c$aet.post.min_c.sq <- d.c$aet.post.min_c^2
-  
   d.c$regen.presab.all.01 <- ifelse(d.c$regen.presab.all == TRUE,1,0)
   d.c$regen.presab.old.01 <- ifelse(d.c$regen.presab.old == TRUE,1,0)
-  
-  
-  vars.focal.c <- paste0(vars.focal[-6],"_c")
-  
-  ## transform cover so it does not include 0 or 1 (for Beta distrib)
-  d.c$SHRUB.p <- d.c$SHRUB/100
-  d.c$SHRUB.pt <- (d.c$SHRUB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-  
-  d.c$GRASS.p <- d.c$GRASS/100
-  d.c$GRASS.pt <- (d.c$GRASS.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-  
-  d.c$HARDWOOD.p <- d.c$HARDWOOD/100
-  d.c$HARDWOOD.pt <- (d.c$HARDWOOD.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-  
-  d.c$FORB.p <- d.c$FORB/100
-  d.c$FORB.pt <- (d.c$FORB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-  
-  d.c$CONIFER.p <- d.c$CONIFER/100
-  d.c$CONIFER.pt <- (d.c$CONIFER.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-  
-  
-  d.c$Fire <- as.factor(d.c$Fire)
-  
-  #d.c <- d.c[!(d.c$Fire == "RICH"),]
   
   d.c$regen.count.all.int <- ceiling(d.c$regen.count.all)
   d.c$regen.count.old.int <- ceiling(d.c$regen.count.old)
   
-  
   ## Test whether seedling taller than shrub
   d.c$seedl.taller <- d.c$tallest_ht_cm > d.c$dominant_shrub_ht_cm
-
-  
   
   
   
@@ -1628,24 +1636,6 @@ for(sp in resp.opts) {
     
     
     
-    ### Function to find the center of a "fixed" predictor variable within the species distribution
-    mid.val.fun <- function(var) {
-      mid.val <- mean(d.c[,var],na.rm=TRUE)
-      return(mid.val)
-    }
-    
-    low.val.fun <- function(var) {
-      a <- quantile(d.c[,var],0.20,na.rm=TRUE)
-      #a <- min(d.c[,var])
-      return(a)
-    }
-    
-    high.val.fun <- function(var) {
-      a <- quantile(d.c[,var],0.80,na.rm=TRUE)
-      #a <- max(d.c[,var])
-      return(a)
-    }
-    
     vars <- c("ppt.normal_c","ppt.normal_c.sq","diff.norm.ppt.z_c","diff.norm.ppt.z_c.sq","tmean.normal_c","tmean.normal_c.sq",
               "diff.norm.tmean.z_c","diff.norm.tmean.z_c.sq",
               "aet.normal_c","aet.normal_c.sq","diff.norm.aet.z_c","diff.norm.aet.z_c.sq","def.normal_c","def.normal_c.sq",
@@ -1879,6 +1869,29 @@ for(sp in resp.opts) {
 sink(file=NULL)
 
 
+## uncenter the predictor vars in the predictions data frame
+
+pred.dat.comb <- as.data.frame(pred.dat.comb)
+
+#for every column in predictions, if it ends in _c, uncenter it
+
+for(col.name in names(pred.dat.comb)) {
+  if(grepl("_c$",col.name)) { #it's a centered col
+    col.name.uncentered <- substr(col.name,1,nchar(col.name)-2)
+    
+    col.mean <- d.center.dat[d.center.dat$var == col.name,"var.mean"]
+    col.sd <- d.center.dat[d.center.dat$var == col.name,"var.sd"]
+    
+    pred.dat.comb[,as.character(col.name.uncentered)] <- pred.dat.comb[,col.name] * col.sd + col.mean
+    
+    
+  }
+}
+
+
+
+
+
 
 #### 11. Plot overall exploration plot ####
 
@@ -1953,7 +1966,7 @@ for(i in 1:length(plot.cats)) {
   
   pred.dat.plotting$sp <- factor(pred.dat.plotting$sp,plot.sp)
 
-  p[[i]] <- ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z_c,y=pred.mid,color=norm.level,fill=norm.level)) +
+  p[[i]] <- ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.min.z,y=pred.mid,color=norm.level,fill=norm.level)) +
     geom_line(size=2) +
     geom_ribbon(aes(ymin=pred.low,ymax=pred.high),alpha=0.3,color=NA) +
     facet_wrap(~sp) +

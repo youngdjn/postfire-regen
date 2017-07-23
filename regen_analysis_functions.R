@@ -277,26 +277,53 @@ cvfun.fire <- function(formula,data) {
 
 
 
+### Function to find the center of a "fixed" predictor variable within the species distribution
+mid.val.fun <- function(var) {
+  mid.val <- mean(d.c[,var],na.rm=TRUE)
+  return(mid.val)
+}
+
+low.val.fun <- function(var) {
+  a <- quantile(d.c[,var],0.20,na.rm=TRUE)
+  #a <- min(d.c[,var])
+  return(a)
+}
+
+high.val.fun <- function(var) {
+  a <- quantile(d.c[,var],0.80,na.rm=TRUE)
+  #a <- max(d.c[,var])
+  return(a)
+}
+
 
 
 
 center.df <- function(df,leave.cols) {
   df.names <- names(df)
+  center.data <- data.frame()
   new.df <- data.frame(SID=1:nrow(df))
-  # get first species ID for thinning
-  first.sp.id <- unique(df$species)[1]
+  
   for(var.name in df.names) {
     col.vals <- df[,var.name]
     colnum <- which(df.names == var.name)
-    if(!is.numeric(col.vals) | var.name %in% leave.cols) {
+    if(!is.numeric(col.vals) | var.name %in% leave.cols) { # if it's not a column to be centered
       new.df[,var.name] <- col.vals
-    } else {
+    } else { # it is a column to be centered
       new.var.name <- paste(var.name,"_c",sep="")
-      col.vals.thinned <- col.vals[df$species == first.sp.id]
+      col.vals.thinned <- col.vals   # <- col.vals[df$species == first.sp.id]
       new.df[,new.var.name] <- (col.vals - mean(col.vals.thinned,na.rm=TRUE)) / sd(col.vals.thinned,na.rm=TRUE)
+      
+      
+      
+      ## store a DF with centering data
+      var.mean <- mean(col.vals.thinned,na.rm=TRUE)
+      var.sd <- sd(col.vals.thinned,na.rm=TRUE)
+      var.center.dat <- data.frame(var=new.var.name,var.mean,var.sd)
+      center.data <- rbind(center.data,var.center.dat)
+      
     }
   }
-  return(new.df)
+  return(list(centered.df=new.df,center.data=center.data))
 }
 
 inv.logit <- function(x) {
