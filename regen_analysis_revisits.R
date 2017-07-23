@@ -8,7 +8,9 @@ library(betareg)
 library(car)
 library(plyr)
 library(data.table)
+options(datatable.WhenJisSymbolThenCallingScope=TRUE)
 library(sf)
+library(viridis)
 
 source("regen_analysis_functions.R")
 
@@ -92,7 +94,9 @@ d.plot$plot.spatial <- plot.spatial
 d.plot <- st_as_sf(d.plot,coords=c("Easting","Northing"),crs=26910)
 
 
-## for each plot, get the closest nearby plot (of a diff survey year) and its distance
+
+
+#### for each plot, get the closest nearby plot (of a diff survey year) and its distance ####
 
 d.plot$revisit.plotname <- NA
 d.plot$revisit.distance <- NA
@@ -134,32 +138,129 @@ for (i in 1:length(unique(d.plot$Fire))) {
 
 
 d.plot$revisit.distance <- round(d.plot$revisit.distance)
+st_geometry(d.plot) <- NULL
 
+
+#### Set max distance for considertation of nearby revisit ####
 d.plot.orig <- d.plot[!is.na(d.plot$revisit.distance),]
-d.plot.orig <- d.plot.orig[d.plot.orig$revisit.distance < 100,]
-st_geometry(d.plot.orig) <- NULL
+d.plot.orig <- d.plot.orig[d.plot.orig$revisit.distance < 4,]
 
 
 
-sp <- "PINUS.ALLSP"
-d.sp.focalsp <- d.sp[d.sp$species == sp,]
 
 
-for(i in 1:nrow(d.plot.orig)) {
-  
-  orig.plt <- d.plot.orig[i,"Regen_Plot"]
-  revisit.plt <- d.plot.orig[i,"revisit.plotname"]
-  orig.sp <- d.sp.focalsp[d.sp.focalsp$Regen_Plot == orig.plt,]
-  revisit.sp <- d.sp.focalsp[d.sp.focalsp$Regen_Plot == revisit.plt,]
+#### Get regen data from each plot (original and revisit), by species ####
+d.plot.lookup <- d.plot.orig[,c("Regen_Plot","Fire","SHRUB","FIRE_SEV","revisit.plotname","revisit.distance")]
 
-  
-  
+sp.opts <- c("PINUS.ALLSP","SHADE.ALLSP","PIPJ","ABCO","HDWD.ALLSP","QUKE")
+
+
+plots.sps <- data.frame()
+
+
+for(sp in sp.opts) {
   
   
+  d.sp.focalsp <- d.sp[d.sp$species == sp,]
+  
+  
+  for(i in 1:nrow(d.plot.lookup)) {
+    
+    orig.plt <- d.plot.lookup[i,"Regen_Plot"]
+    revisit.plt <- d.plot.lookup[i,"revisit.plotname"]
+    orig.sp <- d.sp.focalsp[d.sp.focalsp$Regen_Plot == orig.plt,]
+    revisit.sp <- d.sp.focalsp[d.sp.focalsp$Regen_Plot == revisit.plt,]
+    
+    names(orig.sp) <- paste0(names(orig.sp),".orig")
+    names(revisit.sp) <- paste0(names(revisit.sp),".revisit")
+    
+    plot.sp <- cbind(orig.sp,revisit.sp)
+    plot.sp$species <- sp
+    plot.sp$Fire <- d.plot.lookup[i,"Fire"]
+    
+    plots.sps <- rbind(plots.sps,plot.sp)
+  
+  }
 }
 
+# 
+# 
+# plot(regen.count.nonyoung.orig~regen.count.nonyoung.revisit,data=d.plot.orig)
+# 
+# table(d.plot.orig$regen.presab.all.orig,d.plot.orig$regen.presab.nonyoung.revisit)
+# 
+# 
+# 
+# 
+# ggplot(d.plot.orig,aes(x=regen.presab.all.orig,y=regen.presab.nonyoung.revisit)) +
+#   geom_bin2d() +
+#   theme_bw()
+# 
+# 
+# ggplot(d.plot.orig,aes(x=regen.presab.nonyoung.orig,fill=regen.presab.nonyoung.revisit)) +
+#   geom_bar()
+# 
+# 
 
 
+
+
+#### Aggregate regen data into original regen success categories (poor and good) ####
+
+## prep
+
+orig.type <- "all"
+revisit.type <- "all"
+
+orig.presab.var <- paste("regen.presab",orig.type,"orig",sep=".")
+orig.count.var <- paste("regen.count",orig.type,"orig",sep=".")
+revisit.presab.var <- paste("regen.presab",revisit.type,"revisit",sep=".")
+revisit.count.var <- paste("regen.count",revisit.type,"revisit",sep=".")
+
+
+plots.sps.keepvars <- plots.sps[,c(orig.presab.var,orig.count.var,revisit.presab.var,revisit.count.var,"species","Fire")]
+names(plots.sps.keepvars) <- c("orig.presab","orig.count","revisit.presab","revisit.count","species","Fire")
+plots.sps.keepvars <- data.table(plots.sps.keepvars)
+
+
+## aggregate
+
+revisit.agg <- plots.sps.keepvars[,list(orig.count = mean(orig.count),
+                                        orig.count.low = quantile(orig.count,probs=.25),
+                                        orig.count.high = quantile(orig.count,probs=.75),
+                                        revisit.count = mean(revisit.count),
+                                        revisit.count.low = quantile(revisit.count,probs=.25),
+                                        revisit.count.high = quantile(revisit.count,probs=.75),
+                                        revisit.prop = mean(revisit.presab),
+                                        nplots = .N),
+                                  by=list(species,orig.presab)]
+
+revisit.agg.orig <- revisit.agg[,list(species,orig.presab,count = orig.count,nplots)]
+revisit.agg.orig$survey <- "Initial"
+
+revisit.agg.revisit <- revisit.agg[,list(species,orig.presab,count = revisit.count,prop=revisit.prop,nplots)]
+revisit.agg.revisit$survey <- "Revisit"
+
+d <- rbind.fill(revisit.agg.orig,revisit.agg.revisit)
+d$labeltext <- paste0("n=",d$nplots)
+d$labeltext[d$labeltext == "n=NA"] <- ""
+
+#### Plot seedling counts ####
+ggplot(d,aes(x=orig.presab,y=count,fill=survey)) +
+  geom_bar(stat="identity",position="dodge",width=0.5) +
+  facet_grid(~species) +
+  theme_bw(14) +
+  geom_text(aes(label=labeltext,y=-0.75)) +
+  labs(x="Regeneration present at initial survey",y="Seedlings per plot")
+
+#### Plot proportion plots with presence ####
+d.plot <- d[d$survey == "Revisit",]
+ggplot(d.plot,aes(x=orig.presab,y=prop)) +
+  geom_bar(stat="identity",position="dodge",width=0.5) +
+  facet_grid(~species) +
+  theme_bw(14) +
+  geom_text(aes(label=labeltext,y=-0.02)) +
+  labs(x="Regeneration present at initial survey",y="Proportion plots with presence at revisit")
 
 
 
