@@ -904,9 +904,9 @@ plot.3 <- plot.3[!(plot.3$Regen_Plot %in% plots.planted),]
 
 ### get summarized regen data for each plot (also summarizes adults)
 ##!! NOTE that as written here, the code includes un-ageable species when tallying regen for ALL ages, but not for specific age classes
-plot.3.regen.old <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="old",all.sp=TRUE,peryear=FALSE)
-plot.3.regen.young <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="young",all.sp=TRUE,peryear=FALSE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call, the previous line)
-plot.3.regen.all <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="all",all.sp=TRUE,incl.unk.age.for.all=TRUE,peryear=FALSE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call)
+plot.3.regen.old <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="old",all.sp=TRUE,peryear=TRUE)
+plot.3.regen.young <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="young",all.sp=TRUE,peryear=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call, the previous line)
+plot.3.regen.all <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="all",all.sp=TRUE,incl.unk.age.for.all=TRUE,peryear=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call)
 names(plot.3.regen.old)[3] <- "regen.count.old"
 names(plot.3.regen.young)[3] <- "regen.count.young"
 names(plot.3.regen.all)[3] <- "regen.count.all"

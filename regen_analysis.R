@@ -800,6 +800,7 @@ d.c.modfit <- d.c # because the model fitting uses its own d.c
 ## Set response options and loop through them
 
 sp.opts <- c("ABCO","SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP","PIPJ")
+sp.opts <- c("SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP")
 cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB")
 
 # All
@@ -808,6 +809,7 @@ htabs.opts <- c("HTABS.PIPJ","HTABS.SHRUB","HTABS.ABCO","HTABS.PSME","HTABS.PILA
 prop.opts <- c("PROP.CONIF","PROP.PINUS","PROP.SHADE")
 prop.opts <- NULL
 htabs.opts <- NULL 
+count.opts <- c("COUNT.PINUS.ALLSP","COUNT.SHADE.ALLSP","COUNT.HDWD.ALLSP")
 
 # # sp grps
 # ht.opts <- c("HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP")
@@ -818,6 +820,7 @@ htabs.opts <- NULL
 
 
 resp.opts <- c(prop.opts,htabs.opts,sp.opts,cover.opts,ht.opts)
+resp.opts <- c(sp.opts,cover.opts)
 
 
 do.regression <-TRUE
@@ -870,7 +873,11 @@ for(sp in resp.opts) {
     sp.name <- substr(sp,7,100)
     d.sp.curr.agg <- d.sp.2[d.sp.2$species==sp.name,]
     d.sp.curr.plt <- d.sp[d.sp$species==sp.name,]
-  }  else if(sp == "PROP.PINUS") {
+  }  else if(sp %in% count.opts) {
+    sp.name <- substr(sp,7,100)
+    d.sp.curr.agg <- d.sp.2[d.sp.2$species==sp.name,]
+    d.sp.curr.plt <- d.sp[d.sp$species==sp.name,]
+  } else if(sp == "PROP.PINUS") {
     d.sp.curr.plt <- d.sp[d.sp$species=="PINUS.ALLSP",]
     d.sp.curr.agg <- d.sp.2[d.sp.2$species=="PINUS.ALLSP",]
     d.sp.all.plt <- d.sp[d.sp$species=="CONIF.ALLSP",]
@@ -911,6 +918,7 @@ for(sp in resp.opts) {
   
   ## Test whether seedling taller than shrub
   d.c$seedl.taller <- d.c$tallest_ht_cm > d.c$dominant_shrub_ht_cm
+  d.c[d.c$regen.presab.old == FALSE,"seedl.taller"] <- 0 # where there is no seedling, it is not taller than shrub
   
   
   
@@ -924,7 +932,7 @@ for(sp in resp.opts) {
     
   } else if(sp %in% ht.opts){
     
-    d.c <- d.c[d.c$regen.presab.old == TRUE,] # this is where we select whether we want all plots where the species was present or just old seedlings
+    # no longer looking only at plots where sp existed in the first place d.c <- d.c[d.c$regen.presab.old == TRUE,] # this is where we select whether we want all plots where the species was present or just old seedlings
     d.c$response.var <- d.c$seedl.taller
     
   } else if(sp == "HTABS.SHRUB") {
@@ -933,6 +941,9 @@ for(sp in resp.opts) {
   } else if(sp %in% htabs.opts) {
     d.c <- d.c[d.c$regen.presab.old == TRUE, ] # this is where we select whether we want all plots where the species was present or just old seedlings
     d.c$response.var <- d.c$tallest_ht_cm
+  } else if(sp %in% count.opts) {
+    d.c <- d.c[d.c$regen.presab.old == TRUE, ] # this is where we select whether we want all plots where the species was present or just old seedlings
+    d.c$response.var <- log(d.c$regen.count.old)
   } else if(sp %in% prop.opts) {
     
     response.var <- cbind(d.c$regen.count.old,d.c$regen.count.broader.old-d.c$regen.count.old)
@@ -1083,7 +1094,7 @@ for(sp in resp.opts) {
 
 
       ### Add seed tree ###      
-      if(sp %in% c(sp.opts)) {
+      if(sp %in% c(sp.opts,count.opts)) {
       
 
         formulas[["n0s.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + 1)
@@ -1339,7 +1350,7 @@ for(sp in resp.opts) {
 
 
       ### Add seed tree ###
-      if(sp %in% sp.opts) {
+      if(sp %in% c(sp.opts,count.opts)) {
 
         formulas[["n0sr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + 1)
 
@@ -1712,7 +1723,7 @@ for(sp in resp.opts) {
         
         d.c.complete <- d.c[!is.na(d.c$response.var),]
         
-        nboot <- 30
+        nboot <- 100
         nobs <- nrow(d.c.complete)
         npred <- nrow(newdat)
         preds.anom.boot <- matrix(nrow=npred,ncol=nboot)
@@ -1760,7 +1771,7 @@ for(sp in resp.opts) {
         pred.norm <- data.frame(pred.low=pred.norm.lwr,pred.mid=pred.norm.mid,pred.high=pred.norm.upr)
         
   
-      } else if (sp %in% htabs.opts) {
+      } else if (sp %in% c(htabs.opts,count.opts)) {
         
         
         d.c.complete <- d.c[!is.na(d.c$response.var),]
@@ -1835,6 +1846,26 @@ for(sp in resp.opts) {
       
       
       ## get fitted and observed
+      
+      d.c.complete <- d.c[!is.na(d.c$response.var),]
+      
+      if(sp %in% sp.opts) {
+        
+        mod.anom <- glm(formulas[[best.anom.mod]],data=d.c.complete,family="binomial")
+        mod.norm <- glm(formulas[[best.anom.normal.mod]],data=d.c.complete,family="binomial")
+        
+      } else if(sp %in% cover.opts) {
+        
+        mod.anom <- betareg(formulas[[best.anom.mod]],data=d.c.complete)
+        mod.norm <- betareg(formulas[[best.anom.normal.mod]],data=d.c.complete)
+        
+      } else {
+        #not going to make predictions for other model types yet
+        next()
+        
+      }
+      
+
       fit.anom <- as.data.frame(predict(mod.anom))
       fit.norm <- as.data.frame(predict(mod.norm))
       names(fit.anom) <- names(fit.norm) <- c("fitted")
@@ -1850,43 +1881,20 @@ for(sp in resp.opts) {
       fit.dat.sp$anom <- d.maes.anoms.sp.row$anom.name
       fit.dat.sp$sp <- sp
       
-      fit.dat <- rbind.fill(fit.dat,fit.dat.sp)
-      
-      if(! (sp %in% c(prop.opts,cover.opts,htabs.opts))) {
+      if(sp %in% sp.opts) {
         
-        fit.dat$fitted <- inv.logit(fit.dat$fitted)
+        fit.dat.sp$fitted <- inv.logit(fit.dat.sp$fitted)
         
       }
       
+      fit.dat <- rbind.fill(fit.dat,fit.dat.sp)
       
-      
-      
-      
-    
+
   }
    
 }
 sink(file=NULL)
 
-
-## uncenter the predictor vars in the predictions data frame
-
-pred.dat.comb <- as.data.frame(pred.dat.comb)
-
-#for every column in predictions, if it ends in _c, uncenter it
-
-for(col.name in names(pred.dat.comb)) {
-  if(grepl("_c$",col.name)) { #it's a centered col
-    col.name.uncentered <- substr(col.name,1,nchar(col.name)-2)
-    
-    col.mean <- d.center.dat[d.center.dat$var == col.name,"var.mean"]
-    col.sd <- d.center.dat[d.center.dat$var == col.name,"var.sd"]
-    
-    pred.dat.comb[,as.character(col.name.uncentered)] <- pred.dat.comb[,col.name] * col.sd + col.mean
-    
-    
-  }
-}
 
 
 
@@ -1939,6 +1947,29 @@ ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z_c,y=pred.mid,color=norm.level,fil
 
 
 #### 12. Plot pub-quality counterfactual fits for the 9 main responses ####
+pred.dat.comb <- merge(pred.dat,d.maes.anoms.short,all.x=TRUE,by.x=c("sp","anom"),by.y=c("sp","anom.name"))
+
+
+## uncenter the predictor vars in the predictions data frame
+
+pred.dat.comb <- as.data.frame(pred.dat.comb)
+
+#for every column in predictions, if it ends in _c, uncenter it
+
+for(col.name in names(pred.dat.comb)) {
+  if(grepl("_c$",col.name)) { #it's a centered col
+    col.name.uncentered <- substr(col.name,1,nchar(col.name)-2)
+    
+    col.mean <- d.center.dat[d.center.dat$var == col.name,"var.mean"]
+    col.sd <- d.center.dat[d.center.dat$var == col.name,"var.sd"]
+    
+    pred.dat.comb[,as.character(col.name.uncentered)] <- pred.dat.comb[,col.name] * col.sd + col.mean
+    
+    
+  }
+}
+
+
 pred.dat.comb <- data.table(pred.dat.comb)
 pred.dat.comb <- pred.dat.comb[anom=="Pmin"]
 
@@ -1948,12 +1979,21 @@ pred.dat.comb$norm.beg <- substr(pred.dat.comb$mod,1,2)
 pred.dat.comb <- pred.dat.comb[(norm.beg != "n0" & norm.level %in% c("low","high")) | (norm.beg == "n0" & norm.level == "mid")]
 
 
+pred.dat.comb[pred.dat.comb$sp %in% cover.opts,c("pred.mid","pred.low","pred.high")] <- 100 * pred.dat.comb[pred.dat.comb$sp %in% cover.opts,c("pred.mid","pred.low","pred.high")]
 
 
 
-plot.cats <- c("presab","ht","cov")
+levels(pred.dat.comb$norm.level)
+levels(pred.dat.comb$norm.level) <- c("High","Low","High and low")
+
+
+
+
+plot.cats <- c("presab",
+               #"ht",
+               "cov")
 plot.sps <- list(c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP"),
-                 c("HT.PINUS.ALLSP","HT.SHADE.ALLSP","HT.HDWD.ALLSP"),
+                 #c("HT.PINUS.ALLSP","HT.SHADE.ALLSP","HT.HDWD.ALLSP"),
                  c("COV.SHRUB","COV.GRASS","COV.FORB"))
 
 p <- list()
@@ -1965,19 +2005,57 @@ for(i in 1:length(plot.cats)) {
   pred.dat.plotting <- pred.dat.comb[type == "anom" & sp %in% plot.sp,]
   
   pred.dat.plotting$sp <- factor(pred.dat.plotting$sp,plot.sp)
+  
+  if(plot.cats[[i]] == "presab") {
+    ylab <- "Proportion of plots\nwith regeneration"
+    levels(pred.dat.plotting$sp) <- c("Pines","Shade-tolerant\nconifers","Broadleaved trees")
+  } else if(plot.cats[[i]] == "ht") {
+    ylab <- "Proportion plots where\ndominant in height"
+  } else if(plot.cats[[i]] == "cov") {
+    ylab <- "Percent cover"
+    levels(pred.dat.plotting$sp) <- c("Shrubs","Graminoids","Forbs")
+    
+
+    
+  }
+  
 
   p[[i]] <- ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.min.z,y=pred.mid,color=norm.level,fill=norm.level)) +
-    geom_line(size=2) +
+    geom_line(size=1.5) +
     geom_ribbon(aes(ymin=pred.low,ymax=pred.high),alpha=0.3,color=NA) +
     facet_wrap(~sp) +
-    theme_bw(16)
+    theme_bw(16) +
+    labs(x="Postfire minimum precipitation anomaly (SD)",y=ylab,color="Normal\nprecipitation",fill="Normal\nprecipitation") +
+    scale_color_manual(values=c("turquoise4","darkorange1","gray44")) +
+    scale_fill_manual(values=c("turquoise4","darkorange1","gray44")) +
+    theme(panel.grid.minor = element_blank(),strip.background = element_blank(), panel.border = element_rect(colour = "black",size=0.6), strip.text = element_text(size = 16)) +
+    theme(plot.margin = unit(c(-.1,0.5,0,0.5), "cm"))
+  
+  
+  if(i == 2) {
+    p[[i]] <- p[[i]] + theme(legend.position=c(0.98,0.95),legend.justification=c(1,1),legend.background = element_rect(fill="transparent")) +
+      theme(plot.margin = unit(c(-.1,0.5,.50,0.5), "cm"))
+  } else {
+    p[[i]] <- p[[i]] + guides(fill=FALSE,color=FALSE) + labs(x="")
+  }
+
   
 }
 
-grid.arrange(p[[1]],p[[2]],p[[3]])
+
+a <- ggplot_gtable(ggplot_build(p[[1]]))
+b <-  ggplot_gtable(ggplot_build(p[[2]]))
+
+maxWidth = unit.pmax(a$widths[2:3], b$widths[2:3])
+
+a$widths[2:3] <- maxWidth
+b$widths[2:3] <- maxWidth
 
 
-#x-axis units, align them,  
+tiff(file=paste0("../Figures/FigX_prediction_plots_",Sys.Date(),".tiff"),width=2100,height=1600,res=200) 
+grid.arrange(a,b,ncol=1,heights=c(1,1))
+dev.off()
+
 
 
 
@@ -2003,48 +2081,56 @@ post.table
 
 
 
-#### For each species and rad group, plot fitted vs. observed, for normal and anom side by side ####
+#### 13. For each species and rad group, plot fitted vs. observed, for normal and anom side by side ####
 
 fit.dat$resid <- fit.dat$response.var-fit.dat$fitted
 
 
 ## PPT min only
-fit.dat.ppt <- fit.dat[fit.dat$anom == "Pmin",]
+fit.dat.ppt <- as.data.table(fit.dat[fit.dat$anom == "Pmin",])
+
+## summarize by fire, sp
+
+fit.dat.ppt.fire <- fit.dat.ppt[,list(fitted=mean(fitted),observed=mean(response.var),anom.var=mean(diff.norm.ppt.min.z_c)),by=.(Fire,type,sp)]
+# fit.dat.ppt.fire <- fit.dat.ppt[,list(fitted=fitted,observed=response.var,anom.var=diff.norm.ppt.min.z_c,Fire,type,sp)]
+
+fit.dat.ppt.fire[sp %in% cover.opts,c("observed","fitted")] <- 100* fit.dat.ppt.fire[sp %in% cover.opts,c("observed","fitted")]
+
+fit.dat.ppt.fire$sp <- as.factor(fit.dat.ppt.fire$sp)
+
+
+fit.dat.ppt.fire$sp <- factor(fit.dat.ppt.fire$sp,c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","COV.SHRUB","COV.GRASS","COV.FORB"))
+
+levels(fit.dat.ppt.fire$sp)
+levels(fit.dat.ppt.fire$sp) <- c("Pine regeneration\n(% of plots)","Shade tolerant conifer\nspecies regeneration\n(% of plots)","Broadleaved species\nregeneration\n(% of plots)","Shrubs\n(% cover)","Graminoids\n(% cover)","Forb\n(% cover)")
+
+fit.dat.ppt.fire$type <- as.factor(fit.dat.ppt.fire$type)
+levels(fit.dat.ppt.fire$type)
+fit.dat.ppt.fire$type <- factor(fit.dat.ppt.fire$type,c("norm","anom"))
+levels(fit.dat.ppt.fire$type)
+levels(fit.dat.ppt.fire$type) <- c("Baseline","Post-fire\nanomaly")
 
 
 
-fit.obs.plots <- list()
+dummy.df <- fit.dat.ppt.fire[,list(observed=c(0,max(observed,fitted)),fitted=c(0,max(observed,fitted))),by=list(sp,type,sp)]
 
-for(sp in unique(fit.dat$sp)) {
-  #for(rad.level in unique(fit.dat$rad.level)) {
-    
-    #fit.dat.sp <- fit.dat.aet[fit.dat.aet$sp == sp & fit.dat.aet$rad.level == rad.level,]
-  fit.dat.sp <- fit.dat.ppt[fit.dat.ppt$sp == sp,]
-    
-    fit.dat.sp$type <- factor(fit.dat.sp$type,levels=c("norm","anom"))
-    
-    # dummy points
-    max.xy <- max(c(fit.dat.sp$response.var,fit.dat.sp$fitted))
-    dummy <- data.frame(response.var=c(0,max.xy),fitted=c(0,max.xy))
-    
-    plot.name <- sp
-    
-    fit.obs.plots[[plot.name]] <- ggplot(fit.dat.sp,aes(x=response.var,y=fitted)) +
-      geom_point() +
-      facet_grid(.~type) +
-      geom_abline(slope=1,intercept=0) +
-      geom_point(data=dummy,alpha=0) +
-      labs(x="Observed",y="Fitted",title=plot.name) +
-      theme_bw() +
-      theme(plot.title=element_text(hjust=0.5))
-    
-  #}
-}
 
-library(gridExtra)
-n <- length(fit.obs.plots)
-nCol <- 4
-do.call("grid.arrange",c(fit.obs.plots,ncol=nCol))
+p <- ggplot(fit.dat.ppt.fire,aes(x=observed,y=fitted,color=type)) +
+  geom_point(size=2) +
+  geom_abline(slope=1,intercept=0,size=1,color="gray") +
+  geom_point(data=dummy.df,alpha=0) +
+  facet_wrap(~sp,scales="free") +
+  labs(x="Observed value",y="Fitted value",color="Model type") +
+  theme_bw(18) +
+  theme(plot.title=element_text(hjust=0.5)) +
+  scale_color_manual(values=c("turquoise4","darkorange1")) +
+  theme(panel.grid.minor = element_blank(),strip.background = element_blank(), panel.border = element_rect(colour = "black",size=0.6), strip.text = element_text(size = 16,vjust=0)) +
+  theme(plot.margin = unit(c(-.1,0.5,0.1,0.5), "cm"))
+
+tiff(file=paste0("../Figures/FigX_fitted_vs_observed_",Sys.Date(),".tiff"),width=2100,height=1600,res=200) 
+p
+dev.off()
+
 
 
 
@@ -2069,6 +2155,7 @@ ggplot(fit.dat.plot,aes(x=Fire,y=resid)) +
   facet_grid(sp~.) +
   theme_bw() +
   theme(axis.text.x = element_text(angle=90,hjust=1))
+
 
 
 

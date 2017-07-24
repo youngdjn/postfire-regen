@@ -173,7 +173,7 @@ cvfun.fire <- function(formula,data) {
       err <- mean(abs(logit(m.pred)-logit(obs)),na.rm=TRUE)
 
       
-    } else if (sp %in% htabs.opts) { # we're looking at absolute height
+    } else if (sp %in% c(htabs.opts,count.opts)) { # we're looking at absolute height
       
       
       m <- glm(formula,data=data.train,family="gaussian")
