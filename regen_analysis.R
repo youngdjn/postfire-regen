@@ -727,7 +727,7 @@ ggplot(a,aes(x=Fire,y=mean)) +
 
 
 
-### Center data frame ####
+### Center data frame ###
 
 d <- d.plot.c
 
@@ -806,6 +806,8 @@ cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB")
 # All
 ht.opts <- c("HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP")
 htabs.opts <- c("HTABS.PIPJ","HTABS.SHRUB","HTABS.ABCO","HTABS.PSME","HTABS.PILA","HTABS.QUKE","HTABS.CADE27","HTABS.HDWD.ALLSP","HTABS.PINUS.ALLSP","HTABS.SHADE.ALLSP")
+htabs.opts <- c("HTABS.PIPJ","HTABS.SHRUB","HTABS.ABCO","HTABS.HDWD.ALLSP","HTABS.PINUS.ALLSP","HTABS.SHADE.ALLSP")
+
 prop.opts <- c("PROP.CONIF","PROP.PINUS","PROP.SHADE")
 prop.opts <- NULL
 htabs.opts <- NULL 
@@ -846,7 +848,7 @@ d.maes.anoms <- data.frame()
 rf.importance <- data.frame()
 pred.rf <- data.frame()
 
-
+fit.mods <- list()
 
 
 
@@ -1718,7 +1720,7 @@ for(sp in resp.opts) {
   
       ##predict to new data
       
-      if(sp %in% c(cover.opts)) {
+      if(sp %in% c(cover.opts,prop.opts)) {
       
         
         d.c.complete <- d.c[!is.na(d.c$response.var),]
@@ -1792,7 +1794,7 @@ for(sp in resp.opts) {
         high[high>400] <- 400
         pred.norm <- data.frame(pred.low=(low),pred.mid=(p$fit),pred.high=(high))
         
-      } else {
+      } else { # presab, ht
         
         d.c.complete <- d.c[complete.cases(d.c$response.var),]
         
@@ -1849,21 +1851,27 @@ for(sp in resp.opts) {
       
       d.c.complete <- d.c[!is.na(d.c$response.var),]
       
-      if(sp %in% sp.opts) {
+      if(sp %in% c(sp.opts,ht.opts)) {
         
         mod.anom <- glm(formulas[[best.anom.mod]],data=d.c.complete,family="binomial")
         mod.norm <- glm(formulas[[best.anom.normal.mod]],data=d.c.complete,family="binomial")
         
-      } else if(sp %in% cover.opts) {
+
+        
+      } else if(sp %in% c(cover.opts,prop.opts)) {
         
         mod.anom <- betareg(formulas[[best.anom.mod]],data=d.c.complete)
         mod.norm <- betareg(formulas[[best.anom.normal.mod]],data=d.c.complete)
         
-      } else {
-        #not going to make predictions for other model types yet
-        next()
+      } else { #htabs, count
+        
+        mod.anom <- glm(formulas[[best.anom.mod]],data=d.c.complete,family="gaussian")
+        mod.norm <- glm(formulas[[best.anom.normal.mod]],data=d.c.complete,family="gaussian")
         
       }
+      
+      fit.mods[[paste0(sp,"_",best.anom.mod)]] <- mod.anom
+      fit.mods[[paste0(sp,"_",best.anom.normal.mod)]] <- mod.norm
       
 
       fit.anom <- as.data.frame(predict(mod.anom))
@@ -2057,12 +2065,32 @@ grid.arrange(a,b,ncol=1,heights=c(1,1))
 dev.off()
 
 
+#### Compute what the normal precip hypothetical values are ####
+
+ppt.low <- low.val.fun("ppt.normal_c")
+ppt.high <- high.val.fun("ppt.normal_c")
+
+ppt.low <- (ppt.low * d.center.dat[d.center.dat$var=="ppt.normal_c","var.sd"]) + d.center.dat[d.center.dat$var=="ppt.normal_c","var.mean"]
+ppt.high <- (ppt.high * d.center.dat[d.center.dat$var=="ppt.normal_c","var.sd"]) + d.center.dat[d.center.dat$var=="ppt.normal_c","var.mean"]
+
+
+
+
+#### 14. Table of cross-validation errors ####
+d.maes.anoms <- as.data.table(d.maes.anoms)
+cv.errors <- d.maes.anoms[,.(Species=sp,Variable=anom.name,Baseline=best.anom.normal.mae,Anomaly=best.anom.mae)]
+
+cv.err.melt <- melt(cv.errors,id.vars=c("Species","Variable"),measure.vars=c("Baseline","Anomaly"),variable.name="type")
+
+cv.err.cast <- dcast(cv.err.melt,Species~Variable+type,value.var="value",fun=mean)
+
+cv.err.cast[,-1] <- round(cv.err.cast[,-1],2)
 
 
 
 
 
-#### Display the normal vs. post analysis ####
+#### 15. Table of normal vs. post MAEs ####
 library(reshape)
 
 ##calc how much better the post is than the normal
@@ -2076,6 +2104,86 @@ post.table <- cast(d.maes.anoms,anom.name~sp,value='post.v.norm')
 post.table
 
 
+#### 16. Table of model coefs ####
+
+## For each anomaly type and model type (anom or norm), extract the coefs
+
+coefs <- data.frame()
+
+for(i in 1:nrow(d.maes.anoms)) {
+  
+  cv.row <- d.maes.anoms[i,]
+  sp <- cv.row$sp
+  norm.mod <- cv.row$best.anom.normal
+  anom.mod <- cv.row$best.anomaly.mod
+  
+  m.norm <- fit.mods[[paste0(sp,"_",norm.mod)]]
+  m.anom <- fit.mods[[paste0(sp,"_",anom.mod)]]
+  
+  if(sp %in% c(sp.opts,ht.opts)) {
+    
+    anom.coefs <- as.data.frame(summary(m.anom)$coefficients[,1:2],optional=TRUE)
+    anom.coefs$var.name <- row.names(anom.coefs)
+    anom.coefs$type <- "Anomaly"
+    anom.coefs$variable <- cv.row$anom.name
+    
+    norm.coefs <- as.data.frame(summary(m.norm)$coefficients[,1:2,drop=FALSE])
+    norm.coefs$var.name <- row.names(norm.coefs)
+    norm.coefs$type <- "Baseline"
+    norm.coefs$variable <- cv.row$anom.name
+    
+    norm.coefs.prec <- NULL
+    anom.coefs.prec <- NULL
+    
+  } else { #it's a cover resonse (beta regression)
+    
+    anom.coefs <- as.data.frame(summary(m.anom)$coefficients$mean[,1:2],optional=TRUE)
+    anom.coefs$var.name <- row.names(anom.coefs)
+    anom.coefs$type <- "Anomaly"
+    anom.coefs$variable <- cv.row$anom.name
+    
+    anom.coefs.prec <- as.data.frame(summary(m.anom)$coefficients$precision[,1:2,drop=FALSE],optional=TRUE)
+    anom.coefs.prec$var.name <- row.names(anom.coefs.prec)
+    anom.coefs.prec$type <- "Anomaly"
+    anom.coefs.prec$variable <- cv.row$anom.name
+    
+    
+    norm.coefs <- as.data.frame(summary(m.norm)$coefficients$mean[,1:2,drop=FALSE])
+    norm.coefs$var.name <- row.names(norm.coefs)
+    norm.coefs$type <- "Baseline"
+    norm.coefs$variable <- cv.row$anom.name
+    
+    norm.coefs.prec <- as.data.frame(summary(m.norm)$coefficients$precision[,1:2,drop=FALSE],optional=TRUE)
+    norm.coefs.prec$var.name <- row.names(anom.coefs.prec)
+    norm.coefs.prec$type <- "Baseline"
+    norm.coefs.prec$variable <- cv.row$anom.name
+    
+
+  }
+  
+  coefs.row <- rbind(norm.coefs,norm.coefs.prec,anom.coefs,anom.coefs.prec)
+  coefs.row$sp <- sp
+  coefs <- rbind(coefs,coefs.row)
+  
+  
+}
+
+coefs <- as.data.table(coefs)
+
+coefs[,c("Estimate","Std. Error")] <- coefs[,lapply(.SD,round,digits=3),.SDcols=c("Estimate","Std. Error")]
+
+coefs$var.name <- gsub(pattern="aet\\.|ppt\\.|def\\.",replacement="",x=coefs$var.name)
+coefs$var.name <- gsub(pattern="min\\.|max\\.",replacement="",x=coefs$var.name)
+coefs$est.se <- paste0(coefs$Estimate," (",coefs$`Std. Error`,")")
+
+coefs.cast <- dcast(coefs,sp+variable+type~var.name,value.var="est.se")
+coefs.cast <- as.data.table(coefs.cast)
+
+dummy.df <- data.table("sp"="a","variable"="a","type"="a","(Intercept)"=1,"normal_c"=1,"normal_c.sq"=1,"seed_tree_distance_general_c"=1,"rad.march_c"=1,"diff.norm.z_c"=1,"diff.norm.z_c.sq"=1,"normal_c:diff.norm.z_c"=1,"normal_c:diff.norm.z_c.sq"=1,"(phi)"=1)
+coefs.cast <- rbind.fill(coefs.cast,dummy.df)
+coefs.cast <- as.data.table(coefs.cast)
+
+coefs.cast <- coefs.cast[,c("sp","variable","type",Intercept="(Intercept)","normal_c","normal_c.sq",seed.tree="seed_tree_distance_general_c","rad.march_c","diff.norm.z_c","diff.norm.z_c.sq","normal_c:diff.norm.z_c","normal_c:diff.norm.z_c.sq","(phi)"),with=FALSE]
 
 
 
@@ -2091,7 +2199,7 @@ fit.dat.ppt <- as.data.table(fit.dat[fit.dat$anom == "Pmin",])
 
 ## summarize by fire, sp
 
-fit.dat.ppt.fire <- fit.dat.ppt[,list(fitted=mean(fitted),observed=mean(response.var),anom.var=mean(diff.norm.ppt.min.z_c)),by=.(Fire,type,sp)]
+fit.dat.ppt.fire <- fit.dat.ppt[,list(fitted=mean(fitted),observed=mean(response.var),anom.var=mean(diff.norm.ppt.min.z_c),resid=mean(resid)),by=.(Fire,type,sp)]
 # fit.dat.ppt.fire <- fit.dat.ppt[,list(fitted=fitted,observed=response.var,anom.var=diff.norm.ppt.min.z_c,Fire,type,sp)]
 
 fit.dat.ppt.fire[sp %in% cover.opts,c("observed","fitted")] <- 100* fit.dat.ppt.fire[sp %in% cover.opts,c("observed","fitted")]
@@ -2102,7 +2210,7 @@ fit.dat.ppt.fire$sp <- as.factor(fit.dat.ppt.fire$sp)
 fit.dat.ppt.fire$sp <- factor(fit.dat.ppt.fire$sp,c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","COV.SHRUB","COV.GRASS","COV.FORB"))
 
 levels(fit.dat.ppt.fire$sp)
-levels(fit.dat.ppt.fire$sp) <- c("Pine regeneration\n(% of plots)","Shade tolerant conifer\nspecies regeneration\n(% of plots)","Broadleaved species\nregeneration\n(% of plots)","Shrubs\n(% cover)","Graminoids\n(% cover)","Forb\n(% cover)")
+levels(fit.dat.ppt.fire$sp) <- c("Pine regeneration\n(% of plots)","Shade tolerant conifer\nspecies regeneration\n(% of plots)","Broadleaved species\nregeneration\n(% of plots)","Shrubs\n(% cover)","Graminoids\n(% cover)","Forbs\n(% cover)")
 
 fit.dat.ppt.fire$type <- as.factor(fit.dat.ppt.fire$type)
 levels(fit.dat.ppt.fire$type)
@@ -2133,28 +2241,23 @@ dev.off()
 
 
 
+#### 14. Plot residuals of regen fits (of baseline non-anomaly models) by fire: are we missing anything? ####
 
 
-#### Plot residuals of regen fits by fire: are we missing anything? ####
+fit.dat.plot <- fit.dat.ppt.fire[fit.dat.ppt.fire$type=="Baseline",]
 
-
-fit.dat.plot <- fit.dat[fit.dat$type=="norm",]
-fit.dat.plot <- fit.dat.plot[fit.dat.plot$anom == "Pmin",]
-
-# fit.dat.plot$rad.level <- as.factor(fit.dat.plot$rad.level)
-
-
-plot(fit.dat.plot$diff.norm.ppt.min.z.highsev_c~fit.dat.plot$Fire)
-ggplot(fit.dat.plot,aes(y=diff.norm.ppt.min.z.highsev_c,x=fit.dat.plot$Fire)) +
+ggplot(fit.dat.plot,aes(y=anom.var,x=Fire)) +
   geom_point()
 
-fit.dat.plot$Fire <- factor(fit.dat.plot$Fire,c("Bagley","Chips","Ralston","Bassetts","Moonlight","Antelope","Harding","Freds","Power","Straylor","Rich","Btu Lightning","Cub","American River"))
+fit.dat.plot <- fit.dat.plot[!is.na(fit.dat.plot$Fire),]
+
+fit.dat.plot$Fire <- factor(fit.dat.plot$Fire,c("Bagley","Chips","Harding","Ralston","Bassetts","Moonlight","Antelope","Freds","Power","Straylor","Rich","Btu Lightning","Cub","American River"))
 
 ggplot(fit.dat.plot,aes(x=Fire,y=resid)) +
-  geom_boxplot(position="dodge",width=0.5) +
+  geom_point(size=2) +
   facet_grid(sp~.) +
   theme_bw() +
-  theme(axis.text.x = element_text(angle=90,hjust=1))
+  theme(axis.text.x = element_text(angle=90,hjust=1,vjust=0.5))
 
 
 
@@ -2169,14 +2272,7 @@ library(party)
 
 ### prep the data frame
 
-
-
-
-
-
 sp <- "PINUS.ALLSP"
-
-
 
 d.plot <- d.plot.c
 
@@ -2327,16 +2423,6 @@ a <- ctree(response.var ~ ppt.normal_c +
 #control=ctree_control(testtype=c("Univariate"),mincriterion=0.80)
 
 plot(a)
-
-
-
-
-
-
-
-
-
-
 
 
 

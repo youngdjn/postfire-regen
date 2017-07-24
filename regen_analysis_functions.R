@@ -279,18 +279,18 @@ cvfun.fire <- function(formula,data) {
 
 ### Function to find the center of a "fixed" predictor variable within the species distribution
 mid.val.fun <- function(var) {
-  mid.val <- mean(d.c[,var],na.rm=TRUE)
+  mid.val <- mean(d.c.modfit[,var],na.rm=TRUE)
   return(mid.val)
 }
 
 low.val.fun <- function(var) {
-  a <- quantile(d.c[,var],0.20,na.rm=TRUE)
+  a <- quantile(d.c.modfit[,var],0.20,na.rm=TRUE)
   #a <- min(d.c[,var])
   return(a)
 }
 
 high.val.fun <- function(var) {
-  a <- quantile(d.c[,var],0.80,na.rm=TRUE)
+  a <- quantile(d.c.modfit[,var],0.80,na.rm=TRUE)
   #a <- max(d.c[,var])
   return(a)
 }
