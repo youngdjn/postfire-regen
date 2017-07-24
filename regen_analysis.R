@@ -69,36 +69,44 @@ d.plot <- d.plot[which(!(d.plot$FIRE_SEV.cat == "high.sev" & !(d.plot$survey.yea
 # must have shrub cover
 d.plot <- d.plot[!is.na(d.plot$SHRUB),]
 
+# Dataset of individual (non-aggregated) plots
+d.plot.ind <- d.plot
 
+# first remove the variables that are not useful
 
-
-# 
-# 
-# 
-# d.plot <- d.plot[!((d.plot$Fire == "American River") & (d.plot$ppt.normal < 1700)),]
-# d.plot <- d.plot[!((d.plot$Fire == "BTU Lightning") & (d.plot$ppt.normal > 2000)),]
-# d.plot <- d.plot[!((d.plot$Fire == "Bagley") & (d.plot$rad.march < 4000)),]
-# d.plot <- d.plot[!((d.plot$Fire == "Cub") & (d.plot$ppt.normal < 1300)),]
-# d.plot <- d.plot[!((d.plot$Fire == "Freds") & (d.plot$ppt.normal > 1230)),]
-# d.plot <- d.plot[!((d.plot$Fire == "Power") & (d.plot$rad.march < 6000)),]
-# d.plot <- d.plot[!((d.plot$Fire == "Ralston") & (d.plot$ppt.normal < 1175)),]
-# d.plot <- d.plot[!((d.plot$Fire == "Rich") & (d.plot$ppt.normal > 1080) & (d.plot$rad.march < 5000)),]
-# 
-
-
-
+# label plots as control or high sev
+d.plot.ind$type <- ifelse(d.plot.ind$FIRE_SEV %in% control,"control",NA)
+d.plot.ind$type <- ifelse(d.plot.ind$FIRE_SEV %in% high.sev,"highsev",d.plot.ind$type)
+# get rid of plots that are neither control nor high sev
+d.plot.ind <- d.plot.ind[!is.na(d.plot.ind$type),]
 
 
 
 
 #### 1. Assign each plot a topoclimatic category ####
+
+d.plot.precat <- d.plot
+
+# Remove climatic regions that don't have comparable control plots
+d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "American River") & (d.plot.precat$ppt.normal < 1700)),]
+d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "BTU Lightning") & (d.plot.precat$ppt.normal > 2000)),]
+d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "Bagley") & (d.plot.precat$rad.march < 4000)),]
+d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "Cub") & (d.plot.precat$ppt.normal < 1300)),]
+d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "Freds") & (d.plot.precat$ppt.normal > 1230)),]
+d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "Power") & (d.plot.precat$rad.march < 6000)),]
+d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "Ralston") & (d.plot.precat$ppt.normal < 1175)),]
+d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "Rich") & (d.plot.precat$ppt.normal > 1080) & (d.plot.precat$rad.march < 5000)),]
+
+
+
+
 fires <- unique(d.plot$Fire)
 
 for(fire in fires) {
   
   ## Precipitation categories
   # determine what the precipitation breakpoints should be (here just using median) -- based on control plots only
-  breaks <- quantile(d.plot[(d.plot$Fire == fire) & (d.plot$FIRE_SEV %in% control),]$ppt.normal,probs=c(0.5),na.rm=TRUE)
+  breaks <- quantile(d.plot.precat[(d.plot.precat$Fire == fire) & (d.plot.precat$FIRE_SEV %in% control),]$ppt.normal,probs=c(0.5),na.rm=TRUE)
   
   
   # for some fires with a small range of precip, override the precip breaks, so we just have one category per fire
@@ -108,36 +116,35 @@ for(fire in fires) {
   }
   
   # categorize plots based on where they fall between the breakpoints  
-  categories <- categorize(d.plot[d.plot$Fire==fire,]$ppt.normal,breaks,name="P")
+  categories <- categorize(d.plot.precat[d.plot.precat$Fire==fire,]$ppt.normal,breaks,name="P")
   # store it into the plot data.frame
-  d.plot[d.plot$Fire==fire,"precip.category"] <- categories
+  d.plot.precat[d.plot.precat$Fire==fire,"precip.category"] <- categories
   
   ## Radiation categories
   # determine what the breakpoints should be (here just using median) -- based on high severity plots only
-  breaks <- quantile(d.plot[(d.plot$Fire == fire) & (d.plot$FIRE_SEV %in% high.sev),]$rad.march,probs=c(0.5),na.rm=TRUE)
+  breaks <- quantile(d.plot.precat[(d.plot.precat$Fire == fire) & (d.plot.precat$FIRE_SEV %in% high.sev),]$rad.march,probs=c(0.5),na.rm=TRUE)
   # categorize plots based on where they fall between the breakpoints
   
   #override the per-fire breaks
   breaks <- 6000
   
-  categories <- categorize(d.plot[d.plot$Fire==fire,]$rad.march,breaks,name="R")
+  categories <- categorize(d.plot.precat[d.plot.precat$Fire==fire,]$rad.march,breaks,name="R")
   # store it into the plot data.frame
-  d.plot[d.plot$Fire==fire,"rad.category"] <- categories
+  d.plot.precat[d.plot.precat$Fire==fire,"rad.category"] <- categories
   
 }
   
 ## Create one variable reflecting the all-way factorial combination of topoclimatic categories
-d.plot$topoclim.cat <- paste(d.plot$precip.category,d.plot$rad.category,sep="_")
+d.plot.precat$topoclim.cat <- paste(d.plot.precat$precip.category,d.plot.precat$rad.category,sep="_")
 
 
 
 ### Plot relevant "topoclimate space" for each fire and see how the categories broke them down
 
-d.plot.precat <- d.plot
-
+d.plot.cat <- d.plot.precat
 
 # look at both together
-ggplot(d.plot.precat,aes(x=ppt.normal,y=rad.march,col=topoclim.cat,shape=FIRE_SEV.cat)) +
+ggplot(d.plot.cat,aes(x=ppt.normal,y=rad.march,col=topoclim.cat,shape=FIRE_SEV.cat)) +
   geom_point() +
   facet_wrap(~Fire,scales="free") +
   theme_bw(16) +
@@ -154,7 +161,7 @@ ggplot(d.plot.precat,aes(x=ppt.normal,y=rad.march,col=topoclim.cat,shape=FIRE_SE
 #### 2. Summarize (compute average) regen values (high-sev plots only) and adults (control plots only) by species across all plots in each topoclimatic category in each fire ####
 
 ## assign the trees by species their topoclimatic category and fire name. This also ensures that we only are looking at seedlings for whose plots we are interested (because with this merge operation, seedlings from plots not in d.plot will be dropped)
-d.sp.cat <- merge(d.sp,d.plot.precat[,c("Regen_Plot","topoclim.cat","Fire","FIRE_SEV","survey.years.post")])
+d.sp.cat <- merge(d.sp,d.plot.cat[,c("Regen_Plot","topoclim.cat","Fire","FIRE_SEV","survey.years.post")])
 
 ## preparing to aggregate tree data: get highsev and control plots only, each with only the columns relevant to it
 d.sp.cat.highsev <- d.sp.cat[d.sp.cat$FIRE_SEV %in% high.sev,c("Fire","species","topoclim.cat","seed.tree.sp","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all","survey.years.post")]
@@ -174,7 +181,7 @@ d.sp.agg <- merge(d.sp.agg.highsev,d.sp.agg.control,all.x=TRUE,by=c("species","t
 
 ##preparing to aggregate plot (e.g. climate) data: label plots as highsev or control
 # first remove the variables that are not useful
-d.plot.c <- remove.vars(d.plot.precat,c("Year.of.Fire","Easting","Northing","aspect","Year","precip.category","rad.category"))
+d.plot.c <- remove.vars(d.plot.cat,c("Year.of.Fire","Easting","Northing","aspect","Year","precip.category","rad.category"))
 # label plots as control or high sev
 d.plot.c$type <- ifelse(d.plot.c$FIRE_SEV %in% control,"control",NA)
 d.plot.c$type <- ifelse(d.plot.c$FIRE_SEV %in% high.sev,"highsev",d.plot.c$type)
@@ -219,7 +226,8 @@ d.plot.3 <- d.plot.2[which((d.plot.2$count.control > 4) & (d.plot.2$count.highse
 # only want to analyze high-severity plots burned 4-5 years post-fire
 d.plot.c <- d.plot.c[(d.plot.c$survey.years.post %in% c(4,5)) & (d.plot.c$FIRE_SEV %in% c(4,5)),] 
 
-
+# only want to analyze high-severity plots burned 4-5 years post-fire
+d.plot.ind <- d.plot.ind[(d.plot.ind$survey.years.post %in% c(4,5)) & (d.plot.ind$FIRE_SEV %in% c(4,5)),] 
 
 
 
@@ -242,7 +250,7 @@ for(fire in unique(d.plot.3$Fire)) {
     
     
     # d.plot.fire.cat <- d.plot.c[(d.plot.c$Fire == fire) & (d.plot.c$topoclim.cat == topoclim.cat),]
-  d.plot.fire.cat <- d.plot.c[(d.plot.c$Fire == fire),] 
+  d.plot.fire.cat <- d.plot.ind[(d.plot.ind$Fire == fire),] 
     
     if (nrow(d.plot.fire.cat) < 5) {
       cat("Less than 5 plots in ",fire," ",topoclim.cat,". Skipping.\n")
@@ -377,7 +385,7 @@ for(i in 1:nrow(d.domsp)) {
 d.domsp <- d.domsp[!duplicated(d.domsp$Fire),]
 d.domsp <- remove.vars(d.domsp,c("topoclim.cat","count.control"))
 
-d.plot.c <- merge(d.plot.c,d.domsp,all.x=TRUE,by=c("Fire"))
+d.plot.ind <- merge(d.plot.ind,d.domsp,all.x=TRUE,by=c("Fire"))
 
 
 
@@ -390,7 +398,7 @@ d.plot.c <- merge(d.plot.c,d.domsp,all.x=TRUE,by=c("Fire"))
 
 ### fire-level ###
 
-d <- as.data.table(d.plot.c)
+d <- as.data.table(d.plot.ind)
 #d <- merge(d,d.plot.3[,c("Fire","topoclim.cat")]) # keep only the plot data that has corresponding topoclim cats that are being kept (i.e. correct severity, etc.)
 
 
@@ -464,7 +472,7 @@ d.cat <- d.merge[,list(Fire=Fire,
 #### 7. Plot highsev vs. reference ####
 
 
-d.plot.keep <- merge(d.plot,d.plot.3[,c("Fire","topoclim.cat")])
+d.plot.keep <- merge(d.plot.cat,d.plot.3[,c("Fire","topoclim.cat")])
 
 
 d.plot.keep$topoclim.cat <- gsub(".","",d.plot.keep$topoclim.cat,fixed=TRUE)
@@ -485,11 +493,17 @@ Cairo(file=paste0("../Figures/FigS1_ref_vs_highsev",Sys.Date(),".png"),width=280
 p
 dev.off()
 
+#### 7.1 Number of plots in high seveirty and reference classes ####
+
+nrow(d.plot.keep[d.plot.keep$FIRE_SEV.cat=="High severity",])
+nrow(d.plot.keep[d.plot.keep$FIRE_SEV.cat=="Reference",])
+
+
 
 #### 8. Plot climate space with fire labels ####
 
 
-d.plot.c$Fire <- as.factor(d.plot.c$Fire)
+d.plot.ind$Fire <- as.factor(d.plot.ind$Fire)
 
 ### Plot of monitoring plots in climate space: minimum precip ### 
 
@@ -497,9 +511,9 @@ d.plot.c$Fire <- as.factor(d.plot.c$Fire)
 
 # For each fire, make a point at mean normal precip and mean precip anom 
 fire.centers <- data.frame() 
-fires <- unique(d.plot.c$Fire) 
+fires <- unique(d.plot.ind$Fire) 
 for(fire in fires) { 
-  d.fire <- d.plot.c[d.plot.c$Fire == fire,] 
+  d.fire <- d.plot.ind[d.plot.ind$Fire == fire,] 
   norm.mean <- mean(d.fire$ppt.normal) 
   anom.mean <- mean(d.fire$diff.norm.ppt.min.z) 
   year <- d.fire$fire.year[1] 
@@ -533,7 +547,7 @@ fire.centers[fire.centers$Fire == "Ralston",c("ppt.normal","diff.norm.ppt.min.z"
 fire.centers[fire.centers$Fire == "Chips",c("ppt.normal","diff.norm.ppt.min.z")] <- c(1250,-1.2)
 
 
-p1 <-  ggplot(d.plot.c,aes(x=ppt.normal,y=diff.norm.ppt.min.z,color=Fire)) + 
+p1 <-  ggplot(d.plot.ind,aes(x=ppt.normal,y=diff.norm.ppt.min.z,color=Fire)) + 
   geom_point(size=3) + 
   #geom_point(data=fire.centers,size=5,pch=1) + 
   geom_text(data=fire.centers,aes(label=fire.year),nudge_y=.04,size=6,color="darkgray") + 
@@ -550,9 +564,9 @@ p1 <-  ggplot(d.plot.c,aes(x=ppt.normal,y=diff.norm.ppt.min.z,color=Fire)) +
 
 # For each fire, make a point at mean normal precip and mean precip anom 
 fire.centers <- data.frame() 
-fires <- unique(d.plot.c$Fire) 
+fires <- unique(d.plot.ind$Fire) 
 for(fire in fires) { 
-  d.fire <- d.plot.c[d.plot.c$Fire == fire,] 
+  d.fire <- d.plot.ind[d.plot.ind$Fire == fire,] 
   norm.mean <- mean(d.fire$ppt.normal) 
   anom.mean <- mean(d.fire$diff.norm.ppt.z) 
   year <- d.fire$fire.year[1] 
@@ -582,7 +596,7 @@ names(lines) <- c("x","y","xend","yend")
 
 
 
-p2 <- ggplot(d.plot.c,aes(x=ppt.normal,y=diff.norm.ppt.z,color=Fire)) + 
+p2 <- ggplot(d.plot.ind,aes(x=ppt.normal,y=diff.norm.ppt.z,color=Fire)) + 
   geom_point(size=3) + 
   #geom_point(data=fire.centers,size=5,pch=1) + 
   geom_text(data=fire.centers,aes(label=fire.year),nudge_y=.04,size=6,color="darkgray") + 
@@ -608,7 +622,7 @@ dev.off()
 
 keep.vars <- c("Fire","topoclim.cat","ppt.normal","rad.march","diff.norm.ppt.min.z","diff.norm.ppt.z","FIRE_SEV.cat") # removed seed_tree_distance_general
 
-d <- as.data.table(merge(d.plot[,keep.vars],d.plot.3[,c("Fire","topoclim.cat")]))
+d <- as.data.table(merge(d.plot.cat[,keep.vars],d.plot.3[,c("Fire","topoclim.cat")]))
 
 d.med <- d[,lapply(.SD,median),by=list(Fire,topoclim.cat,FIRE_SEV.cat)]
 d.med$level <- "mid"
@@ -692,7 +706,7 @@ dev.off()
 
 ### 9. Plot histogram of seed tree distance ####
 
-d.plot.highsev <- d.plot[d.plot.c$FIRE_SEV %in% c(4,5),]
+d.plot.highsev <- d.plot.ind[d.plot.ind$FIRE_SEV %in% c(4,5),]
 
 ggplot(d.plot.highsev,aes(seed_tree_distance_general)) +
   geom_histogram() +
@@ -712,16 +726,6 @@ ggplot(a,aes(x=Fire,y=mean)) +
 
 
 
-
-
-
-
-
-
-
-
-
-
 #### 10. Plot-level analysis with GLM; also run randomForest to get importance scores ####
 
 
@@ -729,7 +733,7 @@ ggplot(a,aes(x=Fire,y=mean)) +
 
 ### Center data frame ###
 
-d <- d.plot.c
+d <- d.plot.ind
 
 
 vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all","dominant_shrub_ht_cm","tallest_ht_cm","prop.regen.pinus.old","prop.regen.pinus.all","prop.regen.shade.old","prop.regen.hdwd.old","prop.regen.hdwd.old","prop.regen.conif.old","regen.count.broader.old")
@@ -903,7 +907,7 @@ for(sp in resp.opts) {
     d.sp.curr.plt <- d.sp[d.sp$species==sp,]
   }
   
-  #d <- merge(d.plot.c,d.plot.3,by=c("Fire","topoclim.cat")) # this effectively thins to plots that belong to a topoclimate category that has enough plots in it
+  #d <- merge(d.plot.cat,d.plot.3,by=c("Fire","topoclim.cat")) # this effectively thins to plots that belong to a topoclimate category that has enough plots in it
 
   #add the data for the current species response to the plot data
   d.c <- merge(d.c.modfit,d.sp.curr.plt,by=c("Regen_Plot"))
@@ -2275,7 +2279,7 @@ library(party)
 
 sp <- "PINUS.ALLSP"
 
-d.plot <- d.plot.c
+d.plot <- d.plot.ind
 
 d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV %in% c(4,5)),]
 
@@ -2440,10 +2444,6 @@ plot(a)
 #### 8. Cluster-level multivariate analysis ####
 
 
-
-
-#d.plot.3
-#d.sp.2
 library(data.table)
 
 
@@ -2554,8 +2554,6 @@ cc3 <- cca(d.all.sp ~ NormalPrecip + NormalTemp + PrecipAnom + SolarRadiation + 
 #plot(cc2,choices=c(1,2))
 #plot(cc2b,choices=c(1,2))
 plot(cc3,choices=c(1,2))
-
-
 
 
 vars.focal.nmds <- c("NormalPrecip","NormalTemp","PrecipAnom","SolarRadiation","DF","YP","WF","SP")

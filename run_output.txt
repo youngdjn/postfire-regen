@@ -153,7 +153,8 @@ RStudioGD
 [1] "high" "low"  "mid" 
 RStudioGD 
         2 
-rad.march_c diff.norm.aet.z_c 
+[1] 880
+_c diff.norm.aet.z_c 
         57.108270          8.138242         -3.251620 
 [1] "Norm mod"
 (Intercept) rad.march_c 
