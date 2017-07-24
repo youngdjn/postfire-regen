@@ -821,7 +821,7 @@ count.opts <- c("COUNT.PINUS.ALLSP","COUNT.SHADE.ALLSP","COUNT.HDWD.ALLSP")
 
 
 
-resp.opts <- c(prop.opts,htabs.opts,sp.opts,cover.opts,ht.opts)
+resp.opts <- c(count.opts,prop.opts,htabs.opts,sp.opts,cover.opts,ht.opts)
 resp.opts <- c(sp.opts,cover.opts)
 
 
@@ -2000,9 +2000,9 @@ levels(pred.dat.comb$norm.level) <- c("High","Low","High and low")
 plot.cats <- c("presab",
                #"ht",
                "cov")
-plot.sps <- list(c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP"),
+plot.sps <- list(c("PINUS.ALLSP","SHADE.ALLSP"),
                  #c("HT.PINUS.ALLSP","HT.SHADE.ALLSP","HT.HDWD.ALLSP"),
-                 c("COV.SHRUB","COV.GRASS","COV.FORB"))
+                 c("COV.SHRUB","COV.GRASS"))
 
 p <- list()
 
@@ -2034,9 +2034,9 @@ for(i in 1:length(plot.cats)) {
     facet_wrap(~sp) +
     theme_bw(16) +
     labs(x="Postfire minimum precipitation anomaly (SD)",y=ylab,color="Normal\nprecipitation",fill="Normal\nprecipitation") +
-    scale_color_manual(values=c("turquoise4","darkorange1","gray44")) +
-    scale_fill_manual(values=c("turquoise4","darkorange1","gray44")) +
-    theme(panel.grid.minor = element_blank(),strip.background = element_blank(), panel.border = element_rect(colour = "black",size=0.6), strip.text = element_text(size = 16)) +
+    scale_color_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray44")) +
+    scale_fill_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray44")) +
+    theme(panel.grid.minor = element_blank(),strip.background = element_blank(), panel.border = element_rect(colour = "black",size=0.6), strip.text = element_text(size = 16,vjust=0)) +
     theme(plot.margin = unit(c(-.1,0.5,0,0.5), "cm"))
   
   
@@ -2051,6 +2051,7 @@ for(i in 1:length(plot.cats)) {
 }
 
 
+
 a <- ggplot_gtable(ggplot_build(p[[1]]))
 b <-  ggplot_gtable(ggplot_build(p[[2]]))
 
@@ -2060,7 +2061,7 @@ a$widths[2:3] <- maxWidth
 b$widths[2:3] <- maxWidth
 
 
-tiff(file=paste0("../Figures/FigX_prediction_plots_",Sys.Date(),".tiff"),width=2100,height=1600,res=200) 
+tiff(file=paste0("../Figures/FigX_prediction_plots_",Sys.Date(),".tiff"),width=1600,height=1600,res=200) 
 grid.arrange(a,b,ncol=1,heights=c(1,1))
 dev.off()
 
