@@ -2529,25 +2529,28 @@ names(d.all.sp) <- d.names
 library(vegan)
 
 
-d.all$SolarRadiation <- d.all$solar.rad
-d.all$NormalPrecip <- d.all$ppt.norm
-d.all$NormalTemp <- d.all$temp.norm
+d.all$`Solar Radiation` <- d.all$solar.rad
+d.all$`Normal Precip` <- d.all$ppt.norm
+d.all$`Normal Temp` <- d.all$temp.norm
 
-d.all$PrecipAnom <- d.all$ppt.anom
+d.all$`Precip Anomaly` <- d.all$ppt.anom
 d.all$TempAnom <- d.all$temp.anom
 
 
 
-
+cc0 <- cca(d.all.sp ~ `Precip Anomaly`,data=d.all)
 
 # all non-anomaly, excluding species
-cc1 <- cca(d.all.sp ~ NormalPrecip + NormalTemp + SolarRadiation,data=d.all)
+cc1 <- cca(d.all.sp ~ `Normal Precip` + `Normal Temp` + `Solar Radiation`,data=d.all)
 
 # all non-anomaly, including species
-cc2 <- cca(d.all.sp ~ NormalPrecip + NormalTemp + SolarRadiation + WF+DF+SP+YP,data=d.all)
+cc2 <- cca(d.all.sp ~ `Normal Precip` + `Normal Temp` + `Solar Radiation` + WF+DF+SP+YP,data=d.all)
 
 # all including anomaly, including species
-cc3 <- cca(d.all.sp ~ NormalPrecip + NormalTemp + PrecipAnom + SolarRadiation + WF+DF+SP+YP,data=d.all)
+cc3 <- cca(d.all.sp ~ `Normal Precip` + `Normal Temp` + `Solar Radiation` + `Precip Anomaly` + WF+DF+SP+YP,data=d.all)
+
+cc4 <- cca(d.all.sp ~ `Precip Anomaly` + WF+DF+SP+YP,data=d.all)
+
 
 
 #plot(cc1)
@@ -2566,6 +2569,43 @@ b <- envfit(a,d.focal.nmds)
 
 plot(a,type="t")
 plot(b)
+
+
+
+
+#### 9. Plot the CCA ####
+
+ccadata <- fortify(cc3)
+
+ccadata$Label <- gsub("`","",ccadata$Label)
+
+ccsites <- ccadata[ccadata$Score %in% "sites",]
+ccsp <- ccadata[ccadata$Score %in% "species",]
+ccvects <- ccadata[ccadata$Score %in% "biplot",]
+
+
+ccvects[,1:2] <- 3.8 * ccvects[,1:2]
+
+ccvects.1 <- ccvects
+ccvects.1[,1:2] <- 1.2 * ccvects[,1:2]
+
+p <- ggplot(ccsites,aes(x=Dim1,y=Dim2)) +
+  geom_point(color="darkorange1") +
+  geom_hline(yintercept=0,color="grey") +
+  geom_vline(xintercept=0,color="grey") +
+  theme_bw(14) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  geom_segment(data=ccvects,aes(x=0,xend=Dim1,y=0,yend=Dim2), arrow = arrow(length = unit(0.4, "cm")),size=0.7,colour="grey") +
+  geom_text(data=ccsp,aes(label=Label),color="turquoise4",size=5.5,fontface=2) +
+  lims(x=c(-4,4),y=c(-4.1,4.1)) +
+  geom_text(data=ccvects.1,aes(x=Dim1,y=Dim2,label=Label),size=5) +
+  labs(x="Axis 1",y="Axis 2")
+  
+  
+tiff(file=paste0("../Figures/FigX_CCA_",Sys.Date(),".tiff"),width=1500,height=1500,res=200) 
+p
+dev.off()
+
 
 
 
