@@ -220,24 +220,34 @@ cvfun.fire <- function(formula,data) {
         ## find the cutoff to use for presence/absence, based on the proportion of plots that had presence in the training dataset
         prop.present <- mean(data.train$response.var,na.rm=TRUE)
         
-        #sort plots by predicted probability
-        m.fit.sort <- sort(m.fit,decreasing=TRUE)
-        
-        #what number of them should be presences?
-        num.present <- round(prop.present*sum(!is.na(data.train$response.var)))
-        
-        #what is the probability at that point? use it as the cutoff
-        cutoff <- m.fit.sort[num.present]
-        
-        # comp <- getCompSpecAndSens(data.train$response.var,m.fit)
-        comp <- cutoff
+        # #sort plots by predicted probability
+        # m.fit.sort <- sort(m.fit,decreasing=TRUE)
+        # 
+        # #what number of them should be presences?
+        # num.present <- round(prop.present*sum(!is.na(data.train$response.var)))
+        # 
+        # #what is the probability at that point? use it as the cutoff
+        # cutoff <- m.fit.sort[num.present]
+        # 
+        # # comp <- getCompSpecAndSens(data.train$response.var,m.fit)
+        # comp <- cutoff
+        # 
+        # m.pred <- predict(m,newdat=data.val,type="response")
+        # m.pred.presab <- ifelse(m.pred > comp,1,0)
+        # 
+        # obs <- data.val$response.var
+        # 
+        # err <- 1-mean(m.pred.presab == obs,na.rm=TRUE)
         
         m.pred <- predict(m,newdat=data.val,type="response")
-        m.pred.presab <- ifelse(m.pred > comp,1,0)
-        
         obs <- data.val$response.var
         
-        err <- 1-mean(m.pred.presab == obs,na.rm=TRUE)
+        pred <- mean(m.pred)
+        obs <- mean(obs)
+        
+        err <- abs(pred-obs)      
+        
+        
         
         
       }

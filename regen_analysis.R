@@ -429,7 +429,7 @@ d <- d[d$species %in% keep.sp,]
 
 d <- as.data.table(d)
 
-d.sp.cast <- dcast(d,Fire + topoclim.cat~species,value.var=c("regen.presab.old","adult.ba"))
+d.sp.cast <- data.table::dcast(d,Fire + topoclim.cat~species,value.var=c("regen.presab.old","adult.ba"))
 
 # add the other necessary columns
 keep.cols <- c("Fire","topoclim.cat","SHRUB.highsev","GRASS.highsev","FORB.highsev","count.highsev","count.control")
@@ -472,8 +472,8 @@ d.cat <- d.merge[,list(Fire=Fire,
 #### 7. Plot highsev vs. reference ####
 
 
-d.plot.keep <- merge(d.plot.cat,d.plot.3[,c("Fire","topoclim.cat")])
-
+d.plot.keep <- merge(d.plot.cat,d.plot.3[,c("Fire","topoclim.cat","count.control","count.highsev")])
+d.plot.keep <- d.plot.keep[d.plot.keep$count.control > 4 & d.plot.keep$count.highsev > 4,]
 
 d.plot.keep$topoclim.cat <- gsub(".","",d.plot.keep$topoclim.cat,fixed=TRUE)
 
@@ -492,6 +492,11 @@ p <- ggplot(d.plot.keep,aes(x=ppt.normal,y=rad.march,col=topoclim.cat,shape=FIRE
 Cairo(file=paste0("../Figures/FigS1_ref_vs_highsev",Sys.Date(),".png"),width=2800,height=2000,ppi=200,res=200,dpi=200)
 p
 dev.off()
+
+nrow(d.plot.keep[d.plot.keep$FIRE_SEV.cat == "High severity",])
+nrow(d.plot.keep[d.plot.keep$FIRE_SEV.cat == "Reference",])
+
+
 
 #### 7.1 Number of plots in high seveirty and reference classes ####
 
@@ -808,7 +813,7 @@ sp.opts <- c("SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP")
 cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB")
 
 # All
-ht.opts <- c("HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP")
+ht.opts <- c("HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP","HT.PIPJ","HT.ABCO")
 htabs.opts <- c("HTABS.PIPJ","HTABS.SHRUB","HTABS.ABCO","HTABS.PSME","HTABS.PILA","HTABS.QUKE","HTABS.CADE27","HTABS.HDWD.ALLSP","HTABS.PINUS.ALLSP","HTABS.SHADE.ALLSP")
 htabs.opts <- c("HTABS.PIPJ","HTABS.SHRUB","HTABS.ABCO","HTABS.HDWD.ALLSP","HTABS.PINUS.ALLSP","HTABS.SHADE.ALLSP")
 
@@ -826,7 +831,7 @@ count.opts <- c("COUNT.PINUS.ALLSP","COUNT.SHADE.ALLSP","COUNT.HDWD.ALLSP")
 
 
 resp.opts <- c(count.opts,prop.opts,htabs.opts,sp.opts,cover.opts,ht.opts)
-resp.opts <- c(sp.opts,cover.opts)
+resp.opts <- c(sp.opts,cover.opts,ht.opts,count.opts)
 
 
 do.regression <-TRUE
@@ -938,7 +943,7 @@ for(sp in resp.opts) {
     
   } else if(sp %in% ht.opts){
     
-    # no longer looking only at plots where sp existed in the first place d.c <- d.c[d.c$regen.presab.old == TRUE,] # this is where we select whether we want all plots where the species was present or just old seedlings
+    d.c <- d.c[d.c$regen.presab.old == TRUE,] # this is where we select whether we want all plots where the species was present or just old seedlings
     d.c$response.var <- d.c$seedl.taller
     
   } else if(sp == "HTABS.SHRUB") {
