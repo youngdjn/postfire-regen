@@ -398,15 +398,40 @@ d.plot.ind <- merge(d.plot.ind,d.domsp,all.x=TRUE,by=c("Fire"))
 
 ### fire-level ###
 
-d <- as.data.table(d.plot.ind)
+d <- d.plot.ind
 #d <- merge(d,d.plot.3[,c("Fire","topoclim.cat")]) # keep only the plot data that has corresponding topoclim cats that are being kept (i.e. correct severity, etc.)
 
+keep.sp <- c("ABCO","PIPJ","PILA","PSME","PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP")
+keep.cols <- c("species","regen.presab.old","adult.ba","topoclim.cat","Fire")
+d.sp <- as.data.frame(d.sp)
+d.sp.trim <- d.sp[d.sp$species %in% keep.sp,]
 
-d.fire <- d[,list(fire.year=mean(fire.year),
+#load in fire
+d.sp.trim <- merge(d.sp.trim,d[c("Regen_Plot","Fire")],by="Regen_Plot")
+
+d.sp.trim <- as.data.table(d.sp.trim)
+
+d.sp.cast <- data.table::dcast(d.sp.trim,Regen_Plot~species,value.var=c("regen.presab.old","adult.ba"))
+
+# merge the species data into each plot
+d.merge <- merge(d,d.sp.cast,by="Regen_Plot")
+d.merge <- as.data.table(d.merge)
+
+d.fire <- d.merge[,list(fire.year=mean(fire.year),
                     years.post=paste(sort(unique(survey.years.post)),collapse=", "),
                     nplots=.N,
-                    ppt.norm=summary.string(ppt.normal,decimals=0),
-                    ppt.anom=summary.string(diff.norm.ppt.min.z,decimals=2),
+                    # ppt.norm=summary.string(ppt.normal,decimals=0),
+                    # min.ppt.anom=summary.string(diff.norm.ppt.min.z,decimals=2),
+                    # mean.ppt.anom=summary.string(diff.norm.ppt.z,decimals=2),
+                    
+                    regen.Pinus = 100*round(mean(regen.presab.old_PINUS.ALLSP),digits=2),
+                    regen.Shade = 100*round(mean(regen.presab.old_SHADE.ALLSP),digits=2),
+                    regen.Hdwd = 100*round(mean(regen.presab.old_HDWD.ALLSP),digits=2),
+                    
+                    cov.shrub=summary.string(SHRUB,decimals=0),
+                    cov.forb=summary.string(FORB,decimals=0),
+                    cov.grass=summary.string(GRASS,decimals=0),
+                    
                     dom.sp=first(domsp.comb)
                   ),
                   by=Fire]
@@ -415,6 +440,7 @@ d.fire$Fire <- sapply(d.fire$Fire,FUN= function(x) simpleCap(tolower(x)))
 
 d.fire[d.fire$Fire == "Btu Lightening","Fire"] <- "BTU Lightning"
 
+write.csv(d.fire,"../tables/T1.csv")
 
 
 
@@ -467,6 +493,13 @@ d.cat <- d.merge[,list(Fire=Fire,
                        cov.grass=round(GRASS.highsev,digits=0)
                        )
                   ]
+
+## Fire-level ##
+
+
+write.csv(d.cat,"../tables/topotclim_cat_table.csv")
+
+
 
 
 #### 7. Plot highsev vs. reference ####
@@ -809,7 +842,7 @@ d.c.modfit <- d.c # because the model fitting uses its own d.c
 
 ## Set response options and loop through them
 
-sp.opts <- c("ABCO","SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP","PIPJ")
+sp.opts <- c("ABCO","SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP","PIPJ","PSME","PILA")
 sp.opts <- c("SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP")
 cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB")
 
@@ -817,6 +850,7 @@ cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB")
 ht.opts <- c("HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP","HT.PIPJ","HT.ABCO")
 htabs.opts <- c("HTABS.PIPJ","HTABS.SHRUB","HTABS.ABCO","HTABS.PSME","HTABS.PILA","HTABS.QUKE","HTABS.CADE27","HTABS.HDWD.ALLSP","HTABS.PINUS.ALLSP","HTABS.SHADE.ALLSP")
 htabs.opts <- c("HTABS.PIPJ","HTABS.SHRUB","HTABS.ABCO","HTABS.HDWD.ALLSP","HTABS.PINUS.ALLSP","HTABS.SHADE.ALLSP")
+htabs.opts <- c("HTABS.SHRUB")
 
 prop.opts <- c("PROP.CONIF","PROP.PINUS","PROP.SHADE")
 prop.opts <- NULL
@@ -832,7 +866,7 @@ count.opts <- c("COUNT.PINUS.ALLSP","COUNT.SHADE.ALLSP","COUNT.HDWD.ALLSP")
 
 
 resp.opts <- c(count.opts,prop.opts,htabs.opts,sp.opts,cover.opts,ht.opts)
-resp.opts <- c(sp.opts,cover.opts,ht.opts,count.opts)
+resp.opts <- c(sp.opts,cover.opts,ht.opts,htabs.opts)
 
 
 do.regression <-TRUE
@@ -944,7 +978,7 @@ for(sp in resp.opts) {
     
   } else if(sp %in% ht.opts){
     
-    d.c <- d.c[d.c$regen.presab.old == TRUE,] # this is where we select whether we want all plots where the species was present or just old seedlings
+    #d.c <- d.c[d.c$regen.presab.old == TRUE,] # this is where we select whether we want all plots where the species was present or just old seedlings
     d.c$response.var <- d.c$seedl.taller
     
   } else if(sp == "HTABS.SHRUB") {
@@ -1954,17 +1988,25 @@ pred.dat.plotting$anom.improvement <- round(pred.dat.plotting$anom.improvement,2
 #pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$sp=="PILA",]
 #pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$anom=="Amin",]
 
+pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$sp %in% c("ABCO","COV.GRASS","COV.SHRUB","HDWD.ALLSP","HT.ABCO","HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP","PINUS.ALLSP","PIPJ","SHADE.ALLSP"),]
+pred.dat.plotting <- pred.dat.plotting[!(pred.dat.plotting$anom %in% c("Dmax","Dmean")),]
+
+
 
 ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z_c,y=pred.mid,color=norm.level,fill=norm.level)) +
   geom_point() +
   geom_ribbon(aes(ymin=pred.low,ymax=pred.high),alpha=0.3,color=NA) +
-  facet_wrap(anom~sp,nrow=6,scales="free_y") +
-  geom_text(aes(0,0.8,label=anom.improvement),size=3,color="black")
+  facet_grid(anom~sp,scales="free_y") +
+  geom_text(aes(0,0.8,label=anom.improvement),size=4,color="black") +
+  theme_bw(14)
 
 
 
 
 #### 12. Plot pub-quality counterfactual fits for the 9 main responses ####
+
+anom.var <- "Pmin"
+
 pred.dat.comb <- merge(pred.dat,d.maes.anoms.short,all.x=TRUE,by.x=c("sp","anom"),by.y=c("sp","anom.name"))
 
 
@@ -1988,8 +2030,34 @@ for(col.name in names(pred.dat.comb)) {
 }
 
 
+
 pred.dat.comb <- data.table(pred.dat.comb)
-pred.dat.comb <- pred.dat.comb[anom=="Pmin"]
+pred.dat.comb <- pred.dat.comb[anom==anom.var]
+
+if(anom.var == "Pmin") {
+  anom.var.c <- "diff.norm.ppt.min.z_c"
+  anom.var.nc <- "diff.norm.ppt.min.z"
+}
+
+if(anom.var == "Pmean") {
+  anom.var.c <- "diff.norm.ppt.z_c"
+  anom.var.nc <- "diff.norm.ppt.z"
+}
+
+if(anom.var == "Amin") {
+  anom.var.c <- "diff.norm.aet.min.z_c"
+  anom.var.nc <- "diff.norm.aet.min.z"
+}
+
+if(anom.var == "Amean") {
+  anom.var.c <- "diff.norm.aet.z_c"
+  anom.var.nc <- "diff.norm.aet.z"
+}
+
+
+#for plotting a vertical line at the average anomaly value across all surveyed plots
+anom.mid <- d.center.dat[d.center.dat$var == anom.var.c,"var.mean"]
+
 
 ### for those normal models that are not null, include low and high norm levels; for those that are, include only mid
 pred.dat.comb$norm.beg <- substr(pred.dat.comb$mod,1,2)
@@ -1997,8 +2065,10 @@ pred.dat.comb$norm.beg <- substr(pred.dat.comb$mod,1,2)
 pred.dat.comb <- pred.dat.comb[(norm.beg != "n0" & norm.level %in% c("low","high")) | (norm.beg == "n0" & norm.level == "mid")]
 
 
-pred.dat.comb[pred.dat.comb$sp %in% cover.opts,c("pred.mid","pred.low","pred.high")] <- 100 * pred.dat.comb[pred.dat.comb$sp %in% cover.opts,c("pred.mid","pred.low","pred.high")]
+pred.dat.comb[,c("pred.mid","pred.low","pred.high")] <- 100 * pred.dat.comb[,c("pred.mid","pred.low","pred.high")] # convert to percentages
 
+
+pred.dat.comb$anom.var <- pred.dat.comb[,anom.var.nc,with=FALSE]
 
 
 levels(pred.dat.comb$norm.level)
@@ -2047,7 +2117,8 @@ for(i in 1:length(plot.cats)) {
     scale_color_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray44")) +
     scale_fill_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray44")) +
     theme(panel.grid.minor = element_blank(),strip.background = element_blank(), panel.border = element_rect(colour = "black",size=0.6), strip.text = element_text(size = 16,vjust=0)) +
-    theme(plot.margin = unit(c(-.1,0.5,0,0.5), "cm"))
+    theme(plot.margin = unit(c(-.1,0.5,0,0.5), "cm")) +
+    geom_vline(xintercept=anom.mid,linetype="longdash")
   
   
   if(i == 2) {
@@ -2095,9 +2166,9 @@ cv.err.melt <- melt(cv.errors,id.vars=c("Species","Variable"),measure.vars=c("Ba
 
 cv.err.cast <- dcast(cv.err.melt,Species~Variable+type,value.var="value",fun=mean)
 
-cv.err.cast[,-1] <- round(cv.err.cast[,-1],2)
+cv.err.cast[,2:13] <- round(cv.err.cast[,2:13],2)
 
-
+write.csv(cv.err.cast,"../tables/cv_err.csv")
 
 
 
@@ -2131,7 +2202,7 @@ for(i in 1:nrow(d.maes.anoms)) {
   m.norm <- fit.mods[[paste0(sp,"_",norm.mod)]]
   m.anom <- fit.mods[[paste0(sp,"_",anom.mod)]]
   
-  if(sp %in% c(sp.opts,ht.opts)) {
+  if(sp %in% c(sp.opts,ht.opts,htabs.opts,count.opts)) { # glm regression (not betareg)
     
     anom.coefs <- as.data.frame(summary(m.anom)$coefficients[,1:2],optional=TRUE)
     anom.coefs$var.name <- row.names(anom.coefs)
@@ -2195,6 +2266,15 @@ coefs.cast <- rbind.fill(coefs.cast,dummy.df)
 coefs.cast <- as.data.table(coefs.cast)
 
 coefs.cast <- coefs.cast[,c("sp","variable","type",Intercept="(Intercept)","normal_c","normal_c.sq",seed.tree="seed_tree_distance_general_c","rad.march_c","diff.norm.z_c","diff.norm.z_c.sq","normal_c:diff.norm.z_c","normal_c:diff.norm.z_c.sq","(phi)"),with=FALSE]
+
+
+responses.keep <- c("ABCO","PIPJ","PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","COV.SHRUB","COV.GRASS","HT.PINUS.ALLSP","HT.SHADE.ALLSP","HT.HDWD.ALLSP")
+anoms.keep <- c("Amin","Amean","Pmin","Pmean")
+
+coefs.cast <- coefs.cast[coefs.cast$sp %in% responses.keep & coefs.cast$variable %in% anoms.keep,]
+
+
+##!! need to make species names and anomaly names friendly, also drop replicated AET (min and mean) baselines
 
 
 
@@ -2558,12 +2638,48 @@ cc3 <- cca(d.all.sp ~ `Normal Precip` + `Normal Temp` + `Solar Radiation` + `Pre
 cc4 <- cca(d.all.sp ~ `Precip Anomaly` + WF+DF+SP+YP,data=d.all)
 
 
+cc.full <- cca(d.all.sp ~ `Normal Precip` + `Normal Temp` + `Solar Radiation` + `Precip Anomaly` + WF+DF+SP+YP,data=d.all)
+cc.np <- cca(d.all.sp ~ `Normal Temp` + `Solar Radiation` + `Precip Anomaly` + WF+DF+SP+YP,data=d.all)
+cc.nt <- cca(d.all.sp ~ `Normal Precip` +`Solar Radiation` + `Precip Anomaly` + WF+DF+SP+YP,data=d.all)
+cc.sr <- cca(d.all.sp ~ `Normal Precip` + `Normal Temp` + `Precip Anomaly` + WF+DF+SP+YP,data=d.all)
+cc.pa <- cca(d.all.sp ~ `Normal Precip` + `Normal Temp` + `Solar Radiation` + WF+DF+SP+YP,data=d.all)
+cc.wf <- cca(d.all.sp ~ `Normal Precip` + `Normal Temp` + `Solar Radiation` + `Precip Anomaly` + DF+SP+YP,data=d.all)
+cc.df <- cca(d.all.sp ~ `Normal Precip` + `Normal Temp` + `Solar Radiation` + `Precip Anomaly` + WF+SP+YP,data=d.all)
+cc.sp <- cca(d.all.sp ~ `Normal Precip` + `Normal Temp` + `Solar Radiation` + `Precip Anomaly` + WF+DF+YP,data=d.all)
+cc.yp <- cca(d.all.sp ~ `Normal Precip` + `Normal Temp` + `Solar Radiation` + `Precip Anomaly` + WF+DF+SP,data=d.all)
+cc.nosp <- cca(d.all.sp ~ `Normal Precip` + `Normal Temp` + `Solar Radiation` + `Precip Anomaly`,data=d.all)
+
+
+cc.full
+cc.np
+cc.nt
+cc.sr
+cc.pa
+cc.wf
+cc.df
+cc.sp
+cc.yp
+cc.nosp
+
+
+
+
+
+
+
+
+
 
 #plot(cc1)
 #plot(cc2,choices=c(1,2))
 #plot(cc2b,choices=c(1,2))
 plot(cc3,choices=c(1,2))
 
+
+cc0 <- cca(d.all.sp~1,d.all)
+
+
+a <-step(cc3,scope=formula(cc3),test="perm",perm.max=100)
 
 vars.focal.nmds <- c("NormalPrecip","NormalTemp","PrecipAnom","SolarRadiation","DF","YP","WF","SP")
 d.focal.nmds <- d.all[,vars.focal.nmds]

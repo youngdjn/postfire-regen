@@ -1,694 +1,209 @@
 
 
-#####Running model for:  ABCO #####
-
-
-[1] "Anom mod"
-                 (Intercept)                  rad.march_c seed_tree_distance_general_c                 ppt.normal_c            diff.norm.ppt.z_c 
-                  -0.2899502                   -0.7662790                    0.1030802                    1.5842472                   -0.7488630 
-        diff.norm.ppt.z_c.sq              ppt.normal_c.sq 
-                  -1.4689017                   -0.6981324 
-[1] "Norm mod"
-                 (Intercept)                  rad.march_c seed_tree_distance_general_c                 ppt.normal_c              ppt.normal_c.sq 
-                  -1.9036098                   -0.8107116                    0.1629729                    1.2641836                   -0.3898148 
-[1] "Anom mod"
-      (Intercept)       rad.march_c      def.normal_c diff.norm.def.z_c 
-       -2.2896439        -0.8695843        -1.1814125        -0.1371343 
-[1] "Norm mod"
- (Intercept)  rad.march_c def.normal_c 
-  -2.3009507   -0.8875808   -1.2515483 
-[1] "Anom mod"
-                      (Intercept)                       rad.march_c                      aet.normal_c                 diff.norm.aet.z_c 
-                      -0.91149984                       -0.74306863                       -1.05849422                        0.07392428 
-             diff.norm.aet.z_c.sq                   aet.normal_c.sq    aet.normal_c:diff.norm.aet.z_c aet.normal_c:diff.norm.aet.z_c.sq 
-                       0.10099350                       -2.54762884                        1.30792079                        0.52835860 
-[1] "Norm mod"
-    (Intercept)     rad.march_c    aet.normal_c aet.normal_c.sq 
-     -1.1708031      -0.8152649       0.3530875      -0.9438758 
-[1] "Anom mod"
-                 (Intercept)                  rad.march_c seed_tree_distance_general_c                 ppt.normal_c        diff.norm.ppt.min.z_c 
-                 -1.91140174                  -0.75232441                   0.08024889                   1.11454093                   0.32810361 
-             ppt.normal_c.sq 
-                 -0.38212552 
-[1] "Norm mod"
-                 (Intercept)                  rad.march_c seed_tree_distance_general_c                 ppt.normal_c              ppt.normal_c.sq 
-                  -1.9036098                   -0.8107116                    0.1629729                    1.2641836                   -0.3898148 
-[1] "Anom mod"
-          (Intercept)           rad.march_c          def.normal_c diff.norm.def.max.z_c 
-           -2.2877870            -0.8426377            -1.0782900            -0.3123602 
-[1] "Norm mod"
- (Intercept)  rad.march_c def.normal_c 
-  -2.3009507   -0.8875808   -1.2515483 
-[1] "Anom mod"
-                       (Intercept)                        rad.march_c                       aet.normal_c              diff.norm.aet.min.z_c 
-                        -1.1930559                         -0.6960067                         -0.1443609                          0.2900002 
-                   aet.normal_c.sq aet.normal_c:diff.norm.aet.min.z_c 
-                        -1.6815979                          1.0460623 
-[1] "Norm mod"
-    (Intercept)     rad.march_c    aet.normal_c aet.normal_c.sq 
-     -1.1708031      -0.8152649       0.3530875      -0.9438758 
-
-
-#####Running model for:  SHADE.ALLSP #####
-
-
-[1] "Anom mod"
-                      (Intercept)                       rad.march_c                      ppt.normal_c                 diff.norm.ppt.z_c 
-                       -0.4891654                        -0.7301711                         1.7860317                        -0.7399695 
-             diff.norm.ppt.z_c.sq                   ppt.normal_c.sq    ppt.normal_c:diff.norm.ppt.z_c ppt.normal_c:diff.norm.ppt.z_c.sq 
-                       -0.9701034                        -0.7551576                         0.3320900                        -0.4158227 
-[1] "Norm mod"
-    (Intercept)     rad.march_c    ppt.normal_c ppt.normal_c.sq 
-     -1.6873290      -0.8418937       1.0291474      -0.3412890 
-[1] "Anom mod"
-      (Intercept)       rad.march_c      def.normal_c diff.norm.def.z_c 
-       -2.0392298        -0.8867321        -0.9477739        -0.2047093 
-[1] "Norm mod"
- (Intercept)  rad.march_c def.normal_c 
-   -2.045139    -0.907432    -1.043352 
-[1] "Anom mod"
-                      (Intercept)                       rad.march_c                      aet.normal_c                 diff.norm.aet.z_c 
-                      -0.76717695                       -0.83215713                       -0.99984651                        0.21562415 
-             diff.norm.aet.z_c.sq                   aet.normal_c.sq    aet.normal_c:diff.norm.aet.z_c aet.normal_c:diff.norm.aet.z_c.sq 
-                      -0.05442317                       -2.07607161                        1.09687425                        0.45863047 
-[1] "Norm mod"
-    (Intercept)     rad.march_c    aet.normal_c aet.normal_c.sq 
-     -1.0428705      -0.8587887       0.2526276      -0.8886621 
-[1] "Anom mod"
-          (Intercept)           rad.march_c          ppt.normal_c diff.norm.ppt.min.z_c       ppt.normal_c.sq 
-           -1.7047820            -0.7819213             0.8694483             0.3849163            -0.3357717 
-[1] "Norm mod"
-    (Intercept)     rad.march_c    ppt.normal_c ppt.normal_c.sq 
-     -1.6873290      -0.8418937       1.0291474      -0.3412890 
-[1] "Anom mod"
-          (Intercept)           rad.march_c          def.normal_c diff.norm.def.max.z_c 
-           -2.0479728            -0.8648348            -0.8724607            -0.3485355 
-[1] "Norm mod"
- (Intercept)  rad.march_c def.normal_c 
-   -2.045139    -0.907432    -1.043352 
-[1] "Anom mod"
-                       (Intercept)                        rad.march_c                       aet.normal_c              diff.norm.aet.min.z_c 
-                        -1.1159862                         -0.7519643                         -0.2064970                          0.4000648 
-                   aet.normal_c.sq aet.normal_c:diff.norm.aet.min.z_c 
-                        -1.3580689                          0.7578783 
-[1] "Norm mod"
-    (Intercept)     rad.march_c    aet.normal_c aet.normal_c.sq 
-     -1.0428705      -0.8587887       0.2526276      -0.8886621 
-
-
-#####Running model for:  PINUS.ALLSP #####
-
-
-[1] "Anom mod"
-      (Intercept)       rad.march_c      ppt.normal_c diff.norm.ppt.z_c 
-       -1.3007816        -0.2658103         0.2745365         0.1037731 
-[1] "Norm mod"
- (Intercept)  rad.march_c ppt.normal_c 
-  -1.2985151   -0.2528734    0.2818797 
-[1] "Anom mod"
-                      (Intercept)                       rad.march_c                      def.normal_c                 diff.norm.def.z_c 
-                       -1.6288524                        -0.1032393                        -0.3615446                        -0.8065914 
-             diff.norm.def.z_c.sq    def.normal_c:diff.norm.def.z_c def.normal_c:diff.norm.def.z_c.sq 
-                        0.7582551                        -0.5384426                         0.7691276 
-[1] "Norm mod"
- (Intercept)  rad.march_c def.normal_c 
-  -1.3020096   -0.2761115   -0.3128241 
-[1] "Anom mod"
-         (Intercept)          rad.march_c         aet.normal_c    diff.norm.aet.z_c diff.norm.aet.z_c.sq 
-         -1.60411695          -0.22698828           0.46606175           0.01157252           0.25014406 
-[1] "Norm mod"
- (Intercept)  rad.march_c aet.normal_c 
-  -1.3383424   -0.2892415    0.4912083 
-[1] "Anom mod"
-          (Intercept)           rad.march_c          ppt.normal_c diff.norm.ppt.min.z_c 
-           -1.3022898            -0.2252521             0.2314807             0.1473333 
-[1] "Norm mod"
- (Intercept)  rad.march_c ppt.normal_c 
-  -1.2985151   -0.2528734    0.2818797 
-[1] "Anom mod"
-                          (Intercept)                           rad.march_c                          def.normal_c                 diff.norm.def.max.z_c 
-                          -1.58596850                           -0.03112899                           -0.26777782                           -0.55565049 
-             diff.norm.def.max.z_c.sq    def.normal_c:diff.norm.def.max.z_c def.normal_c:diff.norm.def.max.z_c.sq 
-                           1.16457237                           -0.27866083                            1.18854417 
-[1] "Norm mod"
- (Intercept)  rad.march_c def.normal_c 
-  -1.3020096   -0.2761115   -0.3128241 
-[1] "Anom mod"
-          (Intercept)           rad.march_c          aet.normal_c diff.norm.aet.min.z_c 
-           -1.3459164            -0.2562695             0.4168121             0.1755790 
-[1] "Norm mod"
- (Intercept)  rad.march_c aet.normal_c 
-  -1.3383424   -0.2892415    0.4912083 
-
-
-#####Running model for:  HDWD.ALLSP #####
-
-
-[1] "Anom mod"
-                   (Intercept)   seed_tree_distance_general_c                   ppt.normal_c              diff.norm.ppt.z_c                ppt.normal_c.sq 
-                    -0.1230411                     -0.7684877                      0.4227181                      0.4013368                     -1.6062283 
-ppt.normal_c:diff.norm.ppt.z_c 
-                    -0.7742925 
-[1] "Norm mod"
-                 (Intercept) seed_tree_distance_general_c                 ppt.normal_c              ppt.normal_c.sq 
-                   0.1219435                   -0.7735883                    0.7336722                   -1.9057592 
-[1] "Anom mod"
-                   (Intercept)   seed_tree_distance_general_c                   def.normal_c              diff.norm.def.z_c                def.normal_c.sq 
-                    0.67690064                    -0.82114712                    -1.17630249                    -0.09164015                    -3.92820889 
-def.normal_c:diff.norm.def.z_c 
-                   -0.41299558 
-[1] "Norm mod"
-                 (Intercept) seed_tree_distance_general_c                 def.normal_c              def.normal_c.sq 
-                   0.6068449                   -0.8569691                   -1.3633018                   -4.1117917 
-[1] "Anom mod"
-                 (Intercept) seed_tree_distance_general_c                 aet.normal_c            diff.norm.aet.z_c              aet.normal_c.sq 
-                  -1.5530666                   -0.5122053                    2.5765124                   -0.4209989                   -0.7967738 
-[1] "Norm mod"
-                 (Intercept) seed_tree_distance_general_c                 aet.normal_c              aet.normal_c.sq 
-                  -1.5070227                   -0.5747839                    2.1263060                   -0.6660712 
-[1] "Anom mod"
-                 (Intercept) seed_tree_distance_general_c                 ppt.normal_c        diff.norm.ppt.min.z_c              ppt.normal_c.sq 
-                   0.1576360                   -0.7238863                    0.8724740                   -0.4311784                   -2.0599425 
-[1] "Norm mod"
-                 (Intercept) seed_tree_distance_general_c                 ppt.normal_c              ppt.normal_c.sq 
-                   0.1219435                   -0.7735883                    0.7336722                   -1.9057592 
-[1] "Anom mod"
-                 (Intercept) seed_tree_distance_general_c                 def.normal_c        diff.norm.def.max.z_c     diff.norm.def.max.z_c.sq 
-                  0.52995617                  -0.72659236                  -1.11752243                  -0.08239445                   0.57944230 
-             def.normal_c.sq 
-                 -5.86773993 
-[1] "Norm mod"
-                 (Intercept) seed_tree_distance_general_c                 def.normal_c              def.normal_c.sq 
-                   0.6068449                   -0.8569691                   -1.3633018                   -4.1117917 
-[1] "Anom mod"
-                 (Intercept) seed_tree_distance_general_c                 aet.normal_c        diff.norm.aet.min.z_c     diff.norm.aet.min.z_c.sq 
-                 -1.20706861                  -0.60401509                   2.33898740                  -0.08551171                  -0.66073470 
-             aet.normal_c.sq 
-                 -0.17872976 
-[1] "Norm mod"
-                 (Intercept) seed_tree_distance_general_c                 aet.normal_c              aet.normal_c.sq 
-                  -1.5070227                   -0.5747839                    2.1263060                   -0.6660712 
-
-
-#####Running model for:  PIPJ #####
-
-
-[1] "Anom mod"
-                 (Intercept)                  rad.march_c seed_tree_distance_general_c            diff.norm.ppt.z_c 
-                 -1.51599343                  -0.15741185                  -0.01259192                  -0.02322876 
-[1] "Norm mod"
-                 (Intercept)                  rad.march_c seed_tree_distance_general_c 
-                 -1.51579302                  -0.16089494                  -0.01568457 
-[1] "Anom mod"
-                 (Intercept)                  rad.march_c seed_tree_distance_general_c            diff.norm.def.z_c         diff.norm.def.z_c.sq 
-                -1.858653105                 -0.058578557                  0.009576410                 -0.003626598                  0.307641981 
-[1] "Norm mod"
-                 (Intercept)                  rad.march_c seed_tree_distance_general_c 
-                 -1.51579302                  -0.16089494                  -0.01568457 
-[1] "Anom mod"
-                 (Intercept)                  rad.march_c seed_tree_distance_general_c            diff.norm.aet.z_c 
-                 -1.51802959                  -0.16035717                  -0.02385153                   0.08607860 
-[1] "Norm mod"
-                 (Intercept)                  rad.march_c seed_tree_distance_general_c 
-                 -1.51579302                  -0.16089494                  -0.01568457 
-[1] "Anom mod"
-                 (Intercept)                  rad.march_c seed_tree_distance_general_c        diff.norm.ppt.min.z_c 
-                 -1.51585775                  -0.16301707                  -0.01356140                  -0.01489372 
-[1] "Norm mod"
-                 (Intercept)                  rad.march_c seed_tree_distance_general_c 
-                 -1.51579302                  -0.16089494                  -0.01568457 
-[1] "Anom mod"
-                 (Intercept)                  rad.march_c seed_tree_distance_general_c        diff.norm.def.max.z_c 
-                -1.516886051                 -0.167532319                 -0.006685061                  0.061250339 
-[1] "Norm mod"
-                 (Intercept)                  rad.march_c seed_tree_distance_general_c 
-                 -1.51579302                  -0.16089494                  -0.01568457 
-[1] "Anom mod"
-                 (Intercept)                  rad.march_c seed_tree_distance_general_c        diff.norm.aet.min.z_c 
-                 -1.52089033                  -0.14300214                  -0.03342661                   0.13059343 
-[1] "Norm mod"
-                 (Intercept)                  rad.march_c seed_tree_distance_general_c 
-                 -1.51579302                  -0.16089494                  -0.01568457 
-
-
-#####Running model for:  COV.SHRUB #####
-
-
-[1] "Anom mod"
-         (Intercept)    diff.norm.ppt.z_c diff.norm.ppt.z_c.sq                (phi) 
-          -0.9760461           -0.1267866            0.3496384            1.7400643 
-[1] "Norm mod"
-(Intercept)       (phi) 
- -0.6065092   1.6238019 
-[1] "Anom mod"
-                   (Intercept)                   def.normal_c              diff.norm.def.z_c                def.normal_c.sq def.normal_c:diff.norm.def.z_c 
-                   -0.51500112                    -0.15753280                     0.03871921                    -0.05436146                    -0.20175629 
-                         (phi) 
-                    1.76806370 
-[1] "Norm mod"
-    (Intercept)    def.normal_c def.normal_c.sq           (phi) 
-    -0.53364244     -0.14551488     -0.09621619      1.71227128 
-[1] "Anom mod"
-      (Intercept)      aet.normal_c diff.norm.aet.z_c             (phi) 
-       -0.7184831         0.2573924        -0.1524425         1.9113992 
-[1] "Norm mod"
- (Intercept) aet.normal_c        (phi) 
-  -0.7226468    0.1593968    1.8857919 
-[1] "Anom mod"
-             (Intercept)    diff.norm.ppt.min.z_c diff.norm.ppt.min.z_c.sq                    (phi) 
-              -0.8821957               -0.1540518                0.2140750                1.8619595 
-[1] "Norm mod"
-(Intercept)       (phi) 
- -0.6379325   1.7131829 
-[1] "Anom mod"
-                       (Intercept)                       def.normal_c              diff.norm.def.max.z_c                    def.normal_c.sq 
-                      -0.666579305                       -0.194590476                        0.122540029                        0.004684344 
-def.normal_c:diff.norm.def.max.z_c                              (phi) 
-                      -0.180040028                        1.935857462 
-[1] "Norm mod"
-    (Intercept)    def.normal_c def.normal_c.sq           (phi) 
-     -0.6227704      -0.1043514      -0.0720231       1.8295105 
-[1] "Anom mod"
-             (Intercept)             aet.normal_c    diff.norm.aet.min.z_c diff.norm.aet.min.z_c.sq                    (phi) 
-              -0.8098430                0.2861660               -0.3119439                0.1587184                1.8625657 
-[1] "Norm mod"
- (Intercept) aet.normal_c        (phi) 
-  -0.6254263    0.2120888    1.7450147 
-
-
-#####Running model for:  COV.GRASS #####
-
-
-[1] "Anom mod"
-      (Intercept)       rad.march_c      ppt.normal_c diff.norm.ppt.z_c   ppt.normal_c.sq             (phi) 
-      -2.10150754        0.14650417       -0.55804047        0.05695615        0.16000530        3.18842722 
-[1] "Norm mod"
-    (Intercept)     rad.march_c    ppt.normal_c ppt.normal_c.sq           (phi) 
-     -2.0918585       0.1586625      -0.5524441       0.1533319       3.1741785 
-[1] "Anom mod"
-      (Intercept)       rad.march_c      def.normal_c diff.norm.def.z_c   def.normal_c.sq             (phi) 
-    -2.0633056424      0.2282870240      0.5215708529     -0.0006273123      0.1327796015      3.2882540702 
-[1] "Norm mod"
-    (Intercept)     rad.march_c    def.normal_c def.normal_c.sq           (phi) 
-     -2.0634132       0.2282491       0.5213421       0.1328910       3.2883059 
-[1] "Anom mod"
-      (Intercept)       rad.march_c      aet.normal_c diff.norm.aet.z_c   aet.normal_c.sq             (phi) 
-     -2.293690004       0.251106835      -0.220963208      -0.008975315       0.409903870       2.941059776 
-[1] "Norm mod"
-    (Intercept)     rad.march_c    aet.normal_c aet.normal_c.sq           (phi) 
-     -2.2936617       0.2521539      -0.2261290       0.4094653       2.9408341 
-[1] "Anom mod"
-                       (Intercept)                        rad.march_c                       ppt.normal_c              diff.norm.ppt.min.z_c 
-                       -2.15214500                         0.18613405                        -0.55141278                        -0.02879593 
-                   ppt.normal_c.sq ppt.normal_c:diff.norm.ppt.min.z_c                              (phi) 
-                        0.18028081                         0.06185506                         3.22055516 
-[1] "Norm mod"
-    (Intercept)     rad.march_c    ppt.normal_c ppt.normal_c.sq           (phi) 
-     -2.1459876       0.1812461      -0.5478836       0.1966232       3.2112063 
-[1] "Anom mod"
-          (Intercept)           rad.march_c          def.normal_c diff.norm.def.max.z_c       def.normal_c.sq                 (phi) 
-          -2.06752691            0.22562868            0.50139416            0.03699344            0.05327905            3.45332174 
-[1] "Norm mod"
-    (Intercept)     rad.march_c    def.normal_c def.normal_c.sq           (phi) 
-    -2.05516050      0.23130607      0.51565698      0.04184001      3.45056859 
-[1] "Anom mod"
-             (Intercept)              rad.march_c             aet.normal_c    diff.norm.aet.min.z_c diff.norm.aet.min.z_c.sq          aet.normal_c.sq 
-            -2.249865830              0.032392287             -0.045009245              0.006011665             -0.243022067              0.516891485 
-                   (phi) 
-             3.334745502 
-[1] "Norm mod"
-    (Intercept)     rad.march_c    aet.normal_c aet.normal_c.sq           (phi) 
-     -2.4337321       0.1215774      -0.1682419       0.4624050       3.2428407 
-
-
-#####Running model for:  COV.FORB #####
-
-
-[1] "Anom mod"
-      (Intercept)      ppt.normal_c diff.norm.ppt.z_c   ppt.normal_c.sq             (phi) 
-      -2.00773788       -0.02578125        0.11354398        0.09016848        3.72590733 
-[1] "Norm mod"
-    (Intercept)    ppt.normal_c ppt.normal_c.sq           (phi) 
-   -1.983127234    -0.004232666     0.072437206     3.676504303 
-[1] "Anom mod"
-         (Intercept)          rad.march_c    diff.norm.def.z_c diff.norm.def.z_c.sq                (phi) 
-       -2.2299299326         0.0005172738        -0.0189251643        -0.0274744374         5.3475925632 
-[1] "Norm mod"
-(Intercept) rad.march_c       (phi) 
--2.25626021  0.00719049  5.34007169 
-[1] "Anom mod"
-      (Intercept)       rad.march_c diff.norm.aet.z_c             (phi) 
-      -2.09213770        0.08238896        0.02863425        4.71902313 
-[1] "Norm mod"
-(Intercept) rad.march_c       (phi) 
--2.09182106  0.07993066  4.71407894 
-[1] "Anom mod"
-             (Intercept)             ppt.normal_c    diff.norm.ppt.min.z_c diff.norm.ppt.min.z_c.sq          ppt.normal_c.sq                    (phi) 
-             -2.08283009              -0.05264166              -0.01235139              -0.03218427               0.10364956               4.13346384 
-[1] "Norm mod"
-    (Intercept)    ppt.normal_c ppt.normal_c.sq           (phi) 
-    -2.11153017     -0.08330981      0.10062592      4.12810661 
-[1] "Anom mod"
-          (Intercept)           rad.march_c diff.norm.def.max.z_c                 (phi) 
-          -2.07950646            0.00933070           -0.06567205            4.70857638 
-[1] "Norm mod"
-  (Intercept)   rad.march_c         (phi) 
--2.0777786775 -0.0004319205  4.6852314878 
-[1] "Anom mod"
-             (Intercept)              rad.march_c    diff.norm.aet.min.z_c diff.norm.aet.min.z_c.sq                    (phi) 
-             -2.02330886              -0.00301675               0.09932735              -0.09029032               5.07962188 
-[1] "Norm mod"
-(Intercept) rad.march_c       (phi) 
--2.11500704  0.01509036  5.02422931 
-
-
 #####Running model for:  HT.HDWD.ALLSP #####
 
 
 [1] "Anom mod"
-         (Intercept)    diff.norm.ppt.z_c diff.norm.ppt.z_c.sq 
-          2.70650775          -0.07992916          -0.68275998 
+                   (Intercept)                   ppt.normal_c              diff.norm.ppt.z_c                ppt.normal_c.sq ppt.normal_c:diff.norm.ppt.z_c 
+                    -0.4082645                      0.4014435                      0.3089589                     -1.5057922                     -0.7755498 
 [1] "Norm mod"
-(Intercept) 
-   1.740466 
+    (Intercept)    ppt.normal_c ppt.normal_c.sq 
+     -0.1950875       0.6432470      -1.7242489 
 [1] "Anom mod"
-      (Intercept) diff.norm.def.z_c 
-        1.7881115        -0.3163035 
+                   (Intercept)                   def.normal_c              diff.norm.def.z_c                def.normal_c.sq def.normal_c:diff.norm.def.z_c 
+                     0.2646716                     -0.7588989                     -0.2342326                     -3.0963354                     -0.6202341 
 [1] "Norm mod"
-(Intercept) 
-   1.740466 
+    (Intercept)    def.normal_c def.normal_c.sq 
+      0.1625902      -1.0417401      -3.3558337 
 [1] "Anom mod"
-      (Intercept) diff.norm.aet.z_c 
-        1.7099020         0.1599026 
+      (Intercept)      aet.normal_c diff.norm.aet.z_c   aet.normal_c.sq 
+       -1.7559467         2.5198224        -0.3906010        -0.8641811 
 [1] "Norm mod"
-(Intercept) 
-   1.740466 
+    (Intercept)    aet.normal_c aet.normal_c.sq 
+     -1.7239949       2.0697405      -0.6670813 
 [1] "Anom mod"
-          (Intercept) diff.norm.ppt.min.z_c 
-            1.8637396             0.3428935 
+                       (Intercept)                       ppt.normal_c              diff.norm.ppt.min.z_c                    ppt.normal_c.sq 
+                      -0.071507047                        0.613219569                        0.003280298                       -1.881704279 
+ppt.normal_c:diff.norm.ppt.min.z_c 
+                      -0.497561237 
 [1] "Norm mod"
-(Intercept) 
-   1.740466 
+    (Intercept)    ppt.normal_c ppt.normal_c.sq 
+     -0.1950875       0.6432470      -1.7242489 
 [1] "Anom mod"
-          (Intercept) diff.norm.def.max.z_c 
-             1.872998             -0.303328 
+             (Intercept)             def.normal_c    diff.norm.def.max.z_c diff.norm.def.max.z_c.sq          def.normal_c.sq 
+              0.09806967              -0.88098787              -0.05760777               0.49690935              -4.88111128 
 [1] "Norm mod"
-(Intercept) 
-   1.740466 
+    (Intercept)    def.normal_c def.normal_c.sq 
+      0.1625902      -1.0417401      -3.3558337 
 [1] "Anom mod"
-          (Intercept) diff.norm.aet.min.z_c 
-            1.7440267             0.1693905 
+             (Intercept)             aet.normal_c    diff.norm.aet.min.z_c diff.norm.aet.min.z_c.sq          aet.normal_c.sq 
+              -1.4893983                2.2473689               -0.1923243               -0.4247228               -0.4144670 
 [1] "Norm mod"
-(Intercept) 
-   1.740466 
+    (Intercept)    aet.normal_c aet.normal_c.sq 
+     -1.7239949       2.0697405      -0.6670813 
 
 
 #####Running model for:  HT.PINUS.ALLSP #####
 
 
 [1] "Anom mod"
-      (Intercept)       rad.march_c diff.norm.ppt.z_c 
-      -0.44545042        0.35724833       -0.02823546 
+      (Intercept) diff.norm.ppt.z_c 
+       -2.4770824         0.1345231 
 [1] "Norm mod"
-(Intercept) rad.march_c 
- -0.4491216   0.3534036 
+(Intercept) 
+  -2.468513 
 [1] "Anom mod"
-      (Intercept)       rad.march_c diff.norm.def.z_c 
-       -0.4221030         0.3412584         0.1544775 
+      (Intercept) diff.norm.def.z_c 
+       -2.4711898        -0.0664808 
 [1] "Norm mod"
-(Intercept) rad.march_c 
- -0.4491216   0.3534036 
+(Intercept) 
+  -2.468513 
 [1] "Anom mod"
-         (Intercept)          rad.march_c    diff.norm.aet.z_c diff.norm.aet.z_c.sq 
-          -0.6777213            0.4422127           -0.3500400            0.2375640 
+         (Intercept)         aet.normal_c    diff.norm.aet.z_c diff.norm.aet.z_c.sq 
+          -2.8495798            0.3789357           -0.1650986            0.2923825 
 [1] "Norm mod"
-(Intercept) rad.march_c 
- -0.4491216   0.3534036 
+ (Intercept) aet.normal_c 
+  -2.4966625    0.2640975 
 [1] "Anom mod"
-             (Intercept)              rad.march_c    diff.norm.ppt.min.z_c diff.norm.ppt.min.z_c.sq 
-               0.1308556                0.1996035                0.1483772               -0.5098826 
+          (Intercept) diff.norm.ppt.min.z_c 
+           -2.4816763             0.1676868 
 [1] "Norm mod"
-(Intercept) rad.march_c 
- -0.4491216   0.3534036 
+(Intercept) 
+  -2.468513 
 [1] "Anom mod"
-          (Intercept)           rad.march_c diff.norm.def.max.z_c 
-          -0.43664019            0.34192281            0.06714517 
+          (Intercept) diff.norm.def.max.z_c 
+           -2.4767013            -0.1301319 
 [1] "Norm mod"
-(Intercept) rad.march_c 
- -0.4491216   0.3534036 
+(Intercept) 
+  -2.468513 
 [1] "Anom mod"
-          (Intercept)           rad.march_c diff.norm.aet.min.z_c 
-           -0.3909408             0.3199580            -0.2351023 
+          (Intercept)          aet.normal_c diff.norm.aet.min.z_c 
+         -2.496670140           0.262934978           0.003002268 
 [1] "Norm mod"
-(Intercept) rad.march_c 
- -0.4491216   0.3534036 
+ (Intercept) aet.normal_c 
+  -2.4966625    0.2640975 
 
 
 #####Running model for:  HT.SHADE.ALLSP #####
 
 
 [1] "Anom mod"
-      (Intercept)       rad.march_c      ppt.normal_c diff.norm.ppt.z_c   ppt.normal_c.sq 
-       -1.7145981        -0.2427109         0.5005945         0.2492771        -0.2718289 
+      (Intercept)      ppt.normal_c diff.norm.ppt.z_c   ppt.normal_c.sq 
+       -3.6520905         1.6295560         0.3374940        -0.7207742 
 [1] "Norm mod"
-    (Intercept)     rad.march_c    ppt.normal_c ppt.normal_c.sq 
-     -1.7447816      -0.3037957       0.6221086      -0.3124960 
+    (Intercept)    ppt.normal_c ppt.normal_c.sq 
+      -3.482828        1.484053       -0.730975 
 [1] "Anom mod"
-                   (Intercept)                    rad.march_c                   def.normal_c              diff.norm.def.z_c def.normal_c:diff.norm.def.z_c 
-                    -1.8885264                     -0.2509268                     -0.3676967                     -0.5539865                     -0.5413707 
+      (Intercept)       rad.march_c      def.normal_c diff.norm.def.z_c 
+       -4.2818173        -0.7469524        -0.9756819        -0.3917140 
 [1] "Norm mod"
  (Intercept)  rad.march_c def.normal_c 
-  -1.9582843   -0.3456857   -0.4375564 
+   -4.264945    -0.831232    -1.193089 
 [1] "Anom mod"
-      (Intercept)       rad.march_c      aet.normal_c diff.norm.aet.z_c 
-       -1.9044079        -0.2571014         0.4906592         0.1555692 
+      (Intercept)       rad.march_c      aet.normal_c diff.norm.aet.z_c   aet.normal_c.sq 
+       -3.3752391        -0.6686969         0.3413194         0.7437690        -1.1359193 
 [1] "Norm mod"
- (Intercept)  rad.march_c aet.normal_c 
-  -1.8806085   -0.2841141    0.6429446 
+    (Intercept)     rad.march_c    aet.normal_c aet.normal_c.sq 
+     -3.2303509      -0.7579623       0.8320201      -1.1629404 
 [1] "Anom mod"
-          (Intercept)           rad.march_c          ppt.normal_c diff.norm.ppt.min.z_c       ppt.normal_c.sq 
-           -1.7921474            -0.2537882             0.5304433             0.1433657            -0.2893661 
+          (Intercept)          ppt.normal_c diff.norm.ppt.min.z_c       ppt.normal_c.sq 
+           -3.6977115             0.9774121             0.7175694            -0.5876459 
 [1] "Norm mod"
-    (Intercept)     rad.march_c    ppt.normal_c ppt.normal_c.sq 
-     -1.7447816      -0.3037957       0.6221086      -0.3124960 
+    (Intercept)    ppt.normal_c ppt.normal_c.sq 
+      -3.482828        1.484053       -0.730975 
 [1] "Anom mod"
              (Intercept)              rad.march_c             def.normal_c    diff.norm.def.max.z_c diff.norm.def.max.z_c.sq 
-              -1.7371323               -0.3252533               -0.4737028               -0.2206365               -0.2474683 
+              -3.9913790               -0.7996345               -1.1720743               -0.5041128               -0.3391207 
 [1] "Norm mod"
  (Intercept)  rad.march_c def.normal_c 
-  -1.9582843   -0.3456857   -0.4375564 
+   -4.264945    -0.831232    -1.193089 
 [1] "Anom mod"
-          (Intercept)           rad.march_c          aet.normal_c diff.norm.aet.min.z_c 
-           -1.9325838            -0.2543507             0.5427001             0.1269168 
+             (Intercept)              rad.march_c             aet.normal_c    diff.norm.aet.min.z_c diff.norm.aet.min.z_c.sq          aet.normal_c.sq 
+              -3.9837653               -0.4148741                0.3357718                0.2758970                0.6517840               -1.2826851 
 [1] "Norm mod"
- (Intercept)  rad.march_c aet.normal_c 
-  -1.8806085   -0.2841141    0.6429446 
+    (Intercept)     rad.march_c    aet.normal_c aet.normal_c.sq 
+     -3.2303509      -0.7579623       0.8320201      -1.1629404 
 
 
 #####Running model for:  HT.PIPJ #####
 
 
 [1] "Anom mod"
-         (Intercept)          rad.march_c         ppt.normal_c    diff.norm.ppt.z_c diff.norm.ppt.z_c.sq 
-        -0.007121398          0.627716292         -0.574185372         -0.044985305         -0.548177842 
+      (Intercept)       rad.march_c diff.norm.ppt.z_c 
+       -2.8063969         0.2683588         0.0759954 
 [1] "Norm mod"
- (Intercept)  rad.march_c ppt.normal_c 
-  -0.5557580    0.5464086   -0.6480130 
+(Intercept) rad.march_c 
+ -2.8036574   0.2830515 
 [1] "Anom mod"
-      (Intercept)       rad.march_c      def.normal_c diff.norm.def.z_c 
-      -0.55809072        0.61070700        0.61867202       -0.04193137 
+      (Intercept)       rad.march_c diff.norm.def.z_c 
+      -2.80435148        0.27960618        0.06423234 
 [1] "Norm mod"
- (Intercept)  rad.march_c def.normal_c 
-  -0.5580648    0.6054574    0.6014467 
+(Intercept) rad.march_c 
+ -2.8036574   0.2830515 
 [1] "Anom mod"
       (Intercept)       rad.march_c diff.norm.aet.z_c 
-       -0.5651956         0.4915401        -0.3261349 
+       -2.8106296         0.2856794        -0.1326166 
 [1] "Norm mod"
 (Intercept) rad.march_c 
- -0.5879437   0.4685224 
+ -2.8036574   0.2830515 
 [1] "Anom mod"
-             (Intercept)              rad.march_c             ppt.normal_c    diff.norm.ppt.min.z_c diff.norm.ppt.min.z_c.sq 
-              -0.1273124                0.4055734               -0.3387240                0.2498801               -0.4520018 
+          (Intercept)           rad.march_c diff.norm.ppt.min.z_c 
+          -2.80449923            0.28854173            0.03146286 
 [1] "Norm mod"
- (Intercept)  rad.march_c ppt.normal_c 
-  -0.5557580    0.5464086   -0.6480130 
+(Intercept) rad.march_c 
+ -2.8036574   0.2830515 
 [1] "Anom mod"
-          (Intercept)           rad.march_c          def.normal_c diff.norm.def.max.z_c 
-          -0.55850143            0.62172364            0.62374849           -0.07977878 
+          (Intercept)           rad.march_c diff.norm.def.max.z_c 
+          -2.80351825            0.28065309            0.01554422 
 [1] "Norm mod"
- (Intercept)  rad.march_c def.normal_c 
-  -0.5580648    0.6054574    0.6014467 
+(Intercept) rad.march_c 
+ -2.8036574   0.2830515 
 [1] "Anom mod"
           (Intercept)           rad.march_c diff.norm.aet.min.z_c 
-           -0.5655751             0.4481354            -0.2572066 
+          -2.80524289            0.27549635           -0.06231599 
 [1] "Norm mod"
 (Intercept) rad.march_c 
- -0.5879437   0.4685224 
+ -2.8036574   0.2830515 
 
 
 #####Running model for:  HT.ABCO #####
 
 
 [1] "Anom mod"
-      (Intercept) diff.norm.ppt.z_c 
-       -1.7783024         0.4691747 
-[1] "Norm mod"
-(Intercept) 
-  -1.696449 
-[1] "Anom mod"
-      (Intercept) diff.norm.def.z_c 
-       -1.9175293        -0.3339843 
-[1] "Norm mod"
-(Intercept) 
-  -1.696449 
-[1] "Anom mod"
-      (Intercept) diff.norm.aet.z_c 
-        -1.981733          0.439618 
-[1] "Norm mod"
-(Intercept) 
-  -1.696449 
-[1] "Anom mod"
-          (Intercept) diff.norm.ppt.min.z_c 
-           -2.0470018             0.3940413 
-[1] "Norm mod"
-(Intercept) 
-  -1.696449 
-[1] "Anom mod"
-          (Intercept) diff.norm.def.max.z_c 
-           -1.9967062            -0.3690665 
-[1] "Norm mod"
-(Intercept) 
-  -1.696449 
-[1] "Anom mod"
-          (Intercept) diff.norm.aet.min.z_c 
-           -2.1551508             0.4867242 
-[1] "Norm mod"
-(Intercept) 
-  -1.696449 
-
-
-#####Running model for:  COUNT.PINUS.ALLSP #####
-
-
-[1] "Anom mod"
-                 (Intercept) seed_tree_distance_general_c                 ppt.normal_c            diff.norm.ppt.z_c              ppt.normal_c.sq 
-                  -0.1622592                   -0.1960979                    0.2225417                   -0.1004597                   -0.2599447 
-[1] "Norm mod"
-                 (Intercept) seed_tree_distance_general_c                 ppt.normal_c              ppt.normal_c.sq 
-                  -0.1806795                   -0.2133994                    0.1867075                   -0.2347564 
-[1] "Anom mod"
-                 (Intercept) seed_tree_distance_general_c                 def.normal_c            diff.norm.def.z_c         diff.norm.def.z_c.sq 
-                 -0.34783819                  -0.20214880                   0.06419430                  -0.05050173                   0.14442635 
-             def.normal_c.sq 
-                 -0.22605327 
-[1] "Norm mod"
-                 (Intercept) seed_tree_distance_general_c                 def.normal_c              def.normal_c.sq 
-                -0.142548913                 -0.200423611                 -0.004350021                 -0.232734542 
-[1] "Anom mod"
-                 (Intercept) seed_tree_distance_general_c                 aet.normal_c            diff.norm.aet.z_c              aet.normal_c.sq 
-                -0.278087317                 -0.202354061                  0.137386798                  0.006411858                 -0.109752104 
-[1] "Norm mod"
-                 (Intercept) seed_tree_distance_general_c                 aet.normal_c              aet.normal_c.sq 
-                  -0.2792091                   -0.2008699                    0.1424102                   -0.1088480 
-[1] "Anom mod"
-                 (Intercept) seed_tree_distance_general_c                 ppt.normal_c        diff.norm.ppt.min.z_c              ppt.normal_c.sq 
-                 -0.18272731                  -0.21973256                   0.17317695                   0.02392423                  -0.23485144 
-[1] "Norm mod"
-                 (Intercept) seed_tree_distance_general_c                 ppt.normal_c              ppt.normal_c.sq 
-                  -0.1806795                   -0.2133994                    0.1867075                   -0.2347564 
-[1] "Anom mod"
-                 (Intercept) seed_tree_distance_general_c                 def.normal_c        diff.norm.def.max.z_c              def.normal_c.sq 
-                 -0.12616085                  -0.21140732                   0.03041126                  -0.05454351                  -0.25605289 
-[1] "Norm mod"
-                 (Intercept) seed_tree_distance_general_c                 def.normal_c              def.normal_c.sq 
-                -0.142548913                 -0.200423611                 -0.004350021                 -0.232734542 
-[1] "Anom mod"
-                 (Intercept) seed_tree_distance_general_c                 aet.normal_c        diff.norm.aet.min.z_c              aet.normal_c.sq 
-                 -0.28787302                  -0.21745094                   0.10969461                   0.05979933                  -0.10668634 
-[1] "Norm mod"
-                 (Intercept) seed_tree_distance_general_c                 aet.normal_c              aet.normal_c.sq 
-                  -0.2792091                   -0.2008699                    0.1424102                   -0.1088480 
-
-
-#####Running model for:  COUNT.SHADE.ALLSP #####
-
-
-[1] "Anom mod"
-      (Intercept)       rad.march_c      ppt.normal_c diff.norm.ppt.z_c   ppt.normal_c.sq 
-      -0.08320259       -0.25092990        0.60654706       -0.36592001       -0.21759403 
+                   (Intercept)                    rad.march_c                   ppt.normal_c              diff.norm.ppt.z_c                ppt.normal_c.sq 
+                    -4.5042833                     -0.7781083                      2.0106508                     -0.3089672                     -0.8164035 
+ppt.normal_c:diff.norm.ppt.z_c 
+                     0.8668968 
 [1] "Norm mod"
     (Intercept)     rad.march_c    ppt.normal_c ppt.normal_c.sq 
-     0.02950881     -0.17251844      0.39072585     -0.17561428 
+     -4.4435665      -0.8855642       1.6072611      -0.5330325 
 [1] "Anom mod"
       (Intercept)       rad.march_c      def.normal_c diff.norm.def.z_c 
-       -0.1578045        -0.2635655        -0.5164024         0.2478344 
+       -4.9195567        -0.8673034        -1.2603078        -0.3871211 
 [1] "Norm mod"
  (Intercept)  rad.march_c def.normal_c 
-  -0.1188161   -0.2004221   -0.3175238 
+  -4.9186230   -0.9581861   -1.4903530 
 [1] "Anom mod"
-                   (Intercept)                    rad.march_c                   aet.normal_c              diff.norm.aet.z_c aet.normal_c:diff.norm.aet.z_c 
-                     0.1519894                     -0.1712609                      0.4930255                     -0.2136465                     -0.1647044 
+      (Intercept)       rad.march_c      aet.normal_c diff.norm.aet.z_c   aet.normal_c.sq 
+       -3.7701788        -0.7459052         0.2986403         0.7820342        -1.1676756 
 [1] "Norm mod"
- (Intercept)  rad.march_c aet.normal_c 
-  0.02711198  -0.14564599   0.22549096 
+    (Intercept)     rad.march_c    aet.normal_c aet.normal_c.sq 
+     -3.5971061      -0.8416753       0.8009596      -1.2020787 
 [1] "Anom mod"
           (Intercept)           rad.march_c          ppt.normal_c diff.norm.ppt.min.z_c       ppt.normal_c.sq 
-           0.06815639           -0.24395342            0.57598788           -0.25639690           -0.19820163 
+           -4.5965255            -0.7576697             1.3220249             0.5002587            -0.4385896 
 [1] "Norm mod"
     (Intercept)     rad.march_c    ppt.normal_c ppt.normal_c.sq 
-     0.02950881     -0.17251844      0.39072585     -0.17561428 
+     -4.4435665      -0.8855642       1.6072611      -0.5330325 
 [1] "Anom mod"
           (Intercept)           rad.march_c          def.normal_c diff.norm.def.max.z_c 
-           -0.1006037            -0.2489159            -0.4927741             0.2400434 
+           -4.9180984            -0.8553778            -1.1667445            -0.4531783 
 [1] "Norm mod"
  (Intercept)  rad.march_c def.normal_c 
-  -0.1188161   -0.2004221   -0.3175238 
+  -4.9186230   -0.9581861   -1.4903530 
 [1] "Anom mod"
-          (Intercept)           rad.march_c          aet.normal_c diff.norm.aet.min.z_c 
-           0.07949096           -0.17150852            0.35698051           -0.14575604 
+          (Intercept)           rad.march_c          aet.normal_c diff.norm.aet.min.z_c       aet.normal_c.sq 
+           -4.0678192            -0.6271758             0.3540338             0.8931155            -0.9788701 
 [1] "Norm mod"
- (Intercept)  rad.march_c aet.normal_c 
-  0.02711198  -0.14564599   0.22549096 
-
-
-#####Running model for:  COUNT.HDWD.ALLSP #####
-
-
-[1] "Anom mod"
-                 (Intercept) seed_tree_distance_general_c                 ppt.normal_c            diff.norm.ppt.z_c         diff.norm.ppt.z_c.sq 
-                 -0.05796667                  -0.07696780                  -0.39172308                  -0.11402453                  -0.19096228 
-             ppt.normal_c.sq 
-                  0.24566712 
-[1] "Norm mod"
-                 (Intercept) seed_tree_distance_general_c                 ppt.normal_c              ppt.normal_c.sq 
-                 -0.37767932                  -0.08637601                  -0.42548754                   0.32100857 
-[1] "Anom mod"
-                 (Intercept) seed_tree_distance_general_c            diff.norm.def.z_c         diff.norm.def.z_c.sq 
-                 -0.24134417                  -0.08646144                   0.03136116                  -0.08016844 
-[1] "Norm mod"
-                 (Intercept) seed_tree_distance_general_c 
-                 -0.31450234                  -0.06248106 
-[1] "Anom mod"
-                 (Intercept) seed_tree_distance_general_c                 aet.normal_c            diff.norm.aet.z_c 
-                 -0.15852771                  -0.08693592                  -0.20316120                  -0.04149518 
-[1] "Norm mod"
-                 (Intercept) seed_tree_distance_general_c                 aet.normal_c 
-                 -0.15641983                  -0.09411812                  -0.22223866 
-[1] "Anom mod"
-                 (Intercept) seed_tree_distance_general_c                 ppt.normal_c        diff.norm.ppt.min.z_c              ppt.normal_c.sq 
-                 -0.38180748                  -0.09055399                  -0.46477083                   0.03559835                   0.36516312 
-[1] "Norm mod"
-                 (Intercept) seed_tree_distance_general_c                 ppt.normal_c              ppt.normal_c.sq 
-                 -0.37767932                  -0.08637601                  -0.42548754                   0.32100857 
-[1] "Anom mod"
-                 (Intercept) seed_tree_distance_general_c        diff.norm.def.max.z_c     diff.norm.def.max.z_c.sq 
-                 -0.26351377                  -0.10019626                   0.01505541                  -0.05397917 
-[1] "Norm mod"
-                 (Intercept) seed_tree_distance_general_c 
-                 -0.31450234                  -0.06248106 
-[1] "Anom mod"
-                 (Intercept) seed_tree_distance_general_c                 aet.normal_c        diff.norm.aet.min.z_c     diff.norm.aet.min.z_c.sq 
-                 -0.14540712                  -0.05863766                  -0.31836791                  -0.09819336                   0.08450052 
-[1] "Norm mod"
-                 (Intercept) seed_tree_distance_general_c                 aet.normal_c 
-                 -0.15641983                  -0.09411812                  -0.22223866 
+    (Intercept)     rad.march_c    aet.normal_c aet.normal_c.sq 
+     -3.5971061      -0.8416753       0.8009596      -1.2020787 

@@ -4,7 +4,7 @@ summary.string <- function(x,decimals) {
   
   med <- round(median(x),digits=decimals)
   
-  lims <- round(quantile(x,probs=c(0.25,0.75)),digits=decimals)
+  lims <- round(quantile(x,probs=c(0.0,1)),digits=decimals)
   range <- paste(lims,collapse=", ")
   sum.str <- paste0(med," (",range,")")
   
