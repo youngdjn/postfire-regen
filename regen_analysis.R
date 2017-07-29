@@ -835,6 +835,16 @@ d.c$CONIFER.pt <- (d.c$CONIFER.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
 
 d.c$Fire <- as.factor(d.c$Fire)
 
+
+
+## check pairs plot 
+
+d.c.pairs <- d.c[,c("rad.march_c","diff.norm.ppt.min.z_c","ppt.normal_c")]
+pairs(d.c.pairs)
+
+
+
+
 d.c.modfit <- d.c # because the model fitting uses its own d.c
 
 
@@ -1967,8 +1977,8 @@ d.maes.anoms$most.improved <- ""
 d.maes.anoms.short <- d.maes.anoms[,c("sp","anom.name","anom.better","anom.improvement","best.of.species","most.improved")]
 
 pred.dat.comb <- merge(pred.dat,d.maes.anoms.short,all.x=TRUE,by.x=c("sp","anom"),by.y=c("sp","anom.name"))
-pred.dat.comb$anom.improvement <- round(pred.dat.comb$anom.improvement,2)
-pred.dat.comb[pred.dat.comb$anom.improvement < 0 , "anom.improvement"] <- NA
+pred.dat.comb$anom.improvement <- round(pred.dat.comb$anom.improvement,4)
+#pred.dat.comb[pred.dat.comb$anom.improvement < -0.01 , "anom.improvement"] <- NA
 
 
 #Compute total MAE across all species, to see which is the best #
@@ -1979,11 +1989,51 @@ d.mae.agg <- aggregate(d.maes.anoms[,c("best.anom.mae","best.anom.normal.mae","a
 ### Plot counterfactuals ###
 
 ## get rid of mid and get rid of normal predictions
-pred.dat.plotting <- pred.dat.comb[pred.dat.comb$norm.level %in% c("low","high"),]
+#pred.dat.plotting <- pred.dat.comb[pred.dat.comb$norm.level %in% c("low","high"),]
 #pred.dat.plotting <- pred.dat.comb[pred.dat.comb$norm.level %in% c("mid"),]
+pred.dat.plotting <- pred.dat.comb
+
+
+
+
+pred.dat.plotting <- as.data.frame(pred.dat.plotting)
+
+#for every column in predictions, if it ends in _c, uncenter it
+
+for(col.name in names(pred.dat.plotting)) {
+  if(grepl("_c$",col.name)) { #it's a centered col
+    col.name.uncentered <- substr(col.name,1,nchar(col.name)-2)
+    
+    col.mean <- d.center.dat[d.center.dat$var == col.name,"var.mean"]
+    col.sd <- d.center.dat[d.center.dat$var == col.name,"var.sd"]
+    
+    pred.dat.plotting[,as.character(col.name.uncentered)] <- pred.dat.plotting[,col.name] * col.sd + col.mean
+    
+    
+  }
+}
+
+pred.dat.plotting <- data.table(pred.dat.plotting)
+
+pred.dat.plotting$pred.val <- NA
+
+
+center.rename <- list("Pmin"="diff.norm.ppt.min.z_c","Pmean"="diff.norm.ppt.z_c","Amin"="diff.norm.aet.min.z_c","Amean"="diff.norm.aet.z_c")
+uncenter.rename <- list("Pmin"="diff.norm.ppt.min.z","Pmean"="diff.norm.ppt.z","Amin"="diff.norm.aet.min.z","Amean"="diff.norm.aet.z")
+
+pred.dat.plotting$pred.center.name <- gsubfn("\\S+",center.rename,pred.dat.plotting$anom)
+pred.dat.plotting$pred.uncenter.name <- gsubfn("\\S+",uncenter.rename,pred.dat.plotting$anom)
+
+##drop columns that weren't translated (deficit)
+pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$pred.center.name %in% center.rename,]
+
+pred.dat.plotting <- as.data.table(pred.dat.plotting)
+
+
+
 pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$type == "anom",]
 
-pred.dat.plotting$anom.improvement <- round(pred.dat.plotting$anom.improvement,2)
+#pred.dat.plotting$anom.improvement <- round(pred.dat.plotting$anom.improvement,2)
 
 #pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$sp=="PILA",]
 #pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$anom=="Amin",]
@@ -1991,14 +2041,54 @@ pred.dat.plotting$anom.improvement <- round(pred.dat.plotting$anom.improvement,2
 pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$sp %in% c("ABCO","COV.GRASS","COV.SHRUB","HDWD.ALLSP","HT.ABCO","HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP","PINUS.ALLSP","PIPJ","SHADE.ALLSP"),]
 pred.dat.plotting <- pred.dat.plotting[!(pred.dat.plotting$anom %in% c("Dmax","Dmean")),]
 
+spsub <- list("PIPJ" = "Yellow pine\npresence\n(% of plots)","ABCO" = "White fir\npresence\n(% of plots)","PINUS.ALLSP" = "Pines\npresence\n(% of plots)","SHADE.ALLSP" = "Shade-tolerant conifers\npresence\n(% of plots)","HDWD.ALLSP" = "Broadleaved trees\npresence\n(% of plots)","COV.SHRUB" = "Shrubs\n(% cover)","COV.GRASS" = "Graminoids\n(%cover)","HT.PIPJ"="Yellow pine\nheight dominance\n(% of plots)","HT.ABCO"="White fir\nheight dominance\n(% of plots)","HT.PINUS.ALLSP"="Pines\nheight dominance\n(% of plots)","HT.SHADE.ALLSP"="Shde-tolerant conifers\nheight dominance\n(% of plots)","HT.HDWD.ALLSP"="Broadleaved trees\nheight dominance\n(% of plots)")
+pred.dat.plotting$sp <- gsubfn("\\S+",spsub,pred.dat.plotting$sp)
+pred.dat.plotting$sp <- factor(pred.dat.plotting$sp,levels=spsub)
+
+anomsub <- list("Pmin" = "Min precip","Pmean" = "Mean precip","Amin" = "Min AET","Amean" = "Mean AET")
+pred.dat.plotting$anom <- gsubfn("\\S+",anomsub,pred.dat.plotting$anom)
+pred.dat.plotting$anom <- factor(pred.dat.plotting$anom,levels=anomsub)
 
 
-ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z_c,y=pred.mid,color=norm.level,fill=norm.level)) +
-  geom_point() +
+
+
+
+pred.dat.plotting[which(pred.dat.plotting$anom.improvement < 0),c("pred.mid","pred.low","pred.high")] <- NA
+pred.dat.plotting <- pred.dat.plotting[!is.na(pred.dat.plotting$sp),]
+
+
+
+### for those normal models that are not null, include low and high norm levels; for those that are, include only mid
+pred.dat.plotting$norm.beg <- substr(pred.dat.plotting$mod,1,2)
+
+pred.dat.plotting <- as.data.table(pred.dat.plotting)
+
+pred.dat.plotting <- pred.dat.plotting[(norm.beg != "n0" & norm.level %in% c("low","high")) | (norm.beg == "n0" & norm.level == "mid")]
+
+
+pred.dat.plotting[,c("pred.mid","pred.low","pred.high")] <- 100 * pred.dat.plotting[,c("pred.mid","pred.low","pred.high")] # convert to percentages
+
+levels(pred.dat.plotting$norm.level)
+levels(pred.dat.plotting$norm.level) <- c("High","Low","High and low")
+
+
+
+p <- ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z_c,y=pred.mid,color=norm.level,fill=norm.level)) +
+  geom_line(size=1.5) +
   geom_ribbon(aes(ymin=pred.low,ymax=pred.high),alpha=0.3,color=NA) +
-  facet_grid(anom~sp,scales="free_y") +
-  geom_text(aes(0,0.8,label=anom.improvement),size=4,color="black") +
-  theme_bw(14)
+  facet_grid(anom~sp) +
+  #geom_text(aes(0,0.8,label=anom.improvement),size=4,color="black") +
+  theme_bw(12) +
+  labs(x="Anomaly value",y="Model prediction (% of plots)",color="Normal climate\n(precip. or AET)",fill="Normal climate\n(precip. or AET)") +
+  scale_color_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray26")) +
+  scale_fill_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray26")) +
+  theme(panel.grid.minor = element_blank(),strip.background = element_blank(), panel.border = element_rect(colour = "black",size=0.6), strip.text = element_text(size = 9)) +
+  theme(plot.margin = unit(c(-.1,0.5,0,0.5), "cm"),legend.key = element_rect(size = 0.5),legend.key.size = unit(1.2, 'lines')) +
+  geom_vline(xintercept=0,linetype="longdash")
+
+tiff(file=paste0("../Figures/FigX_full_prediction_plots_",Sys.Date(),".tiff"),width=3500,height=1200,res=200) 
+p
+dev.off()
 
 
 
@@ -2028,7 +2118,6 @@ for(col.name in names(pred.dat.comb)) {
     
   }
 }
-
 
 
 pred.dat.comb <- data.table(pred.dat.comb)
@@ -2080,7 +2169,7 @@ levels(pred.dat.comb$norm.level) <- c("High","Low","High and low")
 plot.cats <- c("presab",
                #"ht",
                "cov")
-plot.sps <- list(c("PINUS.ALLSP","SHADE.ALLSP"),
+plot.sps <- list(c("SHADE.ALLSP"),
                  #c("HT.PINUS.ALLSP","HT.SHADE.ALLSP","HT.HDWD.ALLSP"),
                  c("COV.SHRUB","COV.GRASS"))
 
@@ -2095,10 +2184,10 @@ for(i in 1:length(plot.cats)) {
   pred.dat.plotting$sp <- factor(pred.dat.plotting$sp,plot.sp)
   
   if(plot.cats[[i]] == "presab") {
-    ylab <- "Proportion of plots\nwith regeneration"
-    levels(pred.dat.plotting$sp) <- c("Pines","Shade-tolerant\nconifers","Broadleaved trees")
+    ylab <- "Percentage of plots\nwith regeneration"
+    levels(pred.dat.plotting$sp) <- c("Shade-tolerant\nconifers","Broadleaved trees")
   } else if(plot.cats[[i]] == "ht") {
-    ylab <- "Proportion plots where\ndominant in height"
+    ylab <- "Percentage of plots where\ndominant in height"
   } else if(plot.cats[[i]] == "cov") {
     ylab <- "Percent cover"
     levels(pred.dat.plotting$sp) <- c("Shrubs","Graminoids","Forbs")
@@ -2114,18 +2203,21 @@ for(i in 1:length(plot.cats)) {
     facet_wrap(~sp) +
     theme_bw(16) +
     labs(x="Postfire minimum precipitation anomaly (SD)",y=ylab,color="Normal\nprecipitation",fill="Normal\nprecipitation") +
-    scale_color_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray44")) +
-    scale_fill_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray44")) +
+    scale_color_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray26")) +
+    scale_fill_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray26")) +
     theme(panel.grid.minor = element_blank(),strip.background = element_blank(), panel.border = element_rect(colour = "black",size=0.6), strip.text = element_text(size = 16,vjust=0)) +
-    theme(plot.margin = unit(c(-.1,0.5,0,0.5), "cm")) +
+    theme(plot.margin = unit(c(-.1,0.5,0,0.5), "cm"),legend.key.size = unit(1.5, 'lines')) +
     geom_vline(xintercept=anom.mid,linetype="longdash")
   
   
   if(i == 2) {
-    p[[i]] <- p[[i]] + theme(legend.position=c(0.98,0.95),legend.justification=c(1,1),legend.background = element_rect(fill="transparent")) +
-      theme(plot.margin = unit(c(-.1,0.5,.50,0.5), "cm"))
+    p[[i]] <- p[[i]] +
+      theme(plot.margin = unit(c(-.1,0.5,1,0.5), "cm")) +
+      guides(fill=FALSE,color=FALSE)
   } else {
-    p[[i]] <- p[[i]] + guides(fill=FALSE,color=FALSE) + labs(x="")
+    p[[i]] <- p[[i]] +
+    theme(plot.margin = unit(c(0,9.5,1,0), "cm")) +
+    theme(legend.position=c(1.5,0.5))
   }
 
   
@@ -2136,10 +2228,10 @@ for(i in 1:length(plot.cats)) {
 a <- ggplot_gtable(ggplot_build(p[[1]]))
 b <-  ggplot_gtable(ggplot_build(p[[2]]))
 
-maxWidth = unit.pmax(a$widths[2:3], b$widths[2:3])
-
-a$widths[2:3] <- maxWidth
-b$widths[2:3] <- maxWidth
+# maxWidth = unit.pmax(a$widths[2:3], b$widths[2:3])
+# 
+# a$widths[2:3] <- maxWidth
+# b$widths[2:3] <- maxWidth
 
 
 tiff(file=paste0("../Figures/FigX_prediction_plots_",Sys.Date(),".tiff"),width=1600,height=1600,res=200) 
@@ -2166,7 +2258,60 @@ cv.err.melt <- melt(cv.errors,id.vars=c("Species","Variable"),measure.vars=c("Ba
 
 cv.err.cast <- dcast(cv.err.melt,Species~Variable+type,value.var="value",fun=mean)
 
-cv.err.cast[,2:13] <- round(cv.err.cast[,2:13],2)
+cv.err.cast[,2:13] <- round(cv.err.cast[,2:13],3)
+
+response.rename <- list("PIPJ" = "Yellow pine presence",
+                        "ABCO" = "White fir presence",
+
+                        "PINUS.ALLSP" = "Pinus presence",
+                        "SHADE.ALLSP" = "Shade tolerant conifer presence",
+                        "HDWD.ALLSP" = "Broadleaved species presence",
+                        
+                        "COV.SHRUB" = "Shrub cover",
+                        "COV.GRASS" = "Graminoid cover",
+                        
+                        "HT.PIPJ" = "Yellow pine height dominance",
+                        "HT.ABCO" = "White fir height dominiance",
+                        "HT.PINUS.ALLSP" = "Pine height dominance",
+                        "HT.SHADE.ALLSP" = "Shade-tolerant conifer height dominance",
+                        "HT.HDWD.ALLSP" = "Broadleaved species height dominance"
+                        )
+
+cv.err.cast$Species <- gsubfn(pattern="\\S+",replacement=response.rename,x=cv.err.cast$Species)
+
+cv.err.cast$Species <- factor(cv.err.cast$Species,levels=response.rename)
+cv.err.cast <- cv.err.cast[!is.na(cv.err.cast$Species)]
+
+cv.err.cast <- cv.err.cast[order(Species),]
+
+
+colnames <- names(cv.err.cast)
+
+colnames <- gsub("mean_Baseline","_Baseline",colnames)
+colnames <- gsub("min_Baseline","_Baseline",colnames)
+colnames <- gsub("max_Baseline","_Baseline",colnames)
+
+colnames <- gsub("Amean","Mean AET",colnames)
+colnames <- gsub("Amin","Minimum AET",colnames)
+colnames <- gsub("Dmean","Mean CWD",colnames)
+colnames <- gsub("Dmax","Maximum CWD",colnames)
+colnames <- gsub("Pmean","Mean precpitation",colnames)
+colnames <- gsub("Pmin","Minimum precipitation",colnames)
+
+colnames <- gsub("P_Baseline","Precipitation baseline",colnames)
+colnames <- gsub("A_Baseline","AET baseline",colnames)
+colnames <- gsub("D_Baseline","CWD baseline",colnames)
+
+colnames <- gsub("Anomaly","anomaly",colnames)
+colnames <- gsub("_"," ",colnames)
+colnames <- gsub("Species","Regeneration response variable",colnames)
+
+
+names(cv.err.cast) <- colnames
+cv.err.cast <- cv.err.cast[,which(!duplicated(names(cv.err.cast))),with=FALSE]
+
+
+
 
 write.csv(cv.err.cast,"../tables/cv_err.csv")
 
@@ -2276,40 +2421,105 @@ coefs.cast <- coefs.cast[coefs.cast$sp %in% responses.keep & coefs.cast$variable
 
 ##!! need to make species names and anomaly names friendly, also drop replicated AET (min and mean) baselines
 
+anomsub <- list("Pmean"="Mean Precipitation","Pmin" = "Minimum Precipitation","Amean" = "Mean AET","Amin"="Minimum AET")
+coefs.cast$variable <- gsubfn("\\S+",anomsub,coefs.cast$variable)
+
+colsub <- list("sp"="Response","variable" = "Anomaly","type"="Model","(Intercept)" = "Intercept","normal_c"="Normal climate","normal_c.sq"="Normal climate^2","seed_tree_distance_general_c"="Seed tree dist.","rad.march_c"="Solar exposure","diff.norm.z_c"="Anomaly","diff.norm.z_c.sq"="Anomaly^2","normal_c:diff.norm.z_c" = "Normal climate * Anomaly","normal_c:diff.norm.z_c.sq" = "Normal climate * Anomaly^2","(phi)" = "Phi")
+names(coefs.cast) <- gsubfn("\\S+",colsub,names(coefs.cast))
+
+coefs.cast[is.na(coefs.cast)] <- ""
+
+#change the first word of a two-word string to "Mean/Min"
+fixfront <- function(x) {
+  second <- strsplit(x," ",fixed=TRUE)[[1]][2]
+  return(second)
+}
+
+coefs.cast[Model=="Baseline","Anomaly"] <- apply(coefs.cast[Model=="Baseline","Anomaly"],FUN=fixfront,MARGIN=1)
+coefs.cast$Model <- paste(coefs.cast$Anomaly,coefs.cast$Model,sep=" ")
 
 
+modelsub <- c("Precipitation Baseline" = "Precipitation baseline","Mean Precipitation Anomaly"="Mean precipitation anomaly","Minimum Precipitation Anomaly"="Minimum precipitation anomaly","AET Baseline"="AET baseline","Mean AET Anomaly"="Mean AET anomaly","Minimum AET Anomaly"="Minimum AET anomaly")
+coefs.cast$Model <- mapvalues(x=coefs.cast$Model,from=names(modelsub),to=modelsub)
+
+coefs.cast$Model <- as.factor(coefs.cast$Model)
+coefs.cast$Model <- factor(coefs.cast$Model,levels=modelsub)
+
+coefs.cast <- coefs.cast[!duplicated(coefs.cast),]
+coefs.cast <- coefs.cast[,-2] #remove "anomaly" column
+
+
+### Presence/absence
+keep.vars <- c("PIPJ","ABCO","PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP")
+coefs.presab <- coefs.cast[coefs.cast$Response %in% keep.vars,]
+spsub <- list("PIPJ" = "Yellow pine","ABCO" = "White fir","PINUS.ALLSP" = "Pines","SHADE.ALLSP" = "Shade-tolerant conifers","HDWD.ALLSP" = "Broadleaved trees")
+coefs.presab$Response <- gsubfn("\\S+",spsub,coefs.presab$Response)
+coefs.presab$Response <- factor(coefs.presab$Response,levels=spsub)
+#drop phi
+coefs.presab <- coefs.presab[,-"Phi"]
+coefs.presab <- coefs.presab[order(Response,Model)]
+
+write.csv(coefs.presab,"../coefs_presab.csv")
+
+
+### Height dominaince
+keep.vars <- c("HT.PIPJ","HT.ABCO","HT.PINUS.ALLSP","HT.SHADE.ALLSP","HT.HDWD.ALLSP")
+coefs.dom <- coefs.cast[coefs.cast$Response %in% keep.vars,]
+spsub <- list("HT.PIPJ" = "Yellow pine","HT.ABCO" = "White fir","HT.PINUS.ALLSP" = "Pines","HT.SHADE.ALLSP" = "Shade-tolerant conifers","HT.HDWD.ALLSP" = "Broadleaved trees")
+coefs.dom$Response <- gsubfn("\\S+",spsub,coefs.dom$Response)
+coefs.dom$Response <- factor(coefs.dom$Response,levels=spsub)
+#drop phi
+coefs.dom <- coefs.dom[,-c("Phi","Seed tree dist.")]
+coefs.dom <- coefs.dom[order(Response,Model)]
+
+write.csv(coefs.dom,"../coefs_dom.csv")
+
+### Cover
+keep.vars <- c("COV.SHRUB","COV.GRASS")
+coefs.cov <- coefs.cast[coefs.cast$Response %in% keep.vars,]
+spsub <- list("COV.SHRUB"="Shrubs","COV.GRASS"="Graminoids")
+coefs.cov$Response <- gsubfn("\\S+",spsub,coefs.cov$Response)
+coefs.cov$Response <- factor(coefs.cov$Response,levels=spsub)
+#drop phi
+coefs.cov <- coefs.cov[,-c("Seed tree dist.")]
+coefs.cov <- coefs.cov[order(Response,Model)]
+
+write.csv(coefs.cov,"../coefs_cov.csv")
 
 
 #### 13. For each species and rad group, plot fitted vs. observed, for normal and anom side by side ####
 
-fit.dat$resid <- fit.dat$response.var-fit.dat$fitted
+fit.dat.plotting <- fit.dat
+
+fit.dat.plotting$resid <- fit.dat.plotting$response.var-fit.dat.plotting$fitted
 
 
 ## PPT min only
-fit.dat.ppt <- as.data.table(fit.dat[fit.dat$anom == "Pmin",])
+fit.dat.ppt <- as.data.table(fit.dat.plotting[fit.dat$anom == "Pmin",])
 
 ## summarize by fire, sp
 
 fit.dat.ppt.fire <- fit.dat.ppt[,list(fitted=mean(fitted),observed=mean(response.var),anom.var=mean(diff.norm.ppt.min.z_c),resid=mean(resid)),by=.(Fire,type,sp)]
 # fit.dat.ppt.fire <- fit.dat.ppt[,list(fitted=fitted,observed=response.var,anom.var=diff.norm.ppt.min.z_c,Fire,type,sp)]
 
-fit.dat.ppt.fire[sp %in% cover.opts,c("observed","fitted")] <- 100* fit.dat.ppt.fire[sp %in% cover.opts,c("observed","fitted")]
+fit.dat.ppt.fire[,c("observed","fitted")] <- 100 * fit.dat.ppt.fire[,c("observed","fitted")]
+
+
+resps.keep <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","COV.SHRUB","COV.GRASS")
+
+fit.dat.ppt.fire <- fit.dat.ppt.fire[fit.dat.ppt.fire$sp %in% resps.keep,]
 
 fit.dat.ppt.fire$sp <- as.factor(fit.dat.ppt.fire$sp)
-
-
-fit.dat.ppt.fire$sp <- factor(fit.dat.ppt.fire$sp,c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","COV.SHRUB","COV.GRASS","COV.FORB"))
+fit.dat.ppt.fire$sp <- factor(fit.dat.ppt.fire$sp,resps.keep)
 
 levels(fit.dat.ppt.fire$sp)
-levels(fit.dat.ppt.fire$sp) <- c("Pine regeneration\n(% of plots)","Shade tolerant conifer\nspecies regeneration\n(% of plots)","Broadleaved species\nregeneration\n(% of plots)","Shrubs\n(% cover)","Graminoids\n(% cover)","Forbs\n(% cover)")
+levels(fit.dat.ppt.fire$sp) <- c("Pine regeneration\n(% of plots)","Shade tolerant conifer\nspecies regeneration\n(% of plots)","Broadleaved species\nregeneration\n(% of plots)","Shrubs\n(% cover)","Graminoids\n(% cover)")
 
 fit.dat.ppt.fire$type <- as.factor(fit.dat.ppt.fire$type)
 levels(fit.dat.ppt.fire$type)
 fit.dat.ppt.fire$type <- factor(fit.dat.ppt.fire$type,c("norm","anom"))
 levels(fit.dat.ppt.fire$type)
 levels(fit.dat.ppt.fire$type) <- c("Baseline","Post-fire\nanomaly")
-
-
 
 dummy.df <- fit.dat.ppt.fire[,list(observed=c(0,max(observed,fitted)),fitted=c(0,max(observed,fitted))),by=list(sp,type,sp)]
 
@@ -2324,11 +2534,75 @@ p <- ggplot(fit.dat.ppt.fire,aes(x=observed,y=fitted,color=type)) +
   theme(plot.title=element_text(hjust=0.5)) +
   scale_color_manual(values=c("turquoise4","darkorange1")) +
   theme(panel.grid.minor = element_blank(),strip.background = element_blank(), panel.border = element_rect(colour = "black",size=0.6), strip.text = element_text(size = 16,vjust=0)) +
-  theme(plot.margin = unit(c(-.1,0.5,0.1,0.5), "cm"))
+  theme(plot.margin = unit(c(-.1,0.5,0.1,0.5), "cm")) +
+  theme(legend.position=c(.83,.25),legend.key.size = unit(2, 'lines'))
 
-tiff(file=paste0("../Figures/FigX_fitted_vs_observed_",Sys.Date(),".tiff"),width=2100,height=1600,res=200) 
+tiff(file=paste0("../Figures/FigX_fitted_vs_observed_PPT_",Sys.Date(),".tiff"),width=2100,height=1600,res=200) 
 p
 dev.off()
+
+
+###
+### Repeat for min AET
+###
+
+fit.dat.plotting <- fit.dat
+
+fit.dat.plotting$resid <- fit.dat.plotting$response.var-fit.dat.plotting$fitted
+
+
+## PPT min only
+fit.dat.ppt <- as.data.table(fit.dat.plotting[fit.dat$anom == "Amin",])
+
+## summarize by fire, sp
+
+fit.dat.ppt.fire <- fit.dat.ppt[,list(fitted=mean(fitted),observed=mean(response.var),anom.var=mean(diff.norm.ppt.min.z_c),resid=mean(resid)),by=.(Fire,type,sp)]
+# fit.dat.ppt.fire <- fit.dat.ppt[,list(fitted=fitted,observed=response.var,anom.var=diff.norm.ppt.min.z_c,Fire,type,sp)]
+
+fit.dat.ppt.fire[,c("observed","fitted")] <- 100 * fit.dat.ppt.fire[,c("observed","fitted")]
+
+
+resps.keep <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","COV.SHRUB","COV.GRASS")
+
+fit.dat.ppt.fire <- fit.dat.ppt.fire[fit.dat.ppt.fire$sp %in% resps.keep,]
+
+fit.dat.ppt.fire$sp <- as.factor(fit.dat.ppt.fire$sp)
+fit.dat.ppt.fire$sp <- factor(fit.dat.ppt.fire$sp,resps.keep)
+
+levels(fit.dat.ppt.fire$sp)
+levels(fit.dat.ppt.fire$sp) <- c("Pine regeneration\n(% of plots)","Shade tolerant conifer\nspecies regeneration\n(% of plots)","Broadleaved species\nregeneration\n(% of plots)","Shrubs\n(% cover)","Graminoids\n(% cover)")
+
+fit.dat.ppt.fire$type <- as.factor(fit.dat.ppt.fire$type)
+levels(fit.dat.ppt.fire$type)
+fit.dat.ppt.fire$type <- factor(fit.dat.ppt.fire$type,c("norm","anom"))
+levels(fit.dat.ppt.fire$type)
+levels(fit.dat.ppt.fire$type) <- c("Baseline","Post-fire\nanomaly")
+
+dummy.df <- fit.dat.ppt.fire[,list(observed=c(0,max(observed,fitted)),fitted=c(0,max(observed,fitted))),by=list(sp,type,sp)]
+
+
+p <- ggplot(fit.dat.ppt.fire,aes(x=observed,y=fitted,color=type)) +
+  geom_point(size=2) +
+  geom_abline(slope=1,intercept=0,size=1,color="gray") +
+  geom_point(data=dummy.df,alpha=0) +
+  facet_wrap(~sp,scales="free") +
+  labs(x="Observed value",y="Fitted value",color="Model type") +
+  theme_bw(18) +
+  theme(plot.title=element_text(hjust=0.5)) +
+  scale_color_manual(values=c("turquoise4","darkorange1")) +
+  theme(panel.grid.minor = element_blank(),strip.background = element_blank(), panel.border = element_rect(colour = "black",size=0.6), strip.text = element_text(size = 16,vjust=0)) +
+  theme(plot.margin = unit(c(-.1,0.5,0.1,0.5), "cm")) +
+  theme(legend.position=c(.83,.25),legend.key.size = unit(2, 'lines'))
+
+tiff(file=paste0("../Figures/FigX_fitted_vs_observed_AET_",Sys.Date(),".tiff"),width=2100,height=1600,res=200) 
+p
+dev.off()
+
+
+
+
+
+
 
 
 
