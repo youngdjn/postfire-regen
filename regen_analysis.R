@@ -660,6 +660,129 @@ dev.off()
 
 
 
+
+
+
+#### Repeate cliamte space plots for AET ####
+
+
+
+d.plot.ind$Fire <- as.factor(d.plot.ind$Fire)
+
+### Plot of monitoring plots in climate space: minimum precip ### 
+
+
+
+# For each fire, make a point at mean normal precip and mean precip anom 
+fire.centers <- data.frame() 
+fires <- unique(d.plot.ind$Fire) 
+for(fire in fires) { 
+  d.fire <- d.plot.ind[d.plot.ind$Fire == fire,] 
+  norm.mean <- mean(d.fire$aet.normal) 
+  anom.mean <- mean(d.fire$diff.norm.aet.min.z) 
+  year <- d.fire$fire.year[1] 
+  
+  fire.center <- data.frame(Fire=fire,year=year,aet.normal=norm.mean,diff.norm.aet.min.z=anom.mean) 
+  fire.centers <- rbind(fire.centers,fire.center)   
+} 
+fire.centers$fire.year <- paste0(fire.centers$Fire,", ",fire.centers$year) 
+
+
+lines <- data.frame(rbind(
+  #c(1900,-.27,2000,-0.42), # BTU
+  #c(1650,-0.25,1500,-0.36), # CUB
+  c(700,-0.8,750,-0.6) # moonlight
+))
+names(lines) <- c("x","y","xend","yend")
+
+# ##shifts
+# 
+# fire.centers[fire.centers$Fire == "Antelope",c("ppt.normal","diff.norm.ppt.min.z")] <- c(500,-0.95)
+# fire.centers[fire.centers$Fire == "Freds",c("ppt.normal","diff.norm.ppt.min.z")] <- c(1170,-0.78)
+# fire.centers[fire.centers$Fire == "Power",c("ppt.normal","diff.norm.ppt.min.z")] <- c(1600,-0.85)
+# fire.centers[fire.centers$Fire == "Bassetts",c("ppt.normal","diff.norm.ppt.min.z")] <- c(2000,-0.95)
+# fire.centers[fire.centers$Fire == "Moonlight",c("ppt.normal","diff.norm.ppt.min.z")] <- c(750,-0.6)
+# fire.centers[fire.centers$Fire == "Straylor",c("ppt.normal","diff.norm.ppt.min.z")] <- c(400,-0.74)
+# fire.centers[fire.centers$Fire == "American River",c("ppt.normal","diff.norm.ppt.min.z")] <- c(1700,-0.14)
+# fire.centers[fire.centers$Fire == "Cub",c("ppt.normal","diff.norm.ppt.min.z")] <- c(1400,-0.40)
+# fire.centers[fire.centers$Fire == "BTU Lightning",c("ppt.normal","diff.norm.ppt.min.z")] <- c(2100,-0.37)
+# fire.centers[fire.centers$Fire == "Bagley",c("diff.norm.ppt.min.z")] <- -1.48
+# fire.centers[fire.centers$Fire == "Ralston",c("ppt.normal","diff.norm.ppt.min.z")] <- c(1400,-1.1)
+# fire.centers[fire.centers$Fire == "Chips",c("ppt.normal","diff.norm.ppt.min.z")] <- c(1250,-1.2)
+
+
+p1 <-  ggplot(d.plot.ind,aes(x=aet.normal,y=diff.norm.aet.min.z,color=Fire)) + 
+  geom_point(size=3) + 
+  #geom_point(data=fire.centers,size=5,pch=1) + 
+  geom_text(data=fire.centers,aes(label=fire.year),nudge_y=.04,size=6,color="darkgray") + 
+  guides(color=FALSE) + 
+  theme_bw(17) + 
+  labs(x="Normal AET (mm)",y="Postfire minimum AET anomaly (SD)") + 
+  #scale_x_continuous(limits=c(180,2580))+
+  #geom_segment(aes(x=x,y=y,xend=xend,yend=yend),data=lines,color="darkgray",size=1.0) +
+  scale_color_viridis(discrete=TRUE)
+
+
+
+### Plot of monitoring plots in climate space: mean precip ### 
+
+# For each fire, make a point at mean normal precip and mean precip anom 
+fire.centers <- data.frame() 
+fires <- unique(d.plot.ind$Fire) 
+for(fire in fires) { 
+  d.fire <- d.plot.ind[d.plot.ind$Fire == fire,] 
+  norm.mean <- mean(d.fire$aet.normal) 
+  anom.mean <- mean(d.fire$diff.norm.aet.z) 
+  year <- d.fire$fire.year[1] 
+  
+  fire.center <- data.frame(Fire=fire,year=year,aet.normal=norm.mean,diff.norm.aet.z=anom.mean) 
+  fire.centers <- rbind(fire.centers,fire.center)   
+} 
+fire.centers$fire.year <- paste0(fire.centers$Fire,", ",fire.centers$year) 
+
+# 
+# 
+# fire.centers[fire.centers$Fire == "Antelope",c("diff.norm.aet.z")] <- -0.49
+# fire.centers[fire.centers$Fire == "Moonlight",c("diff.norm.aet.z")] <- -0.62
+# fire.centers[fire.centers$Fire == "Chips",c("aet.normal","diff.norm.aet.z")] <- c(1175,-0.90)
+# fire.centers[fire.centers$Fire == "Cub",c("diff.norm.aet.z")] <- 0.22
+# fire.centers[fire.centers$Fire == "American River",c("diff.norm.aet.z")] <- 0.44
+# fire.centers[fire.centers$Fire == "BTU Lightning",c("diff.norm.aet.z")] <- 0.12
+# fire.centers[fire.centers$Fire == "Freds",c("diff.norm.aet.z")] <- 0.35
+# fire.centers[fire.centers$Fire == "Power",c("diff.norm.aet.z")] <- 0.61
+# fire.centers[fire.centers$Fire == "Bagley",c("diff.norm.aet.z")] <- -.8
+# fire.centers[fire.centers$Fire == "Ralston",c("aet.normal")] <- 1100
+
+
+lines <- data.frame(rbind(c(1920,0.3,1920,0.2))) # BTU
+names(lines) <- c("x","y","xend","yend")
+
+
+
+
+p2 <- ggplot(d.plot.ind,aes(x=aet.normal,y=diff.norm.aet.z,color=Fire)) + 
+  geom_point(size=3) + 
+  #geom_point(data=fire.centers,size=5,pch=1) + 
+  geom_text(data=fire.centers,aes(label=fire.year),nudge_y=.04,size=6,color="darkgray") + 
+  guides(color=FALSE) + 
+  theme_bw(17) + 
+  labs(x="Normal AET (mm)",y="Postfire mean AET anomaly (SD)") + 
+  #scale_x_continuous(limits=c(180,2580)) +
+  scale_color_viridis(discrete=TRUE)
+#geom_segment(aes(x=x,y=y,xend=xend,yend=yend),data=lines,color="darkgray",size=1.0)
+
+
+library(gridExtra)
+blank<-rectGrob(gp=gpar(col="white")) # make a white spacer grob
+
+Cairo(file=paste0("../Figures/Fig1_climateSpace_2AETanom_",Sys.Date(),".png"),width=3100,height=1500,ppi=200,res=200,dpi=200) 
+grid.arrange(p1,blank,p2,ncol=3,widths=c(0.49,0.02,0.49))
+dev.off()
+
+
+
+
+
 #### 9. Graphical summary of abiotic environment comparing reference vs. highsev ####
 
 keep.vars <- c("Fire","topoclim.cat","ppt.normal","rad.march","diff.norm.ppt.min.z","diff.norm.ppt.z","FIRE_SEV.cat") # removed seed_tree_distance_general
@@ -880,7 +1003,7 @@ count.opts <- c("COUNT.PINUS.ALLSP","COUNT.SHADE.ALLSP","COUNT.HDWD.ALLSP")
 
 
 resp.opts <- c(count.opts,prop.opts,htabs.opts,sp.opts,cover.opts,ht.opts)
-resp.opts <- c(sp.opts,cover.opts,ht.opts,htabs.opts)
+resp.opts <- c(sp.opts,cover.opts,ht.opts)
 
 
 do.regression <-TRUE
@@ -2071,8 +2194,8 @@ pred.dat.plotting <- data.table(pred.dat.plotting)
 pred.dat.plotting$pred.val <- NA
 
 
-center.rename <- list("Pmin"="diff.norm.ppt.min.z_c","Pmean"="diff.norm.ppt.z_c","Amin"="diff.norm.aet.min.z_c","Amean"="diff.norm.aet.z_c")
-uncenter.rename <- list("Pmin"="diff.norm.ppt.min.z","Pmean"="diff.norm.ppt.z","Amin"="diff.norm.aet.min.z","Amean"="diff.norm.aet.z")
+center.rename <- list("Pmin"="diff.norm.ppt.min.z_c","Pmean"="diff.norm.ppt.z_c","Amin"="diff.norm.aet.min.z_c","Amean"="diff.norm.aet.z_c","Dmax"="diff.norm.def.max.z_c","Dmean"="diff.norm.def.z_c")
+uncenter.rename <- list("Pmin"="diff.norm.ppt.min.z","Pmean"="diff.norm.ppt.z","Amin"="diff.norm.aet.min.z","Amean"="diff.norm.aet.z","Dmin"="diff.norm.def.min.z","Dmean"="diff.norm.def.z")
 
 pred.dat.plotting$pred.center.name <- gsubfn("\\S+",center.rename,pred.dat.plotting$anom)
 pred.dat.plotting$pred.uncenter.name <- gsubfn("\\S+",uncenter.rename,pred.dat.plotting$anom)
@@ -2091,18 +2214,16 @@ pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$type == "anom",]
 #pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$sp=="PILA",]
 #pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$anom=="Amin",]
 
-pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$sp %in% c("ABCO","COV.GRASS","COV.SHRUB","HDWD.ALLSP","HT.ABCO","HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP","PINUS.ALLSP","PIPJ","SHADE.ALLSP","QUKE","PILA","PSME"),]
-pred.dat.plotting <- pred.dat.plotting[!(pred.dat.plotting$anom %in% c("Dmax","Dmean")),]
+pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$sp %in% c("ABCO","COV.GRASS","COV.SHRUB","HDWD.ALLSP","HT.ABCO","HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.PIPJ","HT.SHADE.ALLSP","PINUS.ALLSP","PIPJ","SHADE.ALLSP"),]
+#pred.dat.plotting <- pred.dat.plotting[!(pred.dat.plotting$anom %in% c("Dmax","Dmean")),]
 
-spsub <- list("PIPJ" = "Yellow pine\npresence\n(% of plots)","ABCO" = "White fir\npresence\n(% of plots)","PILA" = "Sugar pine\npresence\n(% of plots)","PSME" = "Douglas-fir\npresence\n(% of plots)","QUKE"="Black oak\npresence\n(% of plots)","PINUS.ALLSP" = "Pines\npresence\n(% of plots)","SHADE.ALLSP" = "Shade-tolerant conifers\npresence\n(% of plots)","HDWD.ALLSP" = "Broadleaved trees\npresence\n(% of plots)","COV.SHRUB" = "Shrubs\n(% cover)","COV.GRASS" = "Graminoids\n(%cover)","HT.PIPJ"="Yellow pine\nheight dominance\n(% of plots)","HT.ABCO"="White fir\nheight dominance\n(% of plots)","HT.PINUS.ALLSP"="Pines\nheight dominance\n(% of plots)","HT.SHADE.ALLSP"="Shde-tolerant conifers\nheight dominance\n(% of plots)","HT.HDWD.ALLSP"="Broadleaved trees\nheight dominance\n(% of plots)")
+spsub <- list("PIPJ" = "Yellow pine\npresence\n(% of plots)","ABCO" = "White fir\npresence\n(% of plots)","PILA" = "Sugar pine\npresence\n(% of plots)","PSME" = "Douglas-fir\npresence\n(% of plots)","QUKE"="Black oak\npresence\n(% of plots)","PINUS.ALLSP" = "All pines\npresence\n(% of plots)","SHADE.ALLSP" = "Shade-tolerant conifers\npresence\n(% of plots)","HDWD.ALLSP" = "Broadleaved trees\npresence\n(% of plots)","COV.SHRUB" = "Shrubs\n(% cover)","COV.GRASS" = "Graminoids\n(%cover)","HT.PIPJ"="Yellow pine\nheight dominance\n(% of plots)","HT.ABCO"="White fir\nheight dominance\n(% of plots)","HT.PINUS.ALLSP"="Pines\nheight dominance\n(% of plots)","HT.SHADE.ALLSP"="Shde-tolerant conifers\nheight dominance\n(% of plots)","HT.HDWD.ALLSP"="Broadleaved trees\nheight dominance\n(% of plots)")
 pred.dat.plotting$sp <- gsubfn("\\S+",spsub,pred.dat.plotting$sp)
 pred.dat.plotting$sp <- factor(pred.dat.plotting$sp,levels=spsub)
 
-anomsub <- list("Pmin" = "Min precip","Pmean" = "Mean precip","Amin" = "Min AET","Amean" = "Mean AET")
+anomsub <- list("Pmin" = "Min precip","Pmean" = "Mean precip","Amin" = "Min AET","Amean" = "Mean AET","Dmax" = "Max CWD","Dmean" = "Mean CWD")
 pred.dat.plotting$anom <- gsubfn("\\S+",anomsub,pred.dat.plotting$anom)
 pred.dat.plotting$anom <- factor(pred.dat.plotting$anom,levels=anomsub)
-
-
 
 
 
@@ -2130,9 +2251,9 @@ p <- ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z_c,y=pred.mid,color=norm.leve
   geom_line(size=1.5) +
   geom_ribbon(aes(ymin=pred.low,ymax=pred.high),alpha=0.3,color=NA) +
   facet_grid(anom~sp) +
-  geom_text(aes(0,0.8,label=anom.improvement),size=4,color="black") +
+  #geom_text(aes(0,0.8,label=anom.improvement),size=4,color="black") +
   theme_bw(12) +
-  labs(x="Anomaly value",y="Model prediction (% of plots)",color="Normal climate\n(precip. or AET)",fill="Normal climate\n(precip. or AET)") +
+  labs(x="Anomaly value",y="Model prediction (%)",color="Normal climate\n(precip. or AET)",fill="Normal climate\n(precip. or AET)") +
   scale_color_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray26")) +
   scale_fill_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray26")) +
   theme(panel.grid.minor = element_blank(),strip.background = element_blank(), panel.border = element_rect(colour = "black",size=0.6), strip.text = element_text(size = 9)) +
@@ -2256,8 +2377,8 @@ for(i in 1:length(plot.cats)) {
     facet_wrap(~sp) +
     theme_bw(16) +
     labs(x="Postfire minimum precipitation anomaly (SD)",y=ylab,color="Normal\nprecipitation",fill="Normal\nprecipitation") +
-    scale_color_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray26")) +
-    scale_fill_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray26")) +
+    scale_color_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray26"),drop=FALSE) +
+    scale_fill_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray26"),drop=FALSE) +
     theme(panel.grid.minor = element_blank(),strip.background = element_blank(), panel.border = element_rect(colour = "black",size=0.6), strip.text = element_text(size = 16,vjust=0)) +
     theme(plot.margin = unit(c(-.1,0.5,0,0.5), "cm"),legend.key.size = unit(1.5, 'lines')) +
     geom_vline(xintercept=anom.mid,linetype="longdash")
@@ -2459,11 +2580,11 @@ coefs$est.se <- paste0(coefs$Estimate," (",coefs$`Std. Error`,")")
 coefs.cast <- dcast(coefs,sp+variable+type~var.name,value.var="est.se")
 coefs.cast <- as.data.table(coefs.cast)
 
-dummy.df <- data.table("sp"="a","variable"="a","type"="a","(Intercept)"=1,"normal_c"=1,"normal_c.sq"=1,"seed_tree_distance_general_c"=1,"rad.march_c"=1,"diff.norm.z_c"=1,"diff.norm.z_c.sq"=1,"normal_c:diff.norm.z_c"=1,"normal_c:diff.norm.z_c.sq"=1,"(phi)"=1)
+dummy.df <- data.table("sp"="a","variable"="a","type"="a","(Intercept)"=1,"normal_c"=1,"normal_c.sq"=1,"seed_tree_distance_general_c"=1,"rad.march_c"=1,"diff.norm.z_c"=1,"diff.norm.z_c.sq"=1,"normal_c:diff.norm.z_c"=1,"normal_c:diff.norm.z_c.sq"=1,"diff.norm.z_c:normal_c.sq"=1,"(phi)"=1)
 coefs.cast <- rbind.fill(coefs.cast,dummy.df)
 coefs.cast <- as.data.table(coefs.cast)
 
-coefs.cast <- coefs.cast[,c("sp","variable","type",Intercept="(Intercept)","normal_c","normal_c.sq",seed.tree="seed_tree_distance_general_c","rad.march_c","diff.norm.z_c","diff.norm.z_c.sq","normal_c:diff.norm.z_c","normal_c:diff.norm.z_c.sq","(phi)"),with=FALSE]
+coefs.cast <- coefs.cast[,c("sp","variable","type",Intercept="(Intercept)","normal_c","normal_c.sq",seed.tree="seed_tree_distance_general_c","rad.march_c","diff.norm.z_c","diff.norm.z_c.sq","normal_c:diff.norm.z_c","normal_c:diff.norm.z_c.sq","diff.norm.z_c:normal_c.sq","(phi)"),with=FALSE]
 
 
 responses.keep <- c("ABCO","PIPJ","PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","COV.SHRUB","COV.GRASS","HT.PINUS.ALLSP","HT.SHADE.ALLSP","HT.HDWD.ALLSP")
@@ -2472,12 +2593,10 @@ anoms.keep <- c("Amin","Amean","Pmin","Pmean")
 coefs.cast <- coefs.cast[coefs.cast$sp %in% responses.keep & coefs.cast$variable %in% anoms.keep,]
 
 
-##!! need to make species names and anomaly names friendly, also drop replicated AET (min and mean) baselines
-
 anomsub <- list("Pmean"="Mean Precipitation","Pmin" = "Minimum Precipitation","Amean" = "Mean AET","Amin"="Minimum AET")
 coefs.cast$variable <- gsubfn("\\S+",anomsub,coefs.cast$variable)
 
-colsub <- list("sp"="Response","variable" = "Anomaly","type"="Model","(Intercept)" = "Intercept","normal_c"="Normal climate","normal_c.sq"="Normal climate^2","seed_tree_distance_general_c"="Seed tree dist.","rad.march_c"="Solar exposure","diff.norm.z_c"="Anomaly","diff.norm.z_c.sq"="Anomaly^2","normal_c:diff.norm.z_c" = "Normal climate * Anomaly","normal_c:diff.norm.z_c.sq" = "Normal climate * Anomaly^2","(phi)" = "Phi")
+colsub <- list("sp"="Response","variable" = "Anomaly","type"="Model","(Intercept)" = "Intercept","normal_c"="Normal climate","normal_c.sq"="Normal climate^2","seed_tree_distance_general_c"="Seed tree dist.","rad.march_c"="Solar exposure","diff.norm.z_c"="Anomaly","diff.norm.z_c.sq"="Anomaly^2","normal_c:diff.norm.z_c" = "Normal climate * Anomaly","normal_c:diff.norm.z_c.sq" = "Normal climate * Anomaly^2","normal_c.sq:diff.norm.z_c" = "Normal climate^2 * Anomaly","(phi)" = "Phi")
 names(coefs.cast) <- gsubfn("\\S+",colsub,names(coefs.cast))
 
 coefs.cast[is.na(coefs.cast)] <- ""
@@ -2512,7 +2631,9 @@ coefs.presab$Response <- factor(coefs.presab$Response,levels=spsub)
 coefs.presab <- coefs.presab[,-"Phi"]
 coefs.presab <- coefs.presab[order(Response,Model)]
 
-write.csv(coefs.presab,"../coefs_presab.csv")
+coefs.presab[coefs.presab == ""] <- "--"
+
+write.csv(coefs.presab,"../tables/coefs_presab.csv")
 
 
 ### Height dominaince
@@ -2525,7 +2646,9 @@ coefs.dom$Response <- factor(coefs.dom$Response,levels=spsub)
 coefs.dom <- coefs.dom[,-c("Phi","Seed tree dist.")]
 coefs.dom <- coefs.dom[order(Response,Model)]
 
-write.csv(coefs.dom,"../coefs_dom.csv")
+coefs.dom[coefs.dom == ""] <- "--"
+
+write.csv(coefs.dom,"../tables/coefs_dom.csv")
 
 ### Cover
 keep.vars <- c("COV.SHRUB","COV.GRASS")
@@ -2537,7 +2660,9 @@ coefs.cov$Response <- factor(coefs.cov$Response,levels=spsub)
 coefs.cov <- coefs.cov[,-c("Seed tree dist.")]
 coefs.cov <- coefs.cov[order(Response,Model)]
 
-write.csv(coefs.cov,"../coefs_cov.csv")
+coefs.cov[coefs.cov == ""] <- "--"
+
+write.csv(coefs.cov,"../tables/coefs_cov.csv")
 
 
 #### 13. For each species and rad group, plot fitted vs. observed, for normal and anom side by side ####
@@ -2558,7 +2683,7 @@ fit.dat.ppt.fire <- fit.dat.ppt[,list(fitted=mean(fitted),observed=mean(response
 fit.dat.ppt.fire[,c("observed","fitted")] <- 100 * fit.dat.ppt.fire[,c("observed","fitted")]
 
 
-resps.keep <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","COV.SHRUB","COV.GRASS")
+resps.keep <- c("PIPJ","ABCO","HDWD.ALLSP","COV.SHRUB","COV.GRASS")
 
 fit.dat.ppt.fire <- fit.dat.ppt.fire[fit.dat.ppt.fire$sp %in% resps.keep,]
 
@@ -2566,7 +2691,7 @@ fit.dat.ppt.fire$sp <- as.factor(fit.dat.ppt.fire$sp)
 fit.dat.ppt.fire$sp <- factor(fit.dat.ppt.fire$sp,resps.keep)
 
 levels(fit.dat.ppt.fire$sp)
-levels(fit.dat.ppt.fire$sp) <- c("Pine regeneration\n(% of plots)","Shade tolerant conifer\nspecies regeneration\n(% of plots)","Broadleaved species\nregeneration\n(% of plots)","Shrubs\n(% cover)","Graminoids\n(% cover)")
+levels(fit.dat.ppt.fire$sp) <- c("Yellow pine regeneration\n(% of plots)","White fir regeneration\n(% of plots)","Broadleaved species\nregeneration\n(% of plots)","Shrubs\n(% cover)","Graminoids\n(% cover)")
 
 fit.dat.ppt.fire$type <- as.factor(fit.dat.ppt.fire$type)
 levels(fit.dat.ppt.fire$type)
@@ -2615,7 +2740,7 @@ fit.dat.ppt.fire <- fit.dat.ppt[,list(fitted=mean(fitted),observed=mean(response
 fit.dat.ppt.fire[,c("observed","fitted")] <- 100 * fit.dat.ppt.fire[,c("observed","fitted")]
 
 
-resps.keep <- c("PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","COV.SHRUB","COV.GRASS")
+resps.keep <- c("PIPJ","ABCO","HDWD.ALLSP","COV.SHRUB","COV.GRASS")
 
 fit.dat.ppt.fire <- fit.dat.ppt.fire[fit.dat.ppt.fire$sp %in% resps.keep,]
 
@@ -2623,7 +2748,7 @@ fit.dat.ppt.fire$sp <- as.factor(fit.dat.ppt.fire$sp)
 fit.dat.ppt.fire$sp <- factor(fit.dat.ppt.fire$sp,resps.keep)
 
 levels(fit.dat.ppt.fire$sp)
-levels(fit.dat.ppt.fire$sp) <- c("Pine regeneration\n(% of plots)","Shade tolerant conifer\nspecies regeneration\n(% of plots)","Broadleaved species\nregeneration\n(% of plots)","Shrubs\n(% cover)","Graminoids\n(% cover)")
+levels(fit.dat.ppt.fire$sp) <- c("Yellow pine regeneration\n(% of plots)","White fir regeneration\n(% of plots)","Broadleaved species\nregeneration\n(% of plots)","Shrubs\n(% cover)","Graminoids\n(% cover)")
 
 fit.dat.ppt.fire$type <- as.factor(fit.dat.ppt.fire$type)
 levels(fit.dat.ppt.fire$type)
@@ -2818,6 +2943,11 @@ for(sp in sp.opts.norm) {
   
   m.dry <- glm(regen.presab.old~rad.march_c + ppt.normal_c + ppt.normal_c.sq,data=d.mod.dry,family="binomial")
   m.wet <- glm(regen.presab.old~rad.march_c + ppt.normal_c + ppt.normal_c.sq,data=d.mod.wet,family="binomial")
+  
+  # m.dry <- gam(regen.presab.old~ s(ppt.normal_c,k=3) + s(rad.march_c,k=3),data=d.mod.dry,family=binomial)
+  # m.wet <- gam(regen.presab.old~s(ppt.normal_c,k=3) + s(rad.march_c,k=3),data=d.mod.wet,family=binomial)
+  # 
+  
   
   pred <- predict(m.dry,newdata=newdat.dry,se.fit=TRUE,type="link")
   plot.dat.dry <- cbind(newdat.dry,pred)
