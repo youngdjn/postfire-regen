@@ -2222,7 +2222,7 @@ levels(pred.dat.comb$norm.level) <- c("High","Low","High and low")
 plot.cats <- c("presab",
                #"ht",
                "cov")
-plot.sps <- list(c("SHADE.ALLSP"),
+plot.sps <- list(c("ABCO"),
                  #c("HT.PINUS.ALLSP","HT.SHADE.ALLSP","HT.HDWD.ALLSP"),
                  c("COV.SHRUB","COV.GRASS"))
 
@@ -2238,7 +2238,7 @@ for(i in 1:length(plot.cats)) {
   
   if(plot.cats[[i]] == "presab") {
     ylab <- "Percentage of plots\nwith regeneration"
-    levels(pred.dat.plotting$sp) <- c("Shade-tolerant\nconifers","Broadleaved trees")
+    levels(pred.dat.plotting$sp) <- c("White fir","Broadleaved trees")
   } else if(plot.cats[[i]] == "ht") {
     ylab <- "Percentage of plots where\ndominant in height"
   } else if(plot.cats[[i]] == "cov") {
@@ -2685,6 +2685,24 @@ ggplot(fit.dat.plot,aes(x=Fire,y=resid)) +
 
 
 #### 222 ABCO normal fits for wet and dry ####
+vars <- c("ppt.normal_c","ppt.normal_c.sq","diff.norm.ppt.z_c","diff.norm.ppt.z_c.sq","tmean.normal_c","tmean.normal_c.sq",
+          "diff.norm.tmean.z_c","diff.norm.tmean.z_c.sq",
+          "aet.normal_c","aet.normal_c.sq","diff.norm.aet.z_c","diff.norm.aet.z_c.sq","def.normal_c","def.normal_c.sq",
+          "diff.norm.def.z_c","diff.norm.def.z_c.sq",
+          "seed_tree_distance_general_c","rad.march_c","SHRUB_c"
+)
+
+
+
+mid.val <- sapply(vars,mid.val.fun,USE.NAMES=TRUE)
+
+low.val <- sapply(vars,low.val.fun,USE.NAMES=TRUE)
+names(low.val) <- vars
+
+high.val <- sapply(vars,high.val.fun,USE.NAMES=TRUE)
+names(high.val) <- vars
+
+
 
 d <- d.plot.ind
 
@@ -2749,27 +2767,112 @@ d.c$CONIFER.pt <- (d.c$CONIFER.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
 d.c$Fire <- as.factor(d.c$Fire)
 
 
-sp <- 
 
 
 
 
+dryfires <- c("Antelope","Moonlight","Ralston","Bassetts","Chips","Bagley")
+wetfires <- c("Rich","American River","Cub","BTU Lightning","Freds","Power","Straylor")
+
+d.c.dry <- d.c[d.c$Fire %in% dryfires,]
+d.c.wet <- d.c[d.c$Fire %in% wetfires,]
 
 
 
 
+ppt.norm.seq.dry <- seq(from=min(d.c.dry$ppt.normal_c),to=max(d.c.dry$ppt.normal_c),length.out=100)
+
+newdat.dry <- data.frame(
+  ppt.normal_c = ppt.norm.seq.dry,
+  ppt.normal_c.sq = ppt.norm.seq.dry^2,
+  seed_tree_distance_general_c = mid.val["seed_tree_distance_general_c"],
+  rad.march_c = mid.val["rad.march_c"],
+  SHRUB_c = mid.val["SHRUB_c"]
+)
+
+
+ppt.norm.seq.wet <- seq(from=min(d.c.wet$ppt.normal_c),to=max(d.c.wet$ppt.normal_c),length.out=100)
+
+newdat.wet <- data.frame(
+  ppt.normal_c = ppt.norm.seq.wet,
+  ppt.normal_c.sq = ppt.norm.seq.wet^2,
+  seed_tree_distance_general_c = mid.val["seed_tree_distance_general_c"],
+  rad.march_c = mid.val["rad.march_c"],
+  SHRUB_c = mid.val["SHRUB_c"]
+)
+
+
+plot.dat.all <- data.frame()
+
+sp.opts.norm <- c("ABCO","PIPJ")
+
+for(sp in sp.opts.norm) {
+
+
+  
+  
+  d.sp.curr.plt <- d.sp[d.sp$species==sp,]
+  
+  d.mod.wet <- merge(d.c.wet,d.sp.curr.plt,by=c("Regen_Plot"))
+  d.mod.dry <- merge(d.c.dry,d.sp.curr.plt,by=c("Regen_Plot"))
+  
+  m.dry <- glm(regen.presab.old~rad.march_c + ppt.normal_c + ppt.normal_c.sq,data=d.mod.dry,family="binomial")
+  m.wet <- glm(regen.presab.old~rad.march_c + ppt.normal_c + ppt.normal_c.sq,data=d.mod.wet,family="binomial")
+  
+  pred <- predict(m.dry,newdata=newdat.dry,se.fit=TRUE,type="link")
+  plot.dat.dry <- cbind(newdat.dry,pred)
+  plot.dat.dry$postfire <- "Dry"
+  
+  pred <- predict(m.wet,newdata=newdat.wet,se.fit=TRUE,type="link")
+  plot.dat.wet <- cbind(newdat.wet,pred)
+  plot.dat.wet$postfire <- "Wet"
+  
+  plot.dat <- rbind(plot.dat.wet,plot.dat.dry)
+  
+  plot.dat$pred.lwr <- plot.dat$fit-1.96*plot.dat$se.fit
+  plot.dat$pred.upr <- plot.dat$fit+1.96*plot.dat$se.fit
+  
+  plot.dat[,c("fit","pred.upr","pred.lwr")] <- 100*inv.logit(plot.dat[,c("fit","pred.upr","pred.lwr")])
+  
+  plot.dat$sp <- sp
+  
+  plot.dat.all <- rbind(plot.dat.all,plot.dat)
+}
 
 
 
+for(col.name in names(plot.dat.all)) {
+  if(grepl("_c$",col.name)) { #it's a centered col
+    col.name.uncentered <- substr(col.name,1,nchar(col.name)-2)
+    
+    col.mean <- d.center.dat[d.center.dat$var == col.name,"var.mean"]
+    col.sd <- d.center.dat[d.center.dat$var == col.name,"var.sd"]
+    
+    plot.dat.all[,as.character(col.name.uncentered)] <- plot.dat.all[,col.name] * col.sd + col.mean
+    
+    
+  }
+}
 
 
+subs <- list("ABCO" = "White fir","PIPJ" = "Yellow pine")
+plot.dat.all$sp <- gsubfn("\\S+",subs,plot.dat.all$sp)
 
 
+p <- ggplot(plot.dat.all,aes(x=ppt.normal,y=fit,col=postfire,fill=postfire)) +
+  geom_line(size=1.5) +
+  geom_ribbon(aes(ymin=pred.lwr,ymax=pred.upr),alpha=0.3,color=NA) +
+  scale_color_manual(values=c("Wet"="turquoise4","Dry"="darkorange1")) +
+  scale_fill_manual(values=c("Wet"="turquoise4","Dry"="darkorange1")) +
+  labs(x="Normal precipitation (mm)",color="Post-fire mean\nprecipitation anomaly",fill="Post-fire mean\nprecipitation anomaly",y="Percentage of plots\nwith regeneration") +
+  theme_bw(16) +
+  theme(panel.grid.minor = element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black",size=0.6), strip.text = element_text(size = 16,vjust=0)) +
+  facet_wrap(~sp)
 
 
-
-
-
+tiff(file=paste0("../Figures/FigX_normal_preds_",Sys.Date(),".tiff"),width=2000,height=1000,res=200) 
+p
+dev.off()
 
 
 
