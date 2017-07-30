@@ -480,13 +480,14 @@ d.cat <- d.merge[,list(Fire=Fire,
                        regen.Shade = 100*round(regen.presab.old_SHADE.ALLSP,digits=2),
                        regen.Hdwd = 100*round(regen.presab.old_HDWD.ALLSP,digits=2),
                        
-                       ref.ABCO = round(adult.ba_ABCO,digits=0),
-                       ref.PILA = round(adult.ba_PILA,digits=0),
-                       ref.PIPJ = round(adult.ba_PIPJ,digits=0),
-                       ref.PSME = round(adult.ba_PSME,digits=0),
-                       ref.Pinus = round(adult.ba_PINUS.ALLSP,digits=0),
-                       ref.Shade = round(adult.ba_SHADE.ALLSP,digits=0),
-                       ref.Hdwd = round(adult.ba_HDWD.ALLSP,digits=0),
+                       #convert from plot-level BA in cm to BA in sq m per hectare
+                       ref.ABCO = round(adult.ba_ABCO * 0.0001 / 0.006,digits=0),
+                       ref.PILA = round(adult.ba_PILA * 0.0001 / 0.006,digits=0),
+                       ref.PIPJ = round(adult.ba_PIPJ * 0.0001 / 0.006,digits=0),
+                       ref.PSME = round(adult.ba_PSME * 0.0001 / 0.006,digits=0),
+                       ref.Pinus = round(adult.ba_PINUS.ALLSP * 0.0001 / 0.006,digits=0),
+                       ref.Shade = round(adult.ba_SHADE.ALLSP * 0.0001 / 0.006,digits=0),
+                       ref.Hdwd = round(adult.ba_HDWD.ALLSP * 0.0001 / 0.006,digits=0),
                        
                        cov.shrub=round(SHRUB.highsev,digits=0),
                        cov.forb=round(FORB.highsev,digits=0),
@@ -495,6 +496,9 @@ d.cat <- d.merge[,list(Fire=Fire,
                   ]
 
 ## Fire-level ##
+
+
+d.cat$topo.cat <- gsub(".","",d.cat$topo.cat,fixed=TRUE)
 
 
 write.csv(d.cat,"../tables/topotclim_cat_table.csv")
