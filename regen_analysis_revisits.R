@@ -218,8 +218,8 @@ revisit.presab.var <- paste("regen.presab",revisit.type,"revisit",sep=".")
 revisit.count.var <- paste("regen.count",revisit.type,"revisit",sep=".")
 
 
-plots.sps.keepvars <- plots.sps[,c(orig.presab.var,orig.count.var,revisit.presab.var,revisit.count.var,"species","Fire")]
-names(plots.sps.keepvars) <- c("orig.presab","orig.count","revisit.presab","revisit.count","species","Fire")
+plots.sps.keepvars <- plots.sps[,c(orig.presab.var,orig.count.var,revisit.presab.var,revisit.count.var,"species")]
+names(plots.sps.keepvars) <- c("orig.presab","orig.count","revisit.presab","revisit.count","species")
 plots.sps.keepvars <- data.table(plots.sps.keepvars)
 
 
@@ -262,5 +262,5 @@ ggplot(d.plot,aes(x=orig.presab,y=prop)) +
   geom_text(aes(label=labeltext,y=-0.02)) +
   labs(x="Regeneration present at initial survey",y="Proportion plots with presence at revisit")
 
-
+## patterns of older mimicking younger are stronger when considering all seedlings as opposed to "nonyoung" seedlings (in either or both survey times)
 

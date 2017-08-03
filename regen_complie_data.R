@@ -352,8 +352,12 @@ not.ageable <- c(hardwoods)
 seedl$Count_total <- rowSums(seedl[,seedl.count.columns],na.rm=TRUE) #this includes unk_yr (incase some of the seedlings were considered ageable and others not)
 seedl[seedl$Species %in% not.ageable,"unk_yr"] <- seedl$Count_total[seedl$Species %in% not.ageable]
 seedl.known.age.count.cols <- seedl.count.columns[1:(length(seedl.count.columns)-1)]
+
+seedl.count.columns.names <- grep("yr$",names(seedl),value=TRUE)
+seedl.count.columns.names <- seedl.count.columns.names[!(seedl.count.columns.names %in% "unk_yr")]
+
 #for non-ageable seedlings, where ages were just put into unk_yr, set their known age columns to 0
-seedl[seedl$Species %in% not.ageable,seedl.known.age.count.cols] <- 0
+seedl[seedl$Species %in% not.ageable,seedl.count.columns.names] <- 0
 
 
 
@@ -792,6 +796,11 @@ if(nrow(sap.rep.rows)>0) {warning("Multiple sapling entries for some species-plo
 seedl$X11.yr <- seedl$X11.yr + seedl$X11yr
 seedl <- seedl[,!(names(seedl) %in% "X11yr")]
 
+#put unk_yr at the end
+unkyr <- seedl$unk_yr
+seedl <- seedl[,!(names(seedl) %in% "unk_yr")]
+seedl$unk_yr <- unkyr
+
 seedl.count.columns <- grep("yr$",names(seedl))
 seedl.ag <- aggregate(seedl[,seedl.count.columns],by=list(species=seedl$Species,Regen_Plot=seedl$Regen_Plot),FUN=sum,na.rm=TRUE)
 count.yrs <- c(paste("count.",0:(length(seedl.count.columns)-2),"yr",sep=""),"unk_yr")
@@ -799,23 +808,59 @@ names(seedl.ag) <- c("species","Regen_Plot",count.yrs)
 
 ### aggregate sapling table by plot and species
 sap$tot <- rowSums(sap[,6:14],na.rm=TRUE)
-sap$X10yr[sap$tot == 0 | (is.na(sap$tot))] <- 1 # if the species had a row for the sapling but no age, assume it was 10yr; some saplings are not assigned an age; just interpret each row as a presence
-sap.ag <- aggregate(sap[,c(6:14,20)],by=list(species=sap$Species,Regen_Plot=sap$Regen_Plot),FUN=sum,na.rm=TRUE)
+
+#if the species had a row for the sapling but not under an age column, see if it had an age assigned in the age columns. if so, put "1" under the appropriate age column, otherwise assume it was 10 yr (this was only hardwoods and all hardwoods are going to get re-aged anyway because it's impossible to know)
+saps.no.age <- which(sap$tot == 0 | (is.na(sap$tot)))
+
+for(i in saps.no.age) {
+  
+  sap.row <- sap[i,]
+  age <- max(sap.row$tallest_age,sap.row$age,na.rm=TRUE)
+  
+  if(age != -Inf) { #there was an age specified
+    
+    search <- paste0("X",age,"\\.?yr$")
+    age.col <- grep(search,names(sap.row))
+    sap[i,age.col] <- 1 # set the age (if no matching age col, does not set the age)
+    sap[i,"tot"] <- 1
+
+  } else { # there was no age specified, so set age 10 to "1". In highsev plots, this only applies to hardwoods, which are all going to get reassigned to the age of the fire anyway
+    
+    sap[i,"X10yr"] <- 1
+    
+  }
+}
+
+sap.ag <- aggregate(sap[,c(6:14)],by=list(species=sap$Species,Regen_Plot=sap$Regen_Plot),FUN=sum,na.rm=TRUE)
 count.yrs <- paste("count.",3:11,"yr",sep="")
-names(sap.ag) <- c("species","Regen_Plot",count.yrs,"count.tot")
-sap.ag <- sap.ag[,1:ncol(sap.ag)-1]
+names(sap.ag) <- c("species","Regen_Plot",count.yrs)
+
+
+##For hardwood saps, set age to unk_yr
+
+#populate seedling unk_yr column with values for all hardwoods (but NOT CADE)
+sap.count.columns <- grep("yr$",names(sap.ag))
+hardwoods<- c("QUKE","QUCH2","ARME","LIDE3","CHCH","QUGA4","ACMA","CEMO2","CONU4","POTR5","QUBE5","QUJO3","QUWI","UMCA")
+#not.ageable <- c("CADE27",hardwoods)
+not.ageable <- c(hardwoods)
+sap.ag$tot <- rowSums(sap.ag[,sap.count.columns],na.rm=TRUE) #this includes unk_yr (incase some of the seedlings were considered ageable and others not)
+sap.ag[sap.ag$species %in% not.ageable,"unk_yr"] <- sap.ag$tot[sap.ag$species %in% not.ageable]
+
+#for non-ageable seedlings, where ages were just put into unk_yr, set their known age columns to 0
+sap.ag[sap.ag$species %in% not.ageable,sap.count.columns] <- 0
+
 
 ### aggregate resprout table by plot and species
 resprout$COUNT.TOTAL <- ifelse(is.na(resprout$COUNT.TOTAL),1,resprout$COUNT.TOTAL) # sometimes it has a count, sometimes it has one record per individual (stem?)
 resprout.ag <- aggregate(resprout$COUNT.TOTAL,by=list(species=resprout$Species,Regen_Plot=resprout$Regen_Plot),FUN=sum,na.rm=TRUE)
-count.yrs <- paste("count.",5,"yr",sep="")
+count.yrs <- paste("count.",4,"yr",sep="") # use this because it will always be counted as "old" and "all" and not as "young" which is what we need.
 names(resprout.ag) <- c("species","Regen_Plot",count.yrs)
 
 ### merge seedling and sapling tables and resprout table
 regen <- rbind.fill(seedl.ag,sap.ag)
 regen <- rbind.fill(regen,resprout.ag) # add in resprout table (comment out here if desired)
 regen.ag <- aggregate(regen[,3:ncol(regen)],by=list(species=regen$species,Regen_Plot=regen$Regen_Plot),FUN=sum,na.rm=TRUE)
-# for hardwoods, unk_yr is for seedlings/saplings and 5yr is for resprouts
+# for hardwoods, F is for seedlings/saplings and 5yr is for resprouts
 
 ### aggregate surviving tree table by plot and species
 surviving.trees <- surviving.trees[surviving.trees$DBH > 7.5,] # exclude small trees (it seems sometimes crews put smaller trees as saplings instead of surviving trees)
@@ -904,9 +949,9 @@ plot.3 <- plot.3[!(plot.3$Regen_Plot %in% plots.planted),]
 
 ### get summarized regen data for each plot (also summarizes adults)
 ##!! NOTE that as written here, the code includes un-ageable species when tallying regen for ALL ages, but not for specific age classes
-plot.3.regen.old <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="old",all.sp=TRUE,peryear=TRUE)
+plot.3.regen.old <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="old",all.sp=TRUE,peryear=TRUE,incl.unk.age=TRUE)
 plot.3.regen.young <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="young",all.sp=TRUE,peryear=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call, the previous line)
-plot.3.regen.all <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="all",all.sp=TRUE,incl.unk.age.for.all=TRUE,peryear=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call)
+plot.3.regen.all <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="all",all.sp=TRUE,incl.unk.age=TRUE,peryear=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call)
 names(plot.3.regen.old)[3] <- "regen.count.old"
 names(plot.3.regen.young)[3] <- "regen.count.young"
 names(plot.3.regen.all)[3] <- "regen.count.all"

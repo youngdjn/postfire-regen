@@ -176,7 +176,7 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
 
 
 #### summarize regen counts for given ages, with all specified species as separate rows ####
-summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl.unk.age.for.all=FALSE,peryear=TRUE) {
+summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl.unk.age=FALSE,peryear=TRUE) {
   
   plot.ids <- unique(plot.df$Regen_Plot)
 
@@ -223,7 +223,7 @@ summarize.regen.ind <- function(plot.df,regen.df,sp,regen.ages,all.sp=FALSE,incl
     regen.row.cols <- eval(parse(text=paste0("regen.cols$",regen.plot))) # get the names of the regen columns of the correct age seedlings for the current regen plot-species combination
     
     #include unknown age if examining all-aged trees
-    if((regen.ages == "all")&(incl.unk.age.for.all==TRUE)) {
+    if(incl.unk.age==TRUE) {
       regen.row.cols.complete <- c(regen.row.cols,"unk_yr") 
     } else {
       regen.row.cols.complete <- regen.row.cols

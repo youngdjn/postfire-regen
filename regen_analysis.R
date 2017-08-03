@@ -2445,7 +2445,7 @@ response.rename <- list("PIPJ" = "Yellow pine presence",
                         "COV.GRASS" = "Graminoid cover",
                         
                         "HT.PIPJ" = "Yellow pine height dominance",
-                        "HT.ABCO" = "White fir height dominiance",
+                        "HT.ABCO" = "White fir height dominance",
                         "HT.PINUS.ALLSP" = "Pine height dominance",
                         "HT.SHADE.ALLSP" = "Shade-tolerant conifer height dominance",
                         "HT.HDWD.ALLSP" = "Broadleaved species height dominance"
@@ -2896,7 +2896,7 @@ d.c$Fire <- as.factor(d.c$Fire)
 
 
 
-dryfires <- c("Antelope","Moonlight","Ralston","Bassetts","Chips","Bagley")
+dryfires <- c("Antelope","Moonlight","Ralston","Bassetts","Chips","Bagley","Harding")
 wetfires <- c("Rich","American River","Cub","BTU Lightning","Freds","Power","Straylor")
 
 d.c.dry <- d.c[d.c$Fire %in% dryfires,]
