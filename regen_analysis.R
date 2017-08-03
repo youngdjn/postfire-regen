@@ -164,7 +164,7 @@ ggplot(d.plot.cat,aes(x=ppt.normal,y=rad.march,col=topoclim.cat,shape=FIRE_SEV.c
 d.sp.cat <- merge(d.sp,d.plot.cat[,c("Regen_Plot","topoclim.cat","Fire","FIRE_SEV","survey.years.post")])
 
 ## preparing to aggregate tree data: get highsev and control plots only, each with only the columns relevant to it
-d.sp.cat.highsev <- d.sp.cat[d.sp.cat$FIRE_SEV %in% high.sev,c("Fire","species","topoclim.cat","seed.tree.sp","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all","survey.years.post")]
+d.sp.cat.highsev <- d.sp.cat[d.sp.cat$FIRE_SEV %in% high.sev,c("Fire","species","topoclim.cat","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all","survey.years.post")]
 d.sp.cat.control <- d.sp.cat[d.sp.cat$FIRE_SEV %in% control,c("Fire","species","topoclim.cat","adult.count","adult.ba","survey.years.post")]
 
 ## for highsev plots (the ones where we're interested in regen), only consider plots surveyed 4-5 years post-fire
@@ -979,7 +979,7 @@ d.c.modfit <- d.c # because the model fitting uses its own d.c
 
 ## Set response options and loop through them
 
-sp.opts <- c("ABCO","SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP","PIPJ","PSME","PILA")
+sp.opts <- c("ABCO","SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP","PIPJ")
 sp.opts <- c("SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP")
 cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB")
 
@@ -3201,6 +3201,11 @@ regen.var <- "r.old"
 d.all <- merge(d.plot.3,d.sp.cast,by=c("Fire","topoclim.cat"))
 d.all <- d.all[(d.all$count.highsev > 4) & (d.all$count.control > 4),]
 
+#d.all <- d.all[d.all$ppt.normal.highsev > 1271,] #normally wet
+
+
+
+
 # ## wet plots only
 # ppt.cutoff <- mean(d.all$ppt.normal.highsev)
 # d.all <- d.all[d.all$ppt.normal.highsev > ppt.cutoff,]
@@ -3277,6 +3282,7 @@ d.all$TempAnom <- d.all$temp.anom
 
 
 
+
 cc0 <- cca(d.all.sp ~ `Precip Anomaly`,data=d.all)
 
 # all non-anomaly, excluding species
@@ -3349,7 +3355,7 @@ plot(b)
 
 
 #### 9. Plot the CCA ####
-
+library(ggvegan)
 ccadata <- fortify(cc3)
 
 ccadata$Label <- gsub("`","",ccadata$Label)

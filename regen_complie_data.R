@@ -774,6 +774,8 @@ seedl <- read.csv("../data_survey/Compiled/tree_regen.csv")
 resprout <- read.csv("../data_survey/Compiled/Resprouts.csv")
 surviving.trees <- read.csv("../data_survey/Compiled/surviving_trees.csv",header=TRUE,stringsAsFactors=FALSE)
 
+sap.plt <- merge(sap,plot[,c("Regen_Plot","FIRE_SEV")],by="Regen_Plot")
+
 
 # specify only non-planted seedlings (assuming that if it's blank, it means it's seeded)
 seedl <- seedl[which((seedl$seed_veg_plant != "P") | is.na(seedl$seed_veg_plant)),]
