@@ -8,6 +8,7 @@ library(betareg)
 library(car)
 library(plyr)
 library(data.table)
+library(gsubfn)
 
 source("regen_analysis_functions.R")
 
@@ -21,6 +22,11 @@ d.sp <- read.csv("data_intermediate/speciesXplot_level.csv",header=T,stringsAsFa
 d.plot$Fire <- sapply(d.plot$Fire,FUN= function(x) simpleCap(tolower(x)))
 
 d.plot[d.plot$Fire == "Btu Lightening","Fire"] <- "BTU Lightning"
+
+
+
+ggplot(d.plot,aes(x=seed.tree.distance.general,y=))
+
 
 
 
@@ -300,11 +306,6 @@ for(fire in unique(d.plot.3$Fire)) {
 
 
 
-
-
-
-
-
 #### 5. Determine dominant adult tree species (from control plots) within each category ####
 library(reshape)
 
@@ -402,6 +403,7 @@ d <- d.plot.ind
 #d <- merge(d,d.plot.3[,c("Fire","topoclim.cat")]) # keep only the plot data that has corresponding topoclim cats that are being kept (i.e. correct severity, etc.)
 
 keep.sp <- c("ABCO","PIPJ","PILA","PSME","PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP")
+keep.sp <- c("QUCH2","LIDE3",  "QUKE", "ABCO","PIPJ","PILA","PSME","PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","PICO","PILA","PIMO3","PISA2","PINUS")
 keep.cols <- c("species","regen.presab.old","adult.ba","topoclim.cat","Fire")
 d.sp <- as.data.frame(d.sp)
 d.sp.trim <- d.sp[d.sp$species %in% keep.sp,]
@@ -416,6 +418,20 @@ d.sp.cast <- data.table::dcast(d.sp.trim,Regen_Plot~species,value.var=c("regen.p
 # merge the species data into each plot
 d.merge <- merge(d,d.sp.cast,by="Regen_Plot")
 d.merge <- as.data.table(d.merge)
+
+#temporary
+
+pila <- mean(d.merge$regen.presab.old_PILA)
+psme <- mean(d.merge$regen.presab.old_PSME)
+pipo <- mean(d.merge$regen.presab.old_PIPJ)
+abco <- mean(d.merge$regen.presab.old_ABCO)
+pimo <- mean(d.merge$regen.presab.old_PIMO3)
+pisa <- mean(d.merge$regen.presab.old_PISA2)
+pinus <- mean(d.merge$regen.presab.old_PINUS)
+quke <- mean(d.merge$regen.presab.old_QUKE)
+quch <- mean(d.merge$regen.presab.old_QUCH2)
+lide <- mean(d.merge$regen.presab.old_LIDE3)
+
 
 d.fire <- d.merge[,list(fire.year=mean(fire.year),
                     years.post=paste(sort(unique(survey.years.post)),collapse=", "),
@@ -663,7 +679,7 @@ dev.off()
 
 
 
-#### Repeate cliamte space plots for AET ####
+#### Repeat cliamte space plots for AET ####
 
 
 
@@ -888,10 +904,21 @@ ggplot(a,aes(x=Fire,y=mean)) +
 
 
 
+#### 9bb Plot of seed tree distance vs. conif regen ####
+d.sp.curr.plt <- d.sp[d.sp$species=="CONIF.ALLSP",]
+d2 <- merge(d,d.sp.curr.plt,by=c("Regen_Plot"))
+d2 <- d2[d2$seed_tree_distance_general < 201,]
+d2$st.dist <- d2$seed_tree_distance_general * 3.28
+d2$seedl.ha <- d2$regen.count.all
+
+ggplot(d2,aes(x=st.dist,y=seedl.ha)) +
+  geom_point(size=3) +
+  theme_bw(20) +
+  labs(x="Distance to nearest reproductive tree (ft)",y="Seedlings per plot")
 
 
 
-#### 10. Plot-level analysis with GLM; also run randomForest to get importance scores ####
+#### 10. Plot-level analysis with GLM ####
 
 
 
@@ -979,19 +1006,23 @@ d.c.modfit <- d.c # because the model fitting uses its own d.c
 
 ## Set response options and loop through them
 
-sp.opts <- c("ABCO","SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP","PIPJ")
-sp.opts <- c("SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP")
+sp.opts <- c("PIPJ","ABCO","HDWD.ALLSP")
+sp.opts <- c("ABCO","SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP","PIPJ","PSME","PILA","QUCH2","QUKE")
+#sp.opts <- c("SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP")
 cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB")
 
 # All
-ht.opts <- c("HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP","HT.PIPJ","HT.ABCO")
-htabs.opts <- c("HTABS.PIPJ","HTABS.SHRUB","HTABS.ABCO","HTABS.PSME","HTABS.PILA","HTABS.QUKE","HTABS.CADE27","HTABS.HDWD.ALLSP","HTABS.PINUS.ALLSP","HTABS.SHADE.ALLSP")
+ht.opts <- c("HT.HDWD.ALLSP","HT.PIPJ","HT.ABCO")
+ht.opts <- c("HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP","HT.PIPJ","HT.ABCO","HT.QUCH2","HT.QUKE")
+
+ht.opts <- c("HT.PILA","HT.PSME","HT.QUCH2","HT.QUKE")
+htabs.opts <- c("HTABS.PIPJ","HTABS.SHRUB","HTABS.ABCO","HTABS.PSME","HTABS.PILA","HTABS.QUKE","HTABS.CADE27","HTABS.HDWD.ALLSP","HTABS.PINUS.ALLSP","HTABS.SHADE.ALLSP","HTABS.PILA","HTABS.PSME")
 htabs.opts <- c("HTABS.PIPJ","HTABS.SHRUB","HTABS.ABCO","HTABS.HDWD.ALLSP","HTABS.PINUS.ALLSP","HTABS.SHADE.ALLSP")
 htabs.opts <- c("HTABS.SHRUB")
 
 prop.opts <- c("PROP.CONIF","PROP.PINUS","PROP.SHADE")
-prop.opts <- NULL
-htabs.opts <- NULL 
+#prop.opts <- NULL
+#htabs.opts <- NULL 
 count.opts <- c("COUNT.PINUS.ALLSP","COUNT.SHADE.ALLSP","COUNT.HDWD.ALLSP")
 
 # # sp grps
@@ -1003,6 +1034,7 @@ count.opts <- c("COUNT.PINUS.ALLSP","COUNT.SHADE.ALLSP","COUNT.HDWD.ALLSP")
 
 
 resp.opts <- c(count.opts,prop.opts,htabs.opts,sp.opts,cover.opts,ht.opts)
+resp.opts <- c(htabs.opts,ht.opts,sp.opts,cover.opts,ht.opts)
 resp.opts <- c(sp.opts,cover.opts,ht.opts)
 
 
@@ -1115,7 +1147,7 @@ for(sp in resp.opts) {
     
   } else if(sp %in% ht.opts){
     
-    #d.c <- d.c[d.c$regen.presab.old == TRUE,] # this is where we select whether we want all plots where the species was present or just old seedlings
+    d.c <- d.c[d.c$regen.presab.old == TRUE,] # this is where we select whether we want all plots or just plots where seedlings were present in the first place
     d.c$response.var <- d.c$seedl.taller
     
   } else if(sp == "HTABS.SHRUB") {
@@ -2214,10 +2246,10 @@ pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$type == "anom",]
 #pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$sp=="PILA",]
 #pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$anom=="Amin",]
 
-pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$sp %in% c("ABCO","COV.GRASS","COV.SHRUB","HDWD.ALLSP","HT.ABCO","HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.PIPJ","HT.SHADE.ALLSP","PINUS.ALLSP","PIPJ","SHADE.ALLSP"),]
+pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$sp %in% c("ABCO","COV.GRASS","COV.SHRUB","COV.FORB","HDWD.ALLSP","CONIF.ALLSP","HT.CONIF.ALLSP","HT.ABCO","HT.HDWD.ALLSP","HT.PIPJ","PINUS.ALLSP","PIPJ","SHADE.ALLSP"),]
 #pred.dat.plotting <- pred.dat.plotting[!(pred.dat.plotting$anom %in% c("Dmax","Dmean")),]
 
-spsub <- list("PIPJ" = "Yellow pine\npresence\n(% of plots)","ABCO" = "White fir\npresence\n(% of plots)","PILA" = "Sugar pine\npresence\n(% of plots)","PSME" = "Douglas-fir\npresence\n(% of plots)","QUKE"="Black oak\npresence\n(% of plots)","PINUS.ALLSP" = "All pines\npresence\n(% of plots)","SHADE.ALLSP" = "Shade-tolerant conifers\npresence\n(% of plots)","HDWD.ALLSP" = "Broadleaved trees\npresence\n(% of plots)","COV.SHRUB" = "Shrubs\n(% cover)","COV.GRASS" = "Graminoids\n(%cover)","HT.PIPJ"="Yellow pine\nheight dominance\n(% of plots)","HT.ABCO"="White fir\nheight dominance\n(% of plots)","HT.PINUS.ALLSP"="Pines\nheight dominance\n(% of plots)","HT.SHADE.ALLSP"="Shde-tolerant conifers\nheight dominance\n(% of plots)","HT.HDWD.ALLSP"="Broadleaved trees\nheight dominance\n(% of plots)")
+spsub <- list("PIPJ" = "Yellow pine\npresence\n(% of plots)","ABCO" = "White fir\npresence\n(% of plots)","CONIF.ALLSP" = "Conifer\npresence\n(% of plots)","PSME" = "Douglas-fir\npresence\n(% of plots)","QUKE"="Black oak\npresence\n(% of plots)","PINUS.ALLSP" = "All pines\npresence\n(% of plots)","SHADE.ALLSP" = "Shade-tolerant conifers\npresence\n(% of plots)","HDWD.ALLSP" = "Broadleaved trees\npresence\n(% of plots)","COV.SHRUB" = "Shrubs\n(% cover)","COV.GRASS" = "Graminoids\n(% cover)","COV.FORB" = "Forbs\n(% cover)","HT.PIPJ"="Yellow pine\nheight dominance\n(% of plots)","HT.ABCO"="White fir\nheight dominance\n(% of plots)","HT.PINUS.ALLSP"="Pines\nheight dominance\n(% of plots)","HT.SHADE.ALLSP"="Shde-tolerant conifers\nheight dominance\n(% of plots)","HT.HDWD.ALLSP"="Broadleaved trees\nheight dominance\n(% of plots)","HT.CONIF.ALLSP"="Conifer\nheight dominance\n(% of plots)")
 pred.dat.plotting$sp <- gsubfn("\\S+",spsub,pred.dat.plotting$sp)
 pred.dat.plotting$sp <- factor(pred.dat.plotting$sp,levels=spsub)
 
@@ -2264,6 +2296,35 @@ tiff(file=paste0("../Figures/FigX_full_prediction_plots_",Sys.Date(),".tiff"),wi
 p
 dev.off()
 
+
+
+#### 11.5 individual prediction plots ####
+
+a <- "Min precip"
+s <- "All pines\npresence\n(% of plots)"
+s <- "Broadleaved trees\nheight dominance\n(% of plots)"
+s <- "Graminoids\n(%cover)"
+
+
+p.ind <- pred.dat.plotting[anom==a & sp ==s,]
+
+p <- ggplot(p.ind,aes(x=diff.norm.ppt.z_c,y=pred.mid,color=norm.level,fill=norm.level)) +
+  geom_line(size=1.5) +
+  geom_ribbon(aes(ymin=pred.low,ymax=pred.high),alpha=0.3,color=NA) +
+  #geom_text(aes(0,0.8,label=anom.improvement),size=4,color="black") +
+  theme_bw(20) +
+  labs(x="Precipitation anomaly (SD)",y="Percent cover",color="Normal\nprecipitation",fill="Normal\nprecipitation") +
+  scale_color_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray26")) +
+  scale_fill_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray26")) +
+  theme(panel.grid.minor = element_blank(),strip.background = element_blank(), panel.border = element_rect(colour = "black",size=0.6), strip.text = element_text(size = 9)) +
+  theme(plot.margin = unit(c(1,0.5,0.5,1), "cm"),legend.key = element_rect(size = 0.5),legend.key.size = unit(1.2, 'lines')) +
+  geom_vline(xintercept=0,linetype="longdash") +
+  scale_y_continuous(limits=c(0,60))
+
+
+tiff(file=paste0("../Figures/FigX_indiv_prediction_plot_",Sys.Date(),".tiff"),width=1500,height=1000,res=200) 
+p
+dev.off()
 
 
 
@@ -2691,7 +2752,7 @@ fit.dat.ppt.fire$sp <- as.factor(fit.dat.ppt.fire$sp)
 fit.dat.ppt.fire$sp <- factor(fit.dat.ppt.fire$sp,resps.keep)
 
 levels(fit.dat.ppt.fire$sp)
-levels(fit.dat.ppt.fire$sp) <- c("Yellow pine regeneration\n(% of plots)","White fir regeneration\n(% of plots)","Broadleaved species\nregeneration\n(% of plots)","Shrubs\n(% cover)","Graminoids\n(% cover)")
+levels(fit.dat.ppt.fire$sp) <- c("Yellow pine regeneration\n(% of plots)","White fir regeneration\n(% of plots)","Broadleaf tree\nregeneration\n(% of plots)","Shrubs\n(% cover)","Graminoids\n(% cover)")
 
 fit.dat.ppt.fire$type <- as.factor(fit.dat.ppt.fire$type)
 levels(fit.dat.ppt.fire$type)
@@ -2748,7 +2809,7 @@ fit.dat.ppt.fire$sp <- as.factor(fit.dat.ppt.fire$sp)
 fit.dat.ppt.fire$sp <- factor(fit.dat.ppt.fire$sp,resps.keep)
 
 levels(fit.dat.ppt.fire$sp)
-levels(fit.dat.ppt.fire$sp) <- c("Yellow pine regeneration\n(% of plots)","White fir regeneration\n(% of plots)","Broadleaved species\nregeneration\n(% of plots)","Shrubs\n(% cover)","Graminoids\n(% cover)")
+levels(fit.dat.ppt.fire$sp) <- c("Yellow pine regeneration\n(% of plots)","White fir regeneration\n(% of plots)","Broadleaf tree\nregeneration\n(% of plots)","Shrubs\n(% cover)","Graminoids\n(% cover)")
 
 fit.dat.ppt.fire$type <- as.factor(fit.dat.ppt.fire$type)
 levels(fit.dat.ppt.fire$type)

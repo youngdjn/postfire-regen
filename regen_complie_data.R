@@ -982,7 +982,7 @@ regen.ht.agg <- aggregate(regen.ht$tallest_ht_cm,by=list(regen.ht$Regen_Plot,reg
 names(regen.ht.agg) <- c("Regen_Plot","species","tallest_ht_cm")
 
 ## Now do it for species groups
-pinus <- c("PIPO","PIJE","PILA","PIAT","PICO","PINUS","PISA")
+pinus <- c("PIPO","PIJE","PILA","PIAT","PICO","PINUS","PISA2","PIMO3")
 regen.ht.pinus <- regen.ht[regen.ht$Species %in% pinus,]
 regen.ht.pinus.agg <- aggregate(regen.ht.pinus$tallest_ht_cm,by=list(regen.ht.pinus$Regen_Plot),FUN=max)
 names(regen.ht.pinus.agg) <- c("Regen_Plot","tallest_ht_cm")
