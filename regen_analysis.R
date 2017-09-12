@@ -2155,25 +2155,25 @@ for(sp in resp.opts) {
       
       diff.norm.ppt.z_c = rep(diff.norm.seq,3),
       diff.norm.ppt.z_c.sq = rep(diff.norm.seq^2,3),
-      diff.norm.tmean.z_c = rep(diff.norm.seq.rev,3),
-      diff.norm.tmean.z_c.sq = rep(diff.norm.seq.rev,3)^2,
+      diff.norm.tmean.z_c = rep(diff.norm.seq,3),
+      diff.norm.tmean.z_c.sq = rep(diff.norm.seq,3)^2,
       diff.norm.aet.z_c = rep(diff.norm.seq,3),
       diff.norm.aet.z_c.sq = rep(diff.norm.seq^2,3),
-      diff.norm.def.z_c = rep(diff.norm.seq.rev,3),
-      diff.norm.def.z_c.sq = rep(diff.norm.seq.rev,3)^2,
-      diff.norm.snow.z_c = rep(diff.norm.seq.rev,3),
-      diff.norm.snow.z_c.sq = rep(diff.norm.seq.rev,3)^2,
+      diff.norm.def.z_c = rep(diff.norm.seq,3),
+      diff.norm.def.z_c.sq = rep(diff.norm.seq,3)^2,
+      diff.norm.snow.z_c = rep(diff.norm.seq,3),
+      diff.norm.snow.z_c.sq = rep(diff.norm.seq,3)^2,
       
       diff.norm.ppt.min.z_c = rep(diff.norm.seq,3),
       diff.norm.ppt.min.z_c.sq = rep(diff.norm.seq^2,3),
-      diff.norm.tmean.max.z_c = rep(diff.norm.seq.rev,3),
-      diff.norm.tmean.max.z_c.sq = rep(diff.norm.seq.rev,3)^2,
+      diff.norm.tmean.max.z_c = rep(diff.norm.seq,3),
+      diff.norm.tmean.max.z_c.sq = rep(diff.norm.seq,3)^2,
       diff.norm.aet.min.z_c = rep(diff.norm.seq,3),
       diff.norm.aet.min.z_c.sq = rep(diff.norm.seq^2,3),
-      diff.norm.def.max.z_c = rep(diff.norm.seq.rev,3),
-      diff.norm.def.max.z_c.sq = rep(diff.norm.seq.rev,3)^2,
-      diff.norm.snow.min.z_c = rep(diff.norm.seq.rev,3),
-      diff.norm.snow.min.z_c.sq = rep(diff.norm.seq.rev,3)^2,
+      diff.norm.def.max.z_c = rep(diff.norm.seq,3),
+      diff.norm.def.max.z_c.sq = rep(diff.norm.seq,3)^2,
+      diff.norm.snow.min.z_c = rep(diff.norm.seq,3),
+      diff.norm.snow.min.z_c.sq = rep(diff.norm.seq,3)^2,
       
       seed_tree_distance_general_c = mid.val["seed_tree_distance_general_c"],
       rad.march_c = mid.val["rad.march_c"],
@@ -2434,7 +2434,7 @@ pred.dat.plotting <- data.table(pred.dat.plotting)
 pred.dat.plotting$pred.val <- NA
 
 
-center.rename <- list("Pmin"="diff.norm.ppt.min.z_c","Pmean"="diff.norm.ppt.z_c","Amin"="diff.norm.aet.min.z_c","Amean"="diff.norm.aet.z_c","Dmax"="diff.norm.def.max.z_c","Dmean"="diff.norm.def.z_c",   "Tmax"="diff.norm.tmean.max.z_c","Dmean"="diff.norm.tmean.z_c")
+center.rename <- list("Pmin"="diff.norm.ppt.min.z_c","Pmean"="diff.norm.ppt.z_c","Amin"="diff.norm.aet.min.z_c","Amean"="diff.norm.aet.z_c","Dmax"="diff.norm.def.max.z_c","Dmean"="diff.norm.def.z_c",   "Tmax"="diff.norm.tmean.max.z_c","Tmean"="diff.norm.tmean.z_c")
 uncenter.rename <- list("Pmin"="diff.norm.ppt.min.z","Pmean"="diff.norm.ppt.z","Amin"="diff.norm.aet.min.z","Amean"="diff.norm.aet.z","Dmax"="diff.norm.def.max.z","Dmean"="diff.norm.def.z",   "Tmax"="diff.norm.tmean.max.z","Tmean"="diff.norm.tmean.z")
 
 # center.rename <- list("Pmin"="diff.norm.ppt.min.z_c","Pmean"="diff.norm.ppt.z_c","Amin"="diff.norm.aet.min.z_c","Amean"="diff.norm.aet.z_c")
