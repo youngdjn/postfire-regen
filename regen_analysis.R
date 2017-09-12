@@ -34,8 +34,10 @@ ggplot(d.plot,aes(x=seed.tree.distance.general,y=))
 plots.exceptions <- grepl("#.*(INCOMPLETE|INCORRECT)",d.plot$NOTES)
 d.plot <- d.plot[!plots.exceptions,]
 
+d.plot$tmean.post.max <- d.plot$tmean.post #! temporary fix
+
 # only keep the necessary columns
-d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general","seed_tree_distance_conifer","seed_tree_distance_hardwood","diff.norm.ppt.z","diff.norm.ppt.min.z","tmean.post","ppt.post","ppt.post.min","perc.norm.ppt","perc.norm.ppt.min","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z","def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","diff.norm.def.max.z","diff.norm.aet.min.z","def.post","aet.post","def.post.max","aet.post.min","snow.post.min","snow.normal","snow.post","diff.norm.snow.z","diff.norm.snow.min.z","dominant_shrub_ht_cm","dom.veg.all")]
+d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general","seed_tree_distance_conifer","seed_tree_distance_hardwood","diff.norm.ppt.z","diff.norm.ppt.min.z","tmean.post","tmean.post.max","ppt.post","ppt.post.min","perc.norm.ppt","perc.norm.ppt.min","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z","def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","diff.norm.def.max.z","diff.norm.aet.min.z","def.post","aet.post","def.post.max","aet.post.min","snow.post.min","snow.normal","snow.post","diff.norm.snow.z","diff.norm.snow.min.z","dominant_shrub_ht_cm","dom.veg.all")]
 
 # only northern Sierra Nevada fires
 sierra.fires <- c("Straylor","Cub","Rich","Moonlight","Antelope","BTU Lightning","Harding","Bassetts","American River","Ralston","Freds","Power","Bagley","Chips")
@@ -976,6 +978,8 @@ d.c$ppt.post.min_c.sq <- d.c$ppt.post.min_c^2
 d.c$def.post.max_c.sq <- d.c$def.post.max_c^2
 d.c$aet.post.min_c.sq <- d.c$aet.post.min_c^2
 
+d.c$tmean.post.max_c.sq <- d.c$tmean.post.max_c^2
+
 vars.focal.c <- paste0(vars.focal[-6],"_c")
 
 ## transform cover so it does not include 0 or 1 (for Beta distrib)
@@ -1257,7 +1261,31 @@ for(sp in resp.opts) {
       formulas[["nA2.aAni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.z_c + aet.normal_c.sq)
       formulas[["nA2.aA2ni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
 
-
+      
+      ##tmean
+      
+      formulas[["n0.aT"]] <- formula(response.var ~ diff.norm.tmean.z_c)
+      formulas[["n0.aT2"]] <- formula(response.var ~ diff.norm.tmean.z_c + diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq)
+      
+      
+      
+      formulas[["nT.a0"]] <- formula(response.var ~ tmean.normal_c)
+      formulas[["nT.aT"]] <- formula(response.var ~ tmean.normal_c*diff.norm.tmean.z_c)
+      formulas[["nT.aT2"]] <- formula(response.var ~ tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq)
+      formulas[["pT"]] <- formula(response.var ~ tmean.post_c)
+      formulas[["nT2.a0"]] <- formula(response.var ~ tmean.normal_c + tmean.normal_c.sq)
+      formulas[["nT2.aT"]] <- formula(response.var ~ tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq)
+      formulas[["nT2.aTdi"]] <- formula(response.var ~ tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq*diff.norm.tmean.z_c)
+      formulas[["nT2.aT2"]] <- formula(response.var ~ tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq)
+      formulas[["pT2"]] <- formula(response.var ~ tmean.post_c + tmean.post_c.sq)
+      formulas[["nT.aTni"]] <- formula(response.var ~ tmean.normal_c + diff.norm.tmean.z_c)
+      formulas[["nT.aT2ni"]] <- formula(response.var ~ tmean.normal_c + diff.norm.tmean.z_c + tmean.normal_c + diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq)
+      formulas[["nT2.aTni"]] <- formula(response.var ~ tmean.normal_c + diff.norm.tmean.z_c + tmean.normal_c.sq)
+      formulas[["nT2.aT2ni"]] <- formula(response.var ~ tmean.normal_c + diff.norm.tmean.z_c + tmean.normal_c + diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq)
+      
+      
+      
+      
 
 
 
@@ -1320,6 +1348,31 @@ for(sp in resp.opts) {
       formulas[["nA2.aAminni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c.sq)
       formulas[["nA2.aA2minni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
 
+      
+      
+      
+      ##tmean
+      
+      formulas[["n0.aTmax"]] <- formula(response.var ~ diff.norm.tmean.max.z_c)
+      formulas[["n0.aT2max"]] <- formula(response.var ~ diff.norm.tmean.max.z_c + diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq)
+      
+      formulas[["nT.aTmax"]] <- formula(response.var ~ tmean.normal_c*diff.norm.tmean.max.z_c)
+      formulas[["nT.aT2max"]] <- formula(response.var ~ tmean.normal_c*diff.norm.tmean.max.z_c + tmean.normal_c*diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq)
+      formulas[["pTmax"]] <- formula(response.var ~ tmean.post.max_c)
+      formulas[["nT2.aTmax"]] <- formula(response.var ~ tmean.normal_c*diff.norm.tmean.max.z_c + tmean.normal_c.sq)
+      formulas[["nT2.aTmaxdi"]] <- formula(response.var ~ tmean.normal_c*diff.norm.tmean.max.z_c + tmean.normal_c.sq*diff.norm.tmean.max.z_c)
+      formulas[["nT2.aT2max"]] <- formula(response.var ~ tmean.normal_c*diff.norm.tmean.max.z_c + tmean.normal_c*diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq + tmean.normal_c.sq)
+      formulas[["pT2max"]] <- formula(response.var ~ tmean.post.max_c + tmean.post.max_c.sq)
+      formulas[["nT.aTmaxni"]] <- formula(response.var ~ tmean.normal_c + diff.norm.tmean.max.z_c)
+      formulas[["nT.aT2maxni"]] <- formula(response.var ~ tmean.normal_c + diff.norm.tmean.max.z_c + tmean.normal_c + diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq)
+      formulas[["nT2.aTmaxni"]] <- formula(response.var ~ tmean.normal_c + diff.norm.tmean.max.z_c + tmean.normal_c.sq)
+      formulas[["nT2.aT2maxni"]] <- formula(response.var ~ tmean.normal_c + diff.norm.tmean.max.z_c + tmean.normal_c + diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq + tmean.normal_c.sq)
+      
+      
+      
+      
+      
+      
 
       ### Add seed tree ###      
       if(sp %in% c(sp.opts,count.opts)) {
@@ -1394,7 +1447,32 @@ for(sp in resp.opts) {
         formulas[["nA2s.aAni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c.sq)
         formulas[["nA2s.aA2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
 
-
+        
+        ##tmean
+        
+        formulas[["n0s.aT"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.tmean.z_c)
+        formulas[["n0s.aT2"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.tmean.z_c + diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq)
+        
+        
+        
+        formulas[["nTs.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c)
+        formulas[["nTs.aT"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.z_c)
+        formulas[["nTs.aT2"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq)
+        formulas[["pTs"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.post_c)
+        formulas[["nT2s.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c + tmean.normal_c.sq)
+        formulas[["nT2s.aT"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq)
+        formulas[["nT2s.aTdi"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq*diff.norm.tmean.z_c)
+        formulas[["nT2s.aT2"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq)
+        formulas[["pT2s"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.post_c + tmean.post_c.sq)
+        formulas[["nTs.aTni"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c + diff.norm.tmean.z_c)
+        formulas[["nTs.aT2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c + diff.norm.tmean.z_c + tmean.normal_c + diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq)
+        formulas[["nT2s.aTni"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c + diff.norm.tmean.z_c + tmean.normal_c.sq)
+        formulas[["nT2s.aT2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c + diff.norm.tmean.z_c + tmean.normal_c + diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq)
+        
+        
+        
+        
+        
 
         
         
@@ -1455,6 +1533,29 @@ for(sp in resp.opts) {
         formulas[["nAs.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
         formulas[["nA2s.aAminni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c.sq)
         formulas[["nA2s.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+      
+        
+        ##TMEAN
+        
+        formulas[["n0s.aTmax"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.tmean.max.z_c)
+        formulas[["n0s.aT2max"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.tmean.max.z_c + diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq)
+        
+        formulas[["nTs.aTmax"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.max.z_c)
+        formulas[["nTs.aT2max"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.max.z_c + tmean.normal_c*diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq)
+        formulas[["pTmaxs"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.post.max_c)
+        formulas[["nT2s.aTmax"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.max.z_c + tmean.normal_c.sq)
+        formulas[["nT2s.aTmaxdi"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.max.z_c + tmean.normal_c.sq*diff.norm.tmean.max.z_c)
+        formulas[["nT2s.aT2max"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.max.z_c + tmean.normal_c*diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq + tmean.normal_c.sq)
+        formulas[["pT2maxs"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.post.max_c + tmean.post.max_c.sq)
+        formulas[["nTs.aTmaxni"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c + diff.norm.tmean.max.z_c)
+        formulas[["nTs.aT2maxni"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c + diff.norm.tmean.max.z_c + tmean.normal_c + diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq)
+        formulas[["nT2s.aTmaxni"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c + diff.norm.tmean.max.z_c + tmean.normal_c.sq)
+        formulas[["nT2s.aT2maxni"]] <- formula(response.var ~ seed_tree_distance_general_c + tmean.normal_c + diff.norm.tmean.max.z_c + tmean.normal_c + diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq + tmean.normal_c.sq)
+        
+        
+        
+        
+        
       }
       
       
@@ -1528,7 +1629,34 @@ for(sp in resp.opts) {
       formulas[["nA2r.aAni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.z_c + aet.normal_c.sq)
       formulas[["nA2r.aA2ni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
 
+      
+      ##TMEAN
+      
+      formulas[["n0r.aT"]] <- formula(response.var~ rad.march_c +  diff.norm.tmean.z_c)
+      formulas[["n0r.aT2"]] <- formula(response.var~ rad.march_c +  diff.norm.tmean.z_c + diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq)
+      
+      
+      
+      formulas[["nTr.a0"]] <- formula(response.var~ rad.march_c +  tmean.normal_c)
+      formulas[["nTr.aT"]] <- formula(response.var~ rad.march_c +  tmean.normal_c*diff.norm.tmean.z_c)
+      formulas[["nTr.aT2"]] <- formula(response.var~ rad.march_c +  tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq)
+      formulas[["pTr"]] <- formula(response.var~ rad.march_c +  tmean.post_c)
+      formulas[["nT2r.a0"]] <- formula(response.var~ rad.march_c +  tmean.normal_c + tmean.normal_c.sq)
+      formulas[["nT2r.aT"]] <- formula(response.var~ rad.march_c +  tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq)
+      formulas[["nT2r.aTdi"]] <- formula(response.var~ rad.march_c +  tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq*diff.norm.tmean.z_c)
+      formulas[["nT2r.aT2"]] <- formula(response.var~ rad.march_c +  tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq)
+      formulas[["pT2r"]] <- formula(response.var~ rad.march_c +  tmean.post_c + tmean.post_c.sq)
+      formulas[["nTr.aTni"]] <- formula(response.var~ rad.march_c +  tmean.normal_c + diff.norm.tmean.z_c)
+      formulas[["nTr.aT2ni"]] <- formula(response.var~ rad.march_c +  tmean.normal_c + diff.norm.tmean.z_c + tmean.normal_c + diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq)
+      formulas[["nT2r.aTni"]] <- formula(response.var~ rad.march_c +  tmean.normal_c + diff.norm.tmean.z_c + tmean.normal_c.sq)
+      formulas[["nT2r.aT2ni"]] <- formula(response.var~ rad.march_c +  tmean.normal_c + diff.norm.tmean.z_c + tmean.normal_c + diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq)
+      
+      
+      
+      
 
+      
+      
 
       ## PPT
       formulas[["n0r.aPmin"]] <- formula(response.var~ rad.march_c +  diff.norm.ppt.min.z_c)
@@ -1588,6 +1716,28 @@ for(sp in resp.opts) {
       formulas[["nA2r.aAminni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c.sq)
       formulas[["nA2r.aA2minni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
 
+      
+      
+      ##TMEAN
+      
+      formulas[["n0r.aTmax"]] <- formula(response.var~ rad.march_c +  diff.norm.tmean.max.z_c)
+      formulas[["n0r.aT2max"]] <- formula(response.var~ rad.march_c +  diff.norm.tmean.max.z_c + diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq)
+      
+      formulas[["nTr.aTmax"]] <- formula(response.var~ rad.march_c +  tmean.normal_c*diff.norm.tmean.max.z_c)
+      formulas[["nTr.aT2max"]] <- formula(response.var~ rad.march_c +  tmean.normal_c*diff.norm.tmean.max.z_c + tmean.normal_c*diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq)
+      formulas[["pTmaxr"]] <- formula(response.var~ rad.march_c +  tmean.post.max_c)
+      formulas[["nT2r.aTmax"]] <- formula(response.var~ rad.march_c +  tmean.normal_c*diff.norm.tmean.max.z_c + tmean.normal_c.sq)
+      formulas[["nT2r.aTmaxdi"]] <- formula(response.var~ rad.march_c +  tmean.normal_c*diff.norm.tmean.max.z_c + tmean.normal_c.sq*diff.norm.tmean.max.z_c)
+      formulas[["nT2r.aT2max"]] <- formula(response.var~ rad.march_c +  tmean.normal_c*diff.norm.tmean.max.z_c + tmean.normal_c*diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq + tmean.normal_c.sq)
+      formulas[["pT2maxr"]] <- formula(response.var~ rad.march_c +  tmean.post.max_c + tmean.post.max_c.sq)
+      formulas[["nTr.aTmaxni"]] <- formula(response.var~ rad.march_c +  tmean.normal_c + diff.norm.tmean.max.z_c)
+      formulas[["nTr.aT2maxni"]] <- formula(response.var~ rad.march_c +  tmean.normal_c + diff.norm.tmean.max.z_c + tmean.normal_c + diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq)
+      formulas[["nT2r.aTmaxni"]] <- formula(response.var~ rad.march_c +  tmean.normal_c + diff.norm.tmean.max.z_c + tmean.normal_c.sq)
+      formulas[["nT2r.aT2maxni"]] <- formula(response.var~ rad.march_c +  tmean.normal_c + diff.norm.tmean.max.z_c + tmean.normal_c + diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq + tmean.normal_c.sq)
+      
+      
+      
+      
 
       ### Add seed tree ###
       if(sp %in% c(sp.opts,count.opts)) {
@@ -1654,6 +1804,29 @@ for(sp in resp.opts) {
         formulas[["nA2sr.aAni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c.sq)
         formulas[["nA2sr.aA2ni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
 
+        
+        ##TMEAN
+        
+        formulas[["n0sr.aT"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.tmean.z_c)
+        formulas[["n0sr.aT2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.tmean.z_c + diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq)
+        
+        formulas[["nTsr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c)
+        formulas[["nTsr.aT"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.z_c)
+        formulas[["nTsr.aT2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq)
+        formulas[["pTsr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.post_c)
+        formulas[["nT2sr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c + tmean.normal_c.sq)
+        formulas[["nT2sr.aT"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq)
+        formulas[["nT2sr.aTdi"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c.sq*diff.norm.tmean.z_c)
+        formulas[["nT2sr.aT2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.z_c + tmean.normal_c*diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq)
+        formulas[["pT2sr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.post_c + tmean.post_c.sq)
+        formulas[["nTsr.aTni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c + diff.norm.tmean.z_c)
+        formulas[["nTsr.aT2ni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c + diff.norm.tmean.z_c + tmean.normal_c + diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq)
+        formulas[["nT2sr.aTni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c + diff.norm.tmean.z_c + tmean.normal_c.sq)
+        formulas[["nT2sr.aT2ni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c + diff.norm.tmean.z_c + tmean.normal_c + diff.norm.tmean.z_c.sq + diff.norm.tmean.z_c.sq + tmean.normal_c.sq)
+        
+        
+        
+        
 
         
         ## PPT
@@ -1712,6 +1885,26 @@ for(sp in resp.opts) {
         formulas[["nA2sr.aAminni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c.sq)
         formulas[["nA2sr.aA2minni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
       }
+      
+      ##TMEAN
+      
+      formulas[["n0sr.aTmax"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.tmean.max.z_c)
+      formulas[["n0sr.aT2max"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.tmean.max.z_c + diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq)
+      
+      formulas[["nTsr.aTmax"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.max.z_c)
+      formulas[["nTsr.aT2max"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.max.z_c + tmean.normal_c*diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq)
+      formulas[["pTmaxsr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.post.max_c)
+      formulas[["nT2sr.aTmax"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.max.z_c + tmean.normal_c.sq)
+      formulas[["nT2sr.aTmaxdi"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.max.z_c + tmean.normal_c.sq*diff.norm.tmean.max.z_c)
+      formulas[["nT2sr.aT2max"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c*diff.norm.tmean.max.z_c + tmean.normal_c*diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq + tmean.normal_c.sq)
+      formulas[["pT2maxsr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.post.max_c + tmean.post.max_c.sq)
+      formulas[["nTsr.aTmaxni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c + diff.norm.tmean.max.z_c)
+      formulas[["nTsr.aT2maxni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c + diff.norm.tmean.max.z_c + tmean.normal_c + diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq)
+      formulas[["nT2sr.aTmaxni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c + diff.norm.tmean.max.z_c + tmean.normal_c.sq)
+      formulas[["nT2sr.aT2maxni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + tmean.normal_c + diff.norm.tmean.max.z_c + tmean.normal_c + diff.norm.tmean.max.z_c.sq + diff.norm.tmean.max.z_c.sq + tmean.normal_c.sq)
+      
+      
+      
       
       
     #   
@@ -1787,35 +1980,43 @@ for(sp in resp.opts) {
     norm.search.opts <- c(Pmean = "n(P|0)2?s?r?c?\\.a0",
                             Dmean = "n(D|0)2?s?r?c?\\.a0",
                             Amean = "n(A|0)2?s?r?c?\\.a0",
+                            Tmean = "n(T|0)2?s?r?c?\\.a0",
                             Pmin = "n(P|0)2?s?r?c?\\.a0",
                             Dmax = "n(D|0)2?s?r?c?\\.a0",
-                            Amin = "n(A|0)2?s?r?c?\\.a0"
+                            Amin = "n(A|0)2?s?r?c?\\.a0",
+                            Tmax = "n(T|0)2?s?r?c?\\.a0"
                             )
 
 
     anom.search.opts <- c(Pmean = "aP2?(ni)?(di)?$",
                           Dmean = "aD2?(ni)?(di)?$",
                           Amean = "aA2?(ni)?(di)?$",
+                          Tmean = "aT2?(ni)?(di)?$",
                           Pmin = "aP2?min(ni)?(di)?$",
                           Dmax = "aD2?max(ni)?(di)?$",
-                          Amin = "aA2?min(ni)?(di)?$"
+                          Amin = "aA2?min(ni)?(di)?$",
+                          Tmax = "aT2?max(ni)?(di)?$"
                           )
     
     anom.di.search.opts <- c(Pmean = "aP2?(ni)?di$",
                           Dmean = "aD2?(ni)?di$",
                           Amean = "aA2?(ni)?di$",
+                          Tmean = "aT2?(ni)?di$",
                           Pmin = "aP2?min(ni)?di$",
                           Dmax = "aD2?max(ni)?di$",
-                          Amin = "aA2?min(ni)?di$"
+                          Amin = "aA2?min(ni)?di$",
+                          Tmax = "aT2?max(ni)?di$"
     )
 
 
     post.search.opts <- c(Pmean = "pP2?s?r?c?$",
                           Dmean = "pD2?s?r?c?$",
                           Amean = "pA2?s?r?c?$",
+                          Tmean = "pT2?s?r?c?$",
                           Pmin = "pP2?mins?r?c?$",
                           Dmax = "pD2?maxs?r?c?$",
-                          Amin = "pA2?mins?r?c?$"
+                          Amin = "pA2?mins?r?c?$",
+                          Tmax = "pT2?maxs?r?c?$"
                           )
 
 
