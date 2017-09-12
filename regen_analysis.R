@@ -2434,11 +2434,11 @@ pred.dat.plotting <- data.table(pred.dat.plotting)
 pred.dat.plotting$pred.val <- NA
 
 
-center.rename <- list("Pmin"="diff.norm.ppt.min.z_c","Pmean"="diff.norm.ppt.z_c","Amin"="diff.norm.aet.min.z_c","Amean"="diff.norm.aet.z_c","Dmax"="diff.norm.def.max.z_c","Dmean"="diff.norm.def.z_c")
-uncenter.rename <- list("Pmin"="diff.norm.ppt.min.z","Pmean"="diff.norm.ppt.z","Amin"="diff.norm.aet.min.z","Amean"="diff.norm.aet.z","Dmin"="diff.norm.def.min.z","Dmean"="diff.norm.def.z")
+center.rename <- list("Pmin"="diff.norm.ppt.min.z_c","Pmean"="diff.norm.ppt.z_c","Amin"="diff.norm.aet.min.z_c","Amean"="diff.norm.aet.z_c","Dmax"="diff.norm.def.max.z_c","Dmean"="diff.norm.def.z_c",   "Tmax"="diff.norm.tmean.max.z_c","Dmean"="diff.norm.tmean.z_c")
+uncenter.rename <- list("Pmin"="diff.norm.ppt.min.z","Pmean"="diff.norm.ppt.z","Amin"="diff.norm.aet.min.z","Amean"="diff.norm.aet.z","Dmax"="diff.norm.def.max.z","Dmean"="diff.norm.def.z",   "Tmax"="diff.norm.tmean.max.z","Tmean"="diff.norm.tmean.z")
 
-center.rename <- list("Pmin"="diff.norm.ppt.min.z_c","Pmean"="diff.norm.ppt.z_c","Amin"="diff.norm.aet.min.z_c","Amean"="diff.norm.aet.z_c")
-uncenter.rename <- list("Pmin"="diff.norm.ppt.min.z","Pmean"="diff.norm.ppt.z","Amin"="diff.norm.aet.min.z","Amean"="diff.norm.aet.z")
+# center.rename <- list("Pmin"="diff.norm.ppt.min.z_c","Pmean"="diff.norm.ppt.z_c","Amin"="diff.norm.aet.min.z_c","Amean"="diff.norm.aet.z_c")
+# uncenter.rename <- list("Pmin"="diff.norm.ppt.min.z","Pmean"="diff.norm.ppt.z","Amin"="diff.norm.aet.min.z","Amean"="diff.norm.aet.z")
 
 pred.dat.plotting$pred.center.name <- gsubfn("\\S+",center.rename,pred.dat.plotting$anom)
 pred.dat.plotting$pred.uncenter.name <- gsubfn("\\S+",uncenter.rename,pred.dat.plotting$anom)
@@ -2464,7 +2464,7 @@ spsub <- list("PIPJ" = "Yellow pine\npresence\n(% of plots)","ABCO" = "White fir
 pred.dat.plotting$sp <- gsubfn("\\S+",spsub,pred.dat.plotting$sp)
 pred.dat.plotting$sp <- factor(pred.dat.plotting$sp,levels=spsub)
 
-anomsub <- list("Pmin" = "Min precip","Pmean" = "Mean precip","Amin" = "Min AET","Amean" = "Mean AET","Dmax" = "Max CWD","Dmean" = "Mean CWD")
+anomsub <- list("Pmin" = "Min precip","Pmean" = "Mean precip","Amin" = "Min AET","Amean" = "Mean AET","Dmax" = "Max CWD","Dmean" = "Mean CWD",     "Tmax" = "Max temp","Tmean" = "Mean temp")
 pred.dat.plotting$anom <- gsubfn("\\S+",anomsub,pred.dat.plotting$anom)
 pred.dat.plotting$anom <- factor(pred.dat.plotting$anom,levels=anomsub)
 
