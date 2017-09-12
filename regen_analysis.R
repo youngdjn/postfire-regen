@@ -409,11 +409,14 @@ d.sp <- as.data.frame(d.sp)
 d.sp.trim <- d.sp[d.sp$species %in% keep.sp,]
 
 #load in fire
-d.sp.trim <- merge(d.sp.trim,d[c("Regen_Plot","Fire")],by="Regen_Plot")
+d.sp.trim <- merge(d.sp.trim,d[c("Regen_Plot","Fire","dominant_shrub_ht_cm")],by="Regen_Plot")
 
 d.sp.trim <- as.data.table(d.sp.trim)
 
-d.sp.cast <- data.table::dcast(d.sp.trim,Regen_Plot~species,value.var=c("regen.presab.old","adult.ba"))
+d.sp.trim$seedl.taller.shrub <- d.sp.trim$tallest_ht_cm > d.sp.trim$dominant_shrub_ht_cm
+
+
+d.sp.cast <- data.table::dcast(d.sp.trim,Regen_Plot~species,value.var=c("regen.presab.old","adult.ba","seedl.taller.shrub"))
 
 # merge the species data into each plot
 d.merge <- merge(d,d.sp.cast,by="Regen_Plot")
@@ -440,9 +443,13 @@ d.fire <- d.merge[,list(fire.year=mean(fire.year),
                     # min.ppt.anom=summary.string(diff.norm.ppt.min.z,decimals=2),
                     # mean.ppt.anom=summary.string(diff.norm.ppt.z,decimals=2),
                     
-                    regen.Pinus = 100*round(mean(regen.presab.old_PINUS.ALLSP),digits=2),
-                    regen.Shade = 100*round(mean(regen.presab.old_SHADE.ALLSP),digits=2),
+                    regen.pipj = 100*round(mean(regen.presab.old_PIPJ),digits=2),
+                    regen.abco = 100*round(mean(regen.presab.old_ABCO),digits=2),
                     regen.Hdwd = 100*round(mean(regen.presab.old_HDWD.ALLSP),digits=2),
+                    
+                    #taller.pipj = 100*round(mean(seedl.taller.shrub_PIPJ,na.rm=TRUE),digits=2),
+                    #taller.abco = 100*round(mean(seedl.taller.shrub_ABCO,na.rm=TRUE),digits=2),
+                    #taller.Hdwd = 100*round(mean(seedl.taller.shrub_HDWD.ALLSP,na.rm=TRUE),digits=2),
                     
                     cov.shrub=summary.string(SHRUB,decimals=0),
                     cov.forb=summary.string(FORB,decimals=0),
@@ -2229,6 +2236,9 @@ pred.dat.plotting$pred.val <- NA
 center.rename <- list("Pmin"="diff.norm.ppt.min.z_c","Pmean"="diff.norm.ppt.z_c","Amin"="diff.norm.aet.min.z_c","Amean"="diff.norm.aet.z_c","Dmax"="diff.norm.def.max.z_c","Dmean"="diff.norm.def.z_c")
 uncenter.rename <- list("Pmin"="diff.norm.ppt.min.z","Pmean"="diff.norm.ppt.z","Amin"="diff.norm.aet.min.z","Amean"="diff.norm.aet.z","Dmin"="diff.norm.def.min.z","Dmean"="diff.norm.def.z")
 
+center.rename <- list("Pmin"="diff.norm.ppt.min.z_c","Pmean"="diff.norm.ppt.z_c","Amin"="diff.norm.aet.min.z_c","Amean"="diff.norm.aet.z_c")
+uncenter.rename <- list("Pmin"="diff.norm.ppt.min.z","Pmean"="diff.norm.ppt.z","Amin"="diff.norm.aet.min.z","Amean"="diff.norm.aet.z")
+
 pred.dat.plotting$pred.center.name <- gsubfn("\\S+",center.rename,pred.dat.plotting$anom)
 pred.dat.plotting$pred.uncenter.name <- gsubfn("\\S+",uncenter.rename,pred.dat.plotting$anom)
 
@@ -2292,7 +2302,7 @@ p <- ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z_c,y=pred.mid,color=norm.leve
   theme(plot.margin = unit(c(-.1,0.5,0,0.5), "cm"),legend.key = element_rect(size = 0.5),legend.key.size = unit(1.2, 'lines')) +
   geom_vline(xintercept=0,linetype="longdash")
 
-tiff(file=paste0("../Figures/FigX_full_prediction_plots_",Sys.Date(),".tiff"),width=3500,height=1200,res=200) 
+tiff(file=paste0("../Figures/FigX_full_prediction_plots_",Sys.Date(),".tiff"),width=3000,height=1200,res=200) 
 p
 dev.off()
 
@@ -2648,7 +2658,7 @@ coefs.cast <- as.data.table(coefs.cast)
 coefs.cast <- coefs.cast[,c("sp","variable","type",Intercept="(Intercept)","normal_c","normal_c.sq",seed.tree="seed_tree_distance_general_c","rad.march_c","diff.norm.z_c","diff.norm.z_c.sq","normal_c:diff.norm.z_c","normal_c:diff.norm.z_c.sq","diff.norm.z_c:normal_c.sq","(phi)"),with=FALSE]
 
 
-responses.keep <- c("ABCO","PIPJ","PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","COV.SHRUB","COV.GRASS","HT.PINUS.ALLSP","HT.SHADE.ALLSP","HT.HDWD.ALLSP")
+responses.keep <- c("ABCO","PIPJ","PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP","COV.SHRUB","COV.GRASS","HT.PIPJ","HT.ABCO","HT.HDWD.ALLSP")
 anoms.keep <- c("Amin","Amean","Pmin","Pmean")
 
 coefs.cast <- coefs.cast[coefs.cast$sp %in% responses.keep & coefs.cast$variable %in% anoms.keep,]
@@ -2657,7 +2667,7 @@ coefs.cast <- coefs.cast[coefs.cast$sp %in% responses.keep & coefs.cast$variable
 anomsub <- list("Pmean"="Mean Precipitation","Pmin" = "Minimum Precipitation","Amean" = "Mean AET","Amin"="Minimum AET")
 coefs.cast$variable <- gsubfn("\\S+",anomsub,coefs.cast$variable)
 
-colsub <- list("sp"="Response","variable" = "Anomaly","type"="Model","(Intercept)" = "Intercept","normal_c"="Normal climate","normal_c.sq"="Normal climate^2","seed_tree_distance_general_c"="Seed tree dist.","rad.march_c"="Solar exposure","diff.norm.z_c"="Anomaly","diff.norm.z_c.sq"="Anomaly^2","normal_c:diff.norm.z_c" = "Normal climate * Anomaly","normal_c:diff.norm.z_c.sq" = "Normal climate * Anomaly^2","normal_c.sq:diff.norm.z_c" = "Normal climate^2 * Anomaly","(phi)" = "Phi")
+colsub <- list("sp"="Response","variable" = "Anomaly","type"="Model","(Intercept)" = "Intercept","normal_c"="Normal climate","normal_c.sq"="Normal climate^2","seed_tree_distance_general_c"="Seed tree dist.","rad.march_c"="Solar exposure","diff.norm.z_c"="Anomaly","diff.norm.z_c.sq"="Anomaly^2","normal_c:diff.norm.z_c" = "Normal climate * Anomaly","normal_c:diff.norm.z_c.sq" = "Normal climate * Anomaly^2","diff.norm.z_c:normal_c.sq" = "Normal climate^2 * Anomaly","(phi)" = "Phi")
 names(coefs.cast) <- gsubfn("\\S+",colsub,names(coefs.cast))
 
 coefs.cast[is.na(coefs.cast)] <- ""
