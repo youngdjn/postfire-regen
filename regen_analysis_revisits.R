@@ -254,14 +254,20 @@ ggplot(d,aes(x=orig.presab,y=count,fill=survey)) +
   geom_text(aes(label=labeltext,y=-0.75)) +
   labs(x="Regeneration present at initial survey",y="Seedlings per plot")
 
+
 #### Plot proportion plots with presence ####
+
+## rename the species (only some of them--the others get dropped)
+
+
+
 d.plot <- d[d$survey == "Revisit",]
 ggplot(d.plot,aes(x=orig.presab,y=prop)) +
   geom_bar(stat="identity",position="dodge",width=0.5) +
   facet_grid(~species) +
   theme_bw(14) +
   geom_text(aes(label=labeltext,y=-0.02)) +
-  labs(x="Regeneration present at initial survey",y="Proportion plots with presence at revisit")
+  labs(x="Regeneration present at initial survey",y="Proportion of plots with regeneration at revisit")
 
 ## patterns of older mimicking younger are stronger when considering all seedlings as opposed to "nonyoung" seedlings (in either or both survey times)
 

@@ -614,15 +614,15 @@ fire.centers[fire.centers$Fire == "Ralston",c("ppt.normal","diff.norm.ppt.min.z"
 fire.centers[fire.centers$Fire == "Chips",c("ppt.normal","diff.norm.ppt.min.z")] <- c(1250,-1.2)
 
 
-p1 <-  ggplot(d.plot.ind,aes(x=ppt.normal,y=diff.norm.ppt.min.z,color=Fire)) + 
+p1 <-  ggplot(d.plot.ind,aes(y=diff.norm.tmean.z,x=tmean.normal,color=Fire)) + 
   geom_point(size=3) + 
   #geom_point(data=fire.centers,size=5,pch=1) + 
-  geom_text(data=fire.centers,aes(label=fire.year),nudge_y=.04,size=6,color="darkgray") + 
+  #geom_text(data=fire.centers,aes(label=fire.year),nudge_y=.04,size=6,color="darkgray") + 
   guides(color=FALSE) + 
   theme_bw(17) + 
-  labs(x="Normal precipitation (mm)",y="Postfire minimum precipitation anomaly (SD)") + 
-  scale_x_continuous(limits=c(180,2580))+
-  geom_segment(aes(x=x,y=y,xend=xend,yend=yend),data=lines,color="darkgray",size=1.0) +
+  #labs(x="Normal precipitation (mm)",y="Postfire minimum precipitation anomaly (SD)") + 
+  #scale_x_continuous(limits=c(180,2580))+
+  #geom_segment(aes(x=x,y=y,xend=xend,yend=yend),data=lines,color="darkgray",size=1.0) +
   scale_color_viridis(discrete=TRUE)
 
 
@@ -1247,19 +1247,19 @@ for(sp in resp.opts) {
       formulas[["n0.aA2"]] <- formula(response.var ~ diff.norm.aet.z_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
 
 
-      formulas[["nA.a0"]] <- formula(response.var ~ aet.normal_c)
-      formulas[["nA.aA"]] <- formula(response.var ~ aet.normal_c*diff.norm.aet.z_c)
-      formulas[["nA.aA2"]] <- formula(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+      formulas[["nA.a0"]] <- formula(response.var ~     aet.normal_c)
+      formulas[["nA.aA"]] <- formula(response.var ~     aet.normal_c*diff.norm.aet.z_c)
+      formulas[["nA.aA2"]] <- formula(response.var ~     aet.normal_c*diff.norm.aet.z_c +     aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
       formulas[["pA"]] <- formula(response.var ~ aet.post_c)
-      formulas[["nA2.a0"]] <- formula(response.var ~ aet.normal_c + aet.normal_c.sq)
-      formulas[["nA2.aA"]] <- formula(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq)
-      formulas[["nA2.aAdi"]] <- formula(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq*diff.norm.aet.z_c)
-      formulas[["nA2.aA2"]] <- formula(response.var ~ aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+      formulas[["nA2.a0"]] <- formula(response.var ~     aet.normal_c +     aet.normal_c.sq)
+      formulas[["nA2.aA"]] <- formula(response.var ~     aet.normal_c*diff.norm.aet.z_c +     aet.normal_c.sq)
+      formulas[["nA2.aAdi"]] <- formula(response.var ~     aet.normal_c*diff.norm.aet.z_c +     aet.normal_c.sq*diff.norm.aet.z_c)
+      formulas[["nA2.aA2"]] <- formula(response.var ~     aet.normal_c*diff.norm.aet.z_c +     aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq +     aet.normal_c.sq)
       formulas[["pA2"]] <- formula(response.var ~ aet.post_c + aet.post_c.sq)
-      formulas[["nA.aAni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.z_c)
-      formulas[["nA.aA2ni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
-      formulas[["nA2.aAni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.z_c + aet.normal_c.sq)
-      formulas[["nA2.aA2ni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+      formulas[["nA.aAni"]] <- formula(response.var ~     aet.normal_c + diff.norm.aet.z_c)
+      formulas[["nA.aA2ni"]] <- formula(response.var ~     aet.normal_c + diff.norm.aet.z_c +     aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+      formulas[["nA2.aAni"]] <- formula(response.var ~     aet.normal_c + diff.norm.aet.z_c +     aet.normal_c.sq)
+      formulas[["nA2.aA2ni"]] <- formula(response.var ~     aet.normal_c + diff.norm.aet.z_c +     aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq +     aet.normal_c.sq)
 
       
       ##tmean
@@ -1336,17 +1336,17 @@ for(sp in resp.opts) {
       formulas[["n0.aA2min"]] <- formula(response.var ~ diff.norm.aet.min.z_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
 
 
-      formulas[["nA.aAmin"]] <- formula(response.var ~ aet.normal_c*diff.norm.aet.min.z_c)
-      formulas[["nA.aA2min"]] <- formula(response.var ~ aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+      formulas[["nA.aAmin"]] <- formula(response.var ~     aet.normal_c*diff.norm.aet.min.z_c)
+      formulas[["nA.aA2min"]] <- formula(response.var ~     aet.normal_c*diff.norm.aet.min.z_c +     aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
       formulas[["pAmin"]] <- formula(response.var ~ aet.post.min_c)
-      formulas[["nA2.aAmin"]] <- formula(response.var ~ aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c.sq)
-      formulas[["nA2.aAmindi"]] <- formula(response.var ~ aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c.sq*diff.norm.aet.min.z_c)
-      formulas[["nA2.aA2min"]] <- formula(response.var ~ aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+      formulas[["nA2.aAmin"]] <- formula(response.var ~     aet.normal_c*diff.norm.aet.min.z_c +     aet.normal_c.sq)
+      formulas[["nA2.aAmindi"]] <- formula(response.var ~     aet.normal_c*diff.norm.aet.min.z_c +     aet.normal_c.sq*diff.norm.aet.min.z_c)
+      formulas[["nA2.aA2min"]] <- formula(response.var ~     aet.normal_c*diff.norm.aet.min.z_c +     aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq +     aet.normal_c.sq)
       formulas[["pA2min"]] <- formula(response.var ~ aet.post.min_c + aet.post.min_c.sq)
-      formulas[["nA.aAminni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.min.z_c)
-      formulas[["nA.aA2minni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
-      formulas[["nA2.aAminni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c.sq)
-      formulas[["nA2.aA2minni"]] <- formula(response.var ~ aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+      formulas[["nA.aAminni"]] <- formula(response.var ~     aet.normal_c + diff.norm.aet.min.z_c)
+      formulas[["nA.aA2minni"]] <- formula(response.var ~     aet.normal_c + diff.norm.aet.min.z_c +     aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+      formulas[["nA2.aAminni"]] <- formula(response.var ~     aet.normal_c + diff.norm.aet.min.z_c +     aet.normal_c.sq)
+      formulas[["nA2.aA2minni"]] <- formula(response.var ~     aet.normal_c + diff.norm.aet.min.z_c +     aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq +     aet.normal_c.sq)
 
       
       
@@ -1433,19 +1433,19 @@ for(sp in resp.opts) {
         formulas[["n0s.aA2"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.aet.z_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
 
 
-        formulas[["nAs.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c)
-        formulas[["nAs.aA"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.z_c)
-        formulas[["nAs.aA2"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        formulas[["nAs.a0"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c)
+        formulas[["nAs.aA"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.z_c)
+        formulas[["nAs.aA2"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.z_c +     aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
         formulas[["pAs"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.post_c)
-        formulas[["nA2s.a0"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + aet.normal_c.sq)
-        formulas[["nA2s.aA"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq)
-        formulas[["nA2s.aAdi"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq*diff.norm.aet.z_c)
-        formulas[["nA2s.aA2"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+        formulas[["nA2s.a0"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c +     aet.normal_c.sq)
+        formulas[["nA2s.aA"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.z_c +     aet.normal_c.sq)
+        formulas[["nA2s.aAdi"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.z_c +     aet.normal_c.sq*diff.norm.aet.z_c)
+        formulas[["nA2s.aA2"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.z_c +     aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq +     aet.normal_c.sq)
         formulas[["pA2s"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.post_c + aet.post_c.sq)
-        formulas[["nAs.aAni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c)
-        formulas[["nAs.aA2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
-        formulas[["nA2s.aAni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c.sq)
-        formulas[["nA2s.aA2ni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+        formulas[["nAs.aAni"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c + diff.norm.aet.z_c)
+        formulas[["nAs.aA2ni"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c + diff.norm.aet.z_c +     aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        formulas[["nA2s.aAni"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c + diff.norm.aet.z_c +     aet.normal_c.sq)
+        formulas[["nA2s.aA2ni"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c + diff.norm.aet.z_c +     aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq +     aet.normal_c.sq)
 
         
         ##tmean
@@ -1522,17 +1522,17 @@ for(sp in resp.opts) {
         formulas[["n0s.aAmin"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.aet.min.z_c)
         formulas[["n0s.aA2min"]] <- formula(response.var ~ seed_tree_distance_general_c + diff.norm.aet.min.z_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
 
-        formulas[["nAs.aAmin"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.min.z_c)
-        formulas[["nAs.aA2min"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+        formulas[["nAs.aAmin"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.min.z_c)
+        formulas[["nAs.aA2min"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.min.z_c +     aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
         formulas[["pAmins"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.post.min_c)
-        formulas[["nA2s.aAmin"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c.sq)
-        formulas[["nA2s.aAmindi"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c.sq*diff.norm.aet.min.z_c)
-        formulas[["nA2s.aA2min"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+        formulas[["nA2s.aAmin"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.min.z_c +     aet.normal_c.sq)
+        formulas[["nA2s.aAmindi"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.min.z_c +     aet.normal_c.sq*diff.norm.aet.min.z_c)
+        formulas[["nA2s.aA2min"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.min.z_c +     aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq +     aet.normal_c.sq)
         formulas[["pA2mins"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.post.min_c + aet.post.min_c.sq)
-        formulas[["nAs.aAminni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c)
-        formulas[["nAs.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
-        formulas[["nA2s.aAminni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c.sq)
-        formulas[["nA2s.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+        formulas[["nAs.aAminni"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c + diff.norm.aet.min.z_c)
+        formulas[["nAs.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c + diff.norm.aet.min.z_c +     aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+        formulas[["nA2s.aAminni"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c + diff.norm.aet.min.z_c +     aet.normal_c.sq)
+        formulas[["nA2s.aA2minni"]] <- formula(response.var ~ seed_tree_distance_general_c +     aet.normal_c + diff.norm.aet.min.z_c +     aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq +     aet.normal_c.sq)
       
         
         ##TMEAN
@@ -1615,19 +1615,19 @@ for(sp in resp.opts) {
       formulas[["n0r.aA2"]] <- formula(response.var~ rad.march_c +  diff.norm.aet.z_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
 
 
-      formulas[["nAr.a0"]] <- formula(response.var~ rad.march_c +  aet.normal_c)
-      formulas[["nAr.aA"]] <- formula(response.var~ rad.march_c +  aet.normal_c*diff.norm.aet.z_c)
-      formulas[["nAr.aA2"]] <- formula(response.var~ rad.march_c +  aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+      formulas[["nAr.a0"]] <- formula(response.var~ rad.march_c +      aet.normal_c)
+      formulas[["nAr.aA"]] <- formula(response.var~ rad.march_c +      aet.normal_c*diff.norm.aet.z_c)
+      formulas[["nAr.aA2"]] <- formula(response.var~ rad.march_c +      aet.normal_c*diff.norm.aet.z_c +     aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
       formulas[["pAr"]] <- formula(response.var~ rad.march_c +  aet.post_c)
-      formulas[["nA2r.a0"]] <- formula(response.var~ rad.march_c +  aet.normal_c + aet.normal_c.sq)
-      formulas[["nA2r.aA"]] <- formula(response.var~ rad.march_c +  aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq)
-      formulas[["nA2r.aAdi"]] <- formula(response.var~ rad.march_c +  aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq*diff.norm.aet.z_c)
-      formulas[["nA2r.aA2"]] <- formula(response.var~ rad.march_c +  aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+      formulas[["nA2r.a0"]] <- formula(response.var~ rad.march_c +      aet.normal_c +     aet.normal_c.sq)
+      formulas[["nA2r.aA"]] <- formula(response.var~ rad.march_c +      aet.normal_c*diff.norm.aet.z_c +     aet.normal_c.sq)
+      formulas[["nA2r.aAdi"]] <- formula(response.var~ rad.march_c +      aet.normal_c*diff.norm.aet.z_c +     aet.normal_c.sq*diff.norm.aet.z_c)
+      formulas[["nA2r.aA2"]] <- formula(response.var~ rad.march_c +      aet.normal_c*diff.norm.aet.z_c +     aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq +     aet.normal_c.sq)
       formulas[["pA2r"]] <- formula(response.var~ rad.march_c +  aet.post_c + aet.post_c.sq)
-      formulas[["nAr.aAni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.z_c)
-      formulas[["nAr.aA2ni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
-      formulas[["nA2r.aAni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.z_c + aet.normal_c.sq)
-      formulas[["nA2r.aA2ni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+      formulas[["nAr.aAni"]] <- formula(response.var~ rad.march_c +      aet.normal_c + diff.norm.aet.z_c)
+      formulas[["nAr.aA2ni"]] <- formula(response.var~ rad.march_c +      aet.normal_c + diff.norm.aet.z_c +     aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+      formulas[["nA2r.aAni"]] <- formula(response.var~ rad.march_c +      aet.normal_c + diff.norm.aet.z_c +     aet.normal_c.sq)
+      formulas[["nA2r.aA2ni"]] <- formula(response.var~ rad.march_c +      aet.normal_c + diff.norm.aet.z_c +     aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq +     aet.normal_c.sq)
 
       
       ##TMEAN
@@ -1704,17 +1704,17 @@ for(sp in resp.opts) {
       formulas[["n0r.aA2min"]] <- formula(response.var~ rad.march_c +  diff.norm.aet.min.z_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
 
 
-      formulas[["nAr.aAmin"]] <- formula(response.var~ rad.march_c +  aet.normal_c*diff.norm.aet.min.z_c)
-      formulas[["nAr.aA2min"]] <- formula(response.var~ rad.march_c +  aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+      formulas[["nAr.aAmin"]] <- formula(response.var~ rad.march_c +      aet.normal_c*diff.norm.aet.min.z_c)
+      formulas[["nAr.aA2min"]] <- formula(response.var~ rad.march_c +      aet.normal_c*diff.norm.aet.min.z_c +     aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
       formulas[["pAminr"]] <- formula(response.var~ rad.march_c +  aet.post.min_c)
-      formulas[["nA2r.aAmin"]] <- formula(response.var~ rad.march_c +  aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c.sq)
-      formulas[["nA2r.aAmindi"]] <- formula(response.var~ rad.march_c +  aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c.sq*diff.norm.aet.min.z_c)
-      formulas[["nA2r.aA2min"]] <- formula(response.var~ rad.march_c +  aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+      formulas[["nA2r.aAmin"]] <- formula(response.var~ rad.march_c +      aet.normal_c*diff.norm.aet.min.z_c +     aet.normal_c.sq)
+      formulas[["nA2r.aAmindi"]] <- formula(response.var~ rad.march_c +      aet.normal_c*diff.norm.aet.min.z_c +     aet.normal_c.sq*diff.norm.aet.min.z_c)
+      formulas[["nA2r.aA2min"]] <- formula(response.var~ rad.march_c +      aet.normal_c*diff.norm.aet.min.z_c +     aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq +     aet.normal_c.sq)
       formulas[["pA2minr"]] <- formula(response.var~ rad.march_c +  aet.post.min_c + aet.post.min_c.sq)
-      formulas[["nAr.aAminni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.min.z_c)
-      formulas[["nAr.aA2minni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
-      formulas[["nA2r.aAminni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c.sq)
-      formulas[["nA2r.aA2minni"]] <- formula(response.var~ rad.march_c +  aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+      formulas[["nAr.aAminni"]] <- formula(response.var~ rad.march_c +      aet.normal_c + diff.norm.aet.min.z_c)
+      formulas[["nAr.aA2minni"]] <- formula(response.var~ rad.march_c +      aet.normal_c + diff.norm.aet.min.z_c +     aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+      formulas[["nA2r.aAminni"]] <- formula(response.var~ rad.march_c +      aet.normal_c + diff.norm.aet.min.z_c +     aet.normal_c.sq)
+      formulas[["nA2r.aA2minni"]] <- formula(response.var~ rad.march_c +      aet.normal_c + diff.norm.aet.min.z_c +     aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq +     aet.normal_c.sq)
 
       
       
@@ -1790,19 +1790,19 @@ for(sp in resp.opts) {
         formulas[["n0sr.aA"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.aet.z_c)
         formulas[["n0sr.aA2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.aet.z_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
 
-        formulas[["nAsr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c)
-        formulas[["nAsr.aA"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.z_c)
-        formulas[["nAsr.aA2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        formulas[["nAsr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c)
+        formulas[["nAsr.aA"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.z_c)
+        formulas[["nAsr.aA2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.z_c +     aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
         formulas[["pAsr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.post_c)
-        formulas[["nA2sr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + aet.normal_c.sq)
-        formulas[["nA2sr.aA"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq)
-        formulas[["nA2sr.aAdi"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c.sq*diff.norm.aet.z_c)
-        formulas[["nA2sr.aA2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.z_c + aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+        formulas[["nA2sr.a0"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c +     aet.normal_c.sq)
+        formulas[["nA2sr.aA"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.z_c +     aet.normal_c.sq)
+        formulas[["nA2sr.aAdi"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.z_c +     aet.normal_c.sq*diff.norm.aet.z_c)
+        formulas[["nA2sr.aA2"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.z_c +     aet.normal_c*diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq +     aet.normal_c.sq)
         formulas[["pA2sr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.post_c + aet.post_c.sq)
-        formulas[["nAsr.aAni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c)
-        formulas[["nAsr.aA2ni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
-        formulas[["nA2sr.aAni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c.sq)
-        formulas[["nA2sr.aA2ni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.z_c + aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq + aet.normal_c.sq)
+        formulas[["nAsr.aAni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c + diff.norm.aet.z_c)
+        formulas[["nAsr.aA2ni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c + diff.norm.aet.z_c +     aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq)
+        formulas[["nA2sr.aAni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c + diff.norm.aet.z_c +     aet.normal_c.sq)
+        formulas[["nA2sr.aA2ni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c + diff.norm.aet.z_c +     aet.normal_c + diff.norm.aet.z_c.sq + diff.norm.aet.z_c.sq +     aet.normal_c.sq)
 
         
         ##TMEAN
@@ -1873,17 +1873,17 @@ for(sp in resp.opts) {
         formulas[["n0sr.aAmin"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.aet.min.z_c)
         formulas[["n0sr.aA2min"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + diff.norm.aet.min.z_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
 
-        formulas[["nAsr.aAmin"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.min.z_c)
-        formulas[["nAsr.aA2min"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+        formulas[["nAsr.aAmin"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.min.z_c)
+        formulas[["nAsr.aA2min"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.min.z_c +     aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
         formulas[["pAminsr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.post.min_c)
-        formulas[["nA2sr.aAmin"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c.sq)
-        formulas[["nA2sr.aAmindi"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c.sq*diff.norm.aet.min.z_c)
-        formulas[["nA2sr.aA2min"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c*diff.norm.aet.min.z_c + aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+        formulas[["nA2sr.aAmin"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.min.z_c +     aet.normal_c.sq)
+        formulas[["nA2sr.aAmindi"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.min.z_c +     aet.normal_c.sq*diff.norm.aet.min.z_c)
+        formulas[["nA2sr.aA2min"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c*diff.norm.aet.min.z_c +     aet.normal_c*diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq +     aet.normal_c.sq)
         formulas[["pA2minsr"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.post.min_c + aet.post.min_c.sq)
-        formulas[["nAsr.aAminni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c)
-        formulas[["nAsr.aA2minni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
-        formulas[["nA2sr.aAminni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c.sq)
-        formulas[["nA2sr.aA2minni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c + aet.normal_c + diff.norm.aet.min.z_c + aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq + aet.normal_c.sq)
+        formulas[["nAsr.aAminni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c + diff.norm.aet.min.z_c)
+        formulas[["nAsr.aA2minni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c + diff.norm.aet.min.z_c +     aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq)
+        formulas[["nA2sr.aAminni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c + diff.norm.aet.min.z_c +     aet.normal_c.sq)
+        formulas[["nA2sr.aA2minni"]] <- formula(response.var~ rad.march_c +  seed_tree_distance_general_c +     aet.normal_c + diff.norm.aet.min.z_c +     aet.normal_c + diff.norm.aet.min.z_c.sq + diff.norm.aet.min.z_c.sq +     aet.normal_c.sq)
       }
       
       ##TMEAN
@@ -3567,7 +3567,6 @@ cc2 <- cca(d.all.sp ~ `Normal Precip` + `Normal Temp` + `Solar Radiation` + WF+D
 cc3 <- cca(d.all.sp ~ `Normal Precip` + `Normal Temp` + `Solar Radiation` + `Precip Anomaly` + WF+DF+SP+YP,data=d.all)
 
 cc4 <- cca(d.all.sp ~ `Precip Anomaly` + WF+DF+SP+YP,data=d.all)
-
 
 cc.full <- cca(d.all.sp ~ `Normal Precip` + `Normal Temp` + `Solar Radiation` + `Precip Anomaly` + WF+DF+SP+YP,data=d.all)
 cc.np <- cca(d.all.sp ~ `Normal Temp` + `Solar Radiation` + `Precip Anomaly` + WF+DF+SP+YP,data=d.all)

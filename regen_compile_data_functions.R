@@ -115,7 +115,7 @@ summarize.clim <- function(plot.df,plot.climate.df,years.clim) {
     diff.norm.snow.z <- (snow.post.mean-snow.mean)/snow.sd
     diff.norm.snow.min.z <- (snow.post.min-snow.mean)/snow.sd
     
-    diff.norm.tmean.z <- (tmean.post.mean-tmean.mean)/ppt.sd
+    diff.norm.tmean.z <- (tmean.post.mean-tmean.mean)/tmean.sd
     diff.norm.tmean.max.z <- (tmean.post.max-tmean.mean)/tmean.sd
     diff.norm.tmean.JJA.mean.z <- (tmean.JJA.post.mean-tmean.JJA.mean)/tmean.JJA.sd
     diff.norm.tmean.DJF.mean.z <- (tmean.DJF.post.mean-tmean.DJF.mean)/tmean.DJF.sd
