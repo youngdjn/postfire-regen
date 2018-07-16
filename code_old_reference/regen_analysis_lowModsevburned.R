@@ -63,6 +63,7 @@ d.sp$regen.presab.old <- ifelse(d.sp$regen.count.old > 0,TRUE,FALSE)
 d.sp$regen.presab.all <- ifelse(d.sp$regen.count.all > 0,TRUE,FALSE)
 
 # severity categories
+high.sev <- c(1,2,3)
 high.sev <- c(4,5) # which field-assessed severity values are considered high severity
 control <- c(0,1) # which field-assessed severity values are considered controls
 
@@ -232,16 +233,17 @@ d.sp.2 <- d.sp.agg
 d.plot.3 <- d.plot.2[which((d.plot.2$count.control > 4) & (d.plot.2$count.highsev > 0)),]
 
 # only want to analyze high-severity plots burned 4-5 years post-fire
-d.plot.c <- d.plot.c[(d.plot.c$survey.years.post %in% c(4,5)) & (d.plot.c$FIRE_SEV %in% c(4,5)),] 
+d.plot.c <- d.plot.c[(d.plot.c$survey.years.post %in% c(4,5)) & (d.plot.c$FIRE_SEV %in% high.sev),] 
 
 # only want to analyze high-severity plots burned 4-5 years post-fire
-d.plot.ind <- d.plot.ind[(d.plot.ind$survey.years.post %in% c(4,5)) & (d.plot.ind$FIRE_SEV %in% c(4,5)),] 
+d.plot.ind <- d.plot.ind[(d.plot.ind$survey.years.post %in% c(4,5)) & (d.plot.ind$FIRE_SEV %in% high.sev),] 
 
 
 
 
 
-
+#d.plot.3 <- d.plot.3[d.plot.3$Fire != "Bagley",]
+#d.plot.ind <- d.plot.ind[d.plot.ind$Fire != "Bagley",]
 
 
 
@@ -398,18 +400,6 @@ d.plot.ind <- merge(d.plot.ind,d.domsp,all.x=TRUE,by=c("Fire"))
 #### 6. Compile summary statistics and tables ####
 
 
-## shortcut workaround to get correct elevations
-library(raster)
-library(sf)
-dem <- raster("C:/Users/DYoung/Documents/UC Davis/Research Projects/Post-fire management/postfire-management/data/non-synced/existing-datasets/DEM/CAmerged12_albers2.tif")
-utm10 <- 26910
-d.p.sp <- st_as_sf(d.plot.ind,
-                   coords=c("Easting","Northing"),
-                   remove=F,
-                   crs=utm10)
-d.p.sp$elev.m2 <- extract(dem,d.p.sp)
-d.plot.ind$elev.m2 <- d.p.sp$elev.m2
-
 
 ### fire-level ###
 
@@ -435,6 +425,8 @@ d.sp.cast <- data.table::dcast(d.sp.trim,Regen_Plot~species,value.var=c("regen.p
 # merge the species data into each plot
 d.merge <- merge(d,d.sp.cast,by="Regen_Plot")
 d.merge <- as.data.table(d.merge)
+
+#d.merge <- d.merge[d.merge$Fire != "Bagley",]
 
 #temporary
 
@@ -469,8 +461,7 @@ d.fire <- d.merge[,list(fire.year=mean(fire.year),
                     cov.forb=summary.string(FORB,decimals=0),
                     cov.grass=summary.string(GRASS,decimals=0),
                     
-                    dom.sp=first(domsp.comb),
-                    elev.range = paste0(round(min(elev.m2)),", ",round(max(elev.m2)))
+                    dom.sp=first(domsp.comb)
                   ),
                   by=Fire]
 
@@ -909,7 +900,7 @@ dev.off()
 
 ### 9. Plot histogram of seed tree distance ####
 
-d.plot.highsev <- d.plot.ind[d.plot.ind$FIRE_SEV %in% c(4,5),]
+d.plot.highsev <- d.plot.ind[d.plot.ind$FIRE_SEV %in% high.sev,]
 
 ggplot(d.plot.highsev,aes(seed_tree_distance_general)) +
   geom_histogram() +
