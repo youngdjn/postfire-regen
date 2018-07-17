@@ -24,13 +24,7 @@ d.plot$Fire <- sapply(d.plot$Fire,FUN= function(x) simpleCap(tolower(x)))
 d.plot[d.plot$Fire == "Btu Lightening","Fire"] <- "BTU Lightning"
 
 
-
-ggplot(d.plot,aes(x=seed.tree.distance.general,y=))
-
-
-
-
-## Look for plots with incomplete data specified in the comments
+## Omit plots with incomplete data specified in the comments
 plots.exceptions <- grepl("#.*(INCOMPLETE|INCORRECT)",d.plot$NOTES)
 d.plot <- d.plot[!plots.exceptions,]
 
@@ -49,7 +43,7 @@ plot.ids.exclude <- plots.exclude[plots.exclude$Exclude != "",]$Regen_Plot
 d.plot <- d.plot[!(d.plot$Regen_Plot %in% plot.ids.exclude),]
 
 
-# Remove any plots > 50m from seed source
+# Remove any plots > 75m from seed source
 d.plot <- d.plot[which(d.plot$seed_tree_distance_general < 75),]
 
 # quadratic climate terms
@@ -104,9 +98,6 @@ d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "Freds") & (d.plot.preca
 d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "Power") & (d.plot.precat$rad.march < 6000)),]
 d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "Ralston") & (d.plot.precat$ppt.normal < 1175)),]
 d.plot.precat <- d.plot.precat[!((d.plot.precat$Fire == "Rich") & (d.plot.precat$ppt.normal > 1080) & (d.plot.precat$rad.march < 5000)),]
-
-
-
 
 fires <- unique(d.plot$Fire)
 
@@ -314,7 +305,7 @@ library(reshape)
 d.sp.pre <- d.sp.2[,c("species","topoclim.cat","Fire","adult.ba")]
 
 #d.fire.sp <- cast(d.sp.pre,Fire + topoclim.cat ~ species,value="adult.ba")
-d.fire.sp <- cast(d.sp.pre,Fire ~ species,value="adult.ba",fun.aggregate=sum)
+d.fire.sp <- reshape::cast(d.sp.pre,Fire ~ species,value="adult.ba",fun.aggregate=sum)
 
 d.fire.sp$PIPJ <- d.fire.sp$PIPO + d.fire.sp$PIJE
 
@@ -422,7 +413,7 @@ keep.cols <- c("species","regen.presab.old","adult.ba","topoclim.cat","Fire")
 d.sp <- as.data.frame(d.sp)
 d.sp.trim <- d.sp[d.sp$species %in% keep.sp,]
 
-#load in fire
+#load fire
 d.sp.trim <- merge(d.sp.trim,d[c("Regen_Plot","Fire","dominant_shrub_ht_cm")],by="Regen_Plot")
 
 d.sp.trim <- as.data.table(d.sp.trim)
@@ -546,7 +537,6 @@ write.csv(d.cat,"../tables/topotclim_cat_table.csv")
 
 #### 7. Plot highsev vs. reference ####
 
-
 d.plot.keep <- merge(d.plot.cat,d.plot.3[,c("Fire","topoclim.cat","count.control","count.highsev")])
 d.plot.keep <- d.plot.keep[d.plot.keep$count.control > 4 & d.plot.keep$count.highsev > 4,]
 
@@ -567,10 +557,6 @@ p <- ggplot(d.plot.keep,aes(x=ppt.normal,y=rad.march,col=topoclim.cat,shape=FIRE
 Cairo(file=paste0("../Figures/FigS1_ref_vs_highsev",Sys.Date(),".png"),width=2800,height=2000,ppi=200,res=200,dpi=200)
 p
 dev.off()
-
-nrow(d.plot.keep[d.plot.keep$FIRE_SEV.cat == "High severity",])
-nrow(d.plot.keep[d.plot.keep$FIRE_SEV.cat == "Reference",])
-
 
 
 #### 7.1 Number of plots in high seveirty and reference classes ####
@@ -611,8 +597,7 @@ lines <- data.frame(rbind(
                ))
 names(lines) <- c("x","y","xend","yend")
 
-##shifts
-
+##shifting the fire name annotations so they look nice
 fire.centers[fire.centers$Fire == "Antelope",c("ppt.normal","diff.norm.ppt.min.z")] <- c(500,-0.95)
 fire.centers[fire.centers$Fire == "Freds",c("ppt.normal","diff.norm.ppt.min.z")] <- c(1170,-0.78)
 fire.centers[fire.centers$Fire == "Power",c("ppt.normal","diff.norm.ppt.min.z")] <- c(1600,-0.85)
@@ -627,15 +612,15 @@ fire.centers[fire.centers$Fire == "Ralston",c("ppt.normal","diff.norm.ppt.min.z"
 fire.centers[fire.centers$Fire == "Chips",c("ppt.normal","diff.norm.ppt.min.z")] <- c(1250,-1.2)
 
 
-p1 <-  ggplot(d.plot.ind,aes(y=diff.norm.tmean.z,x=tmean.normal,color=Fire)) + 
+p1 <-  ggplot(d.plot.ind,aes(y=diff.norm.ppt.min.z,x=ppt.normal,color=Fire)) + 
   geom_point(size=3) + 
   #geom_point(data=fire.centers,size=5,pch=1) + 
-  #geom_text(data=fire.centers,aes(label=fire.year),nudge_y=.04,size=6,color="darkgray") + 
+  geom_text(data=fire.centers,aes(label=fire.year),nudge_y=.04,size=6,color="darkgray") + 
   guides(color=FALSE) + 
   theme_bw(17) + 
-  #labs(x="Normal precipitation (mm)",y="Postfire minimum precipitation anomaly (SD)") + 
-  #scale_x_continuous(limits=c(180,2580))+
-  #geom_segment(aes(x=x,y=y,xend=xend,yend=yend),data=lines,color="darkgray",size=1.0) +
+  labs(x="Normal precipitation (mm)",y="Postfire minimum precipitation anomaly (SD)") + 
+  scale_x_continuous(limits=c(180,2580))+
+  geom_segment(aes(x=x,y=y,xend=xend,yend=yend),data=lines,color="darkgray",size=1.0) +
   scale_color_viridis(discrete=TRUE)
 
 
@@ -885,23 +870,23 @@ for(i in 1:length(unique(d.cast$variable))) {
 
 }
 
-a <- ggplot_gtable(ggplot_build(plots[[1]]))
-b <-  ggplot_gtable(ggplot_build(plots[[2]]))
-c <-  ggplot_gtable(ggplot_build(plots[[3]]))
-d <-  ggplot_gtable(ggplot_build(plots[[4]]))
+p.a <- ggplot_gtable(ggplot_build(plots[[1]]))
+p.b <-  ggplot_gtable(ggplot_build(plots[[2]]))
+p.c <-  ggplot_gtable(ggplot_build(plots[[3]]))
+p.d <-  ggplot_gtable(ggplot_build(plots[[4]]))
 
-maxWidth = unit.pmax(a$widths[2:3], b$widths[2:3], c$widths[2:3], d$widths[2:3])
+maxWidth = unit.pmax(p.a$widths[2:3], p.b$widths[2:3], p.c$widths[2:3], p.d$widths[2:3])
 
-a$widths[2:3] <- maxWidth
-b$widths[2:3] <- maxWidth
-c$widths[2:3] <- maxWidth
-d$widths[2:3] <- maxWidth
+p.a$widths[2:3] <- maxWidth
+p.b$widths[2:3] <- maxWidth
+p.c$widths[2:3] <- maxWidth
+p.d$widths[2:3] <- maxWidth
 
 
 
 
 Cairo(file=paste0("../Figures/Fig1_anom_normal_abiotic_",Sys.Date(),".png"),width=1500,height=2000,ppi=200,res=200,dpi=200) 
-grid.arrange(a,b,c,d,ncol=1,heights=c(1,1,1,1.7))
+grid.arrange(p.a,p.b,p.c,p.d,ncol=1,heights=c(1,1,1,1.7))
 dev.off()
 
 
@@ -928,6 +913,7 @@ ggplot(a,aes(x=Fire,y=mean)) +
 
 #### 9bb Plot of seed tree distance vs. conif regen ####
 d.sp.curr.plt <- d.sp[d.sp$species=="CONIF.ALLSP",]
+d <- d.plot.ind
 d2 <- merge(d,d.sp.curr.plt,by=c("Regen_Plot"))
 d2 <- d2[d2$seed_tree_distance_general < 201,]
 d2$st.dist <- d2$seed_tree_distance_general * 3.28
@@ -948,8 +934,6 @@ ggplot(d2,aes(x=st.dist,y=seedl.ha)) +
 ### Center data frame ###
 
 d <- d.plot.ind
-
-
 
 vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all","dominant_shrub_ht_cm","tallest_ht_cm","prop.regen.pinus.old","prop.regen.pinus.all","prop.regen.shade.old","prop.regen.hdwd.old","prop.regen.hdwd.old","prop.regen.conif.old","regen.count.broader.old")
 vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z", "def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","def.post","aet.post") # removed snow, adult.ba.agg
@@ -1026,34 +1010,28 @@ pairs(d.c.pairs)
 d.c.modfit <- d.c # because the model fitting uses its own d.c
 
 
-
-
 ## Set response options and loop through them
 
-sp.opts <- c("PIPJ","ABCO","HDWD.ALLSP")
-sp.opts <- c("ABCO","SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP","PIPJ","PSME","PILA","QUCH2","QUKE")
-#sp.opts <- c("SHADE.ALLSP","PINUS.ALLSP","HDWD.ALLSP")
+# species presence-absence
+sp.opts <- c("HDWD.ALLSP","PIPJ","ABCO")
+
+# species cover
 cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB")
 
-# All
-ht.opts <- c("HT.HDWD.ALLSP","HT.PIPJ","HT.ABCO")
-ht.opts <- c("HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP","HT.PIPJ","HT.ABCO","HT.QUCH2","HT.QUKE")
+# species height relative to shrubs ("height dominance")
+ht.opts <- c("HT.PIPJ","HT.ABCO","HT.HDWD.ALLSP")
 
-ht.opts <- c("HT.PILA","HT.PSME","HT.QUCH2","HT.QUKE")
-htabs.opts <- c("HTABS.PIPJ","HTABS.SHRUB","HTABS.ABCO","HTABS.PSME","HTABS.PILA","HTABS.QUKE","HTABS.CADE27","HTABS.HDWD.ALLSP","HTABS.PINUS.ALLSP","HTABS.SHADE.ALLSP","HTABS.PILA","HTABS.PSME")
-htabs.opts <- c("HTABS.PIPJ","HTABS.SHRUB","HTABS.ABCO","HTABS.HDWD.ALLSP","HTABS.PINUS.ALLSP","HTABS.SHADE.ALLSP")
+# species height (absolute)
 htabs.opts <- c("HTABS.SHRUB")
+htabs.opts <- NULL
 
+# proprtional representation of species
 prop.opts <- c("PROP.CONIF","PROP.PINUS","PROP.SHADE")
-#prop.opts <- NULL
-#htabs.opts <- NULL 
-count.opts <- c("COUNT.PINUS.ALLSP","COUNT.SHADE.ALLSP","COUNT.HDWD.ALLSP")
+prop.opts <- NULL
 
-# # sp grps
-# ht.opts <- c("HT.HDWD.ALLSP","HT.PINUS.ALLSP","HT.SHADE.ALLSP")
-# htabs.opts <- c("HTABS.HDWD.ALLSP","HTABS.PINUS.ALLSP","HTABS.SHRUB","HTABS.SHADE.ALLSP")
-# prop.opts <- c("PROP.CONIF","PROP.PINUS")
-# 
+# count by species
+count.opts <- c("COUNT.PINUS.ALLSP","COUNT.SHADE.ALLSP","COUNT.HDWD.ALLSP")
+count.opts <- NULL
 
 
 
@@ -1062,7 +1040,11 @@ resp.opts <- c(htabs.opts,ht.opts,sp.opts,cover.opts,ht.opts)
 resp.opts <- c(sp.opts,cover.opts,ht.opts)
 
 
+
+
 do.regression <-TRUE
+
+## variables to store outputs generated in loop
 
 m.p <- list()
 
@@ -1091,23 +1073,24 @@ fit.mods <- list()
 
 
 
-sink("run_output.txt")
+sink("run_output.txt") # this file will store model fits etc
 for(sp in resp.opts) {
   
   cat("\n\n#####")
   cat("Running model for: ",sp,"")
   cat("#####\n\n")
 
+  ## select the correct plot-level and topoclimate category-level data for the given response variable
   if(sp %in% cover.opts) {
-    d.sp.curr.agg <- d.sp.2[d.sp.2$species=="PIPO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
-    d.sp.curr.plt <- d.sp[d.sp$species=="PIPO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
+    d.sp.curr.agg <- d.sp.2[d.sp.2$species=="PIPO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plot
+    d.sp.curr.plt <- d.sp[d.sp$species=="PIPO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plot
   } else if(sp %in% ht.opts)  {
     sp.name <- substr(sp,4,100)
     d.sp.curr.agg <- d.sp.2[d.sp.2$species==sp.name,]
     d.sp.curr.plt <- d.sp[d.sp$species==sp.name,]
   } else if(sp == "HTABS.SHRUB") {
-    d.sp.curr.agg <- d.sp.2[d.sp.2$species=="PIPO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
-    d.sp.curr.plt <- d.sp[d.sp$species=="PIPO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
+    d.sp.curr.agg <- d.sp.2[d.sp.2$species=="PIPO",] #pick any species; for heightabs it doesn't matter; just need to thin to one row per plot
+    d.sp.curr.plt <- d.sp[d.sp$species=="PIPO",] #pick any species; for heightabs it doesn't matter; just need to thin to one row per plot
   } else if(sp %in% htabs.opts) {
     sp.name <- substr(sp,7,100)
     d.sp.curr.agg <- d.sp.2[d.sp.2$species==sp.name,]
@@ -1148,7 +1131,6 @@ for(sp in resp.opts) {
   # names(d.sp.curr.agg) <- paste0(names(d.sp.curr.agg),".agg")
   # d <- merge(d,d.sp.curr.agg,by.x=c("Fire","topoclim.cat"),by.y=c("Fire.agg","topoclim.cat.agg")) # add the aggregated species data (from this we just want adult BA from the control plot)
   
-
   d.c$regen.presab.all.01 <- ifelse(d.c$regen.presab.all == TRUE,1,0)
   d.c$regen.presab.old.01 <- ifelse(d.c$regen.presab.old == TRUE,1,0)
   
@@ -1197,7 +1179,7 @@ for(sp in resp.opts) {
   }
   
   
-    
+    ### define candidate model formulas
     if(TRUE) {
       
       
@@ -1959,7 +1941,7 @@ for(sp in resp.opts) {
     
     
     
-    
+    ## for each formula (candidate model), fit the mdoel and evaluate fit using cross-validation
     cv.results <- data.frame()
     
     cat("\n")
@@ -1969,7 +1951,7 @@ for(sp in resp.opts) {
       #cat("\rEvaluating model ",i," of ",length(formulas))
       
       formula.name <- names(formulas)[i]
-      cv.result <- cvfun.fire(formulas[[i]],data=d.c)
+      cv.result <- cvfun.fire(formulas[[i]],data=d.c) # function to fit model and evaluate fit using cross-validation
       cv.result.named <- data.frame(model=names(formulas)[i],cv.result,stringsAsFactors=FALSE)
       cv.results <- rbind(cv.results,cv.result.named)
       
@@ -1983,9 +1965,9 @@ for(sp in resp.opts) {
     
     
     
-    ## finding the best normal and then the corresponding best anomaly and post
+    ### finding the best normal climate model and then the corresponding best post-fire weather (anomaly) model and best post-fire absolute weather models
     
-    ## normal models
+    ## normal climate models
     search <- ".a0"
     normal.model.names <- cv.results[grep(search,cv.results$model,fixed=TRUE),]$mod
     # normal.model.names <- normal.model.names[normal.model.names != "n0.a0"] # exclude null model
@@ -2037,7 +2019,7 @@ for(sp in resp.opts) {
     
     d.maes.anoms.sp <- data.frame()
     
-    
+    ## for each of these categories of models, find the best ones
     for(i in 1:length(anom.search.opts)) {
       
       anom.name <- names(norm.search.opts)[i]
@@ -2049,7 +2031,7 @@ for(sp in resp.opts) {
       d.cv.normal <- cv.results[cv.results$model %in% normal.model.names,]
       best.normal.mod <- d.cv.normal[which(d.cv.normal$mae == min(d.cv.normal$mae,na.rm=TRUE)),]$mod[1]
       
-      #what is the best anomaly model for that normal, sticking with whichever anom we have
+      #what is the best anomaly model corresponding to that normal model, sticking with whichever normal we have
       best.normal.normal.part <- strsplit(as.character(best.normal.mod),".",fixed=TRUE)[[1]][1]
       best.normal.anom.search <- paste0(best.normal.normal.part,"\\.",anom.search)
       anom.model.names <- cv.results[grep(best.normal.anom.search,cv.results$model,fixed=FALSE),]$model
@@ -2075,7 +2057,7 @@ for(sp in resp.opts) {
       
       
 
-      #what is the best post model for that normal, sticking with whichever anom we have from the normal
+      #what is the best post-fire weather model for that normal, sticking with whichever anom we have from the normal
       post.mod.name.1 <- gsub("^n","p",best.normal.nonull.mod)
       post.mod.name.2 <- substr(post.mod.name.1,1,nchar(post.mod.name.1)-3)
       extreme.text <- "(min)?(max)?"
@@ -2088,7 +2070,7 @@ for(sp in resp.opts) {
       best.post.mod <- d.cv.post[which(d.cv.post$mae == min(d.cv.post$mae,na.rm=TRUE)),]$mod[1]
       
       
-      ## get maes of best normal, best anomal, best normal.nonull, best.post
+      ## get maes (mean absolute errors) of best normal, best anomal, best normal.nonull, best.post
       best.anom.mae <- cv.results[cv.results$model == best.anom.mod,"mae"]
       best.anom.own.mae <- cv.results[cv.results$model == best.anom.own.mod,"mae"]
       best.anom.di.mae <- cv.results[cv.results$model == best.anom.di.mod,"mae"]
@@ -2115,22 +2097,12 @@ for(sp in resp.opts) {
       
     }
     
-    d.maes.anoms <- rbind(d.maes.anoms,d.maes.anoms.sp)
+    d.maes.anoms <- rbind(d.maes.anoms,d.maes.anoms.sp) # this stores the best models of each type (e.g., normal climate model and post-fire anomaly model) and their associated MAEs (mean absolute errors)
     
     
     
-    
-    
-    
-    
-    
-    
-    
-    
-    ## Now for each anom model , make predictions
-    
-    
-    
+
+    ### Now for each anom model , make predictions
     
     vars <- c("ppt.normal_c","ppt.normal_c.sq","diff.norm.ppt.z_c","diff.norm.ppt.z_c.sq","tmean.normal_c","tmean.normal_c.sq",
               "diff.norm.tmean.z_c","diff.norm.tmean.z_c.sq",
@@ -2387,12 +2359,12 @@ for(sp in resp.opts) {
 sink(file=NULL)
 
 
+save.image("../model_workspace.Rwkspc")
 
 
 
 
-
-#### 11. Plot overall exploration plot ####
+#### 11. Plot overall exploration plot of model fits for each response ####
 
 ### Prep  ###
 
@@ -2406,6 +2378,7 @@ d.maes.anoms$most.improved <- ""
 d.maes.anoms.short <- d.maes.anoms[,c("sp","anom.name","anom.better","anom.improvement","best.of.species","most.improved")]
 
 pred.dat.comb <- merge(pred.dat,d.maes.anoms.short,all.x=TRUE,by.x=c("sp","anom"),by.y=c("sp","anom.name"))
+
 pred.dat.comb$anom.improvement <- round(pred.dat.comb$anom.improvement,4)
 #pred.dat.comb[pred.dat.comb$anom.improvement < -0.01 , "anom.improvement"] <- NA
 
@@ -2453,8 +2426,8 @@ uncenter.rename <- list("Pmin"="diff.norm.ppt.min.z","Pmean"="diff.norm.ppt.z","
 # center.rename <- list("Pmin"="diff.norm.ppt.min.z_c","Pmean"="diff.norm.ppt.z_c","Amin"="diff.norm.aet.min.z_c","Amean"="diff.norm.aet.z_c")
 # uncenter.rename <- list("Pmin"="diff.norm.ppt.min.z","Pmean"="diff.norm.ppt.z","Amin"="diff.norm.aet.min.z","Amean"="diff.norm.aet.z")
 
-pred.dat.plotting$pred.center.name <- gsubfn("\\S+",center.rename,pred.dat.plotting$anom)
-pred.dat.plotting$pred.uncenter.name <- gsubfn("\\S+",uncenter.rename,pred.dat.plotting$anom)
+pred.dat.plotting$pred.center.name <- gsubfn("\\S+",center.rename,as.character(pred.dat.plotting$anom))
+pred.dat.plotting$pred.uncenter.name <- gsubfn("\\S+",uncenter.rename,as.character(pred.dat.plotting$anom))
 
 ##drop columns that weren't translated (deficit)
 pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$pred.center.name %in% center.rename,]
@@ -2474,11 +2447,11 @@ pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$sp %in% c("ABCO","COV.G
 #pred.dat.plotting <- pred.dat.plotting[!(pred.dat.plotting$anom %in% c("Dmax","Dmean")),]
 
 spsub <- list("PIPJ" = "Yellow pine\npresence\n(% of plots)","ABCO" = "White fir\npresence\n(% of plots)","CONIF.ALLSP" = "Conifer\npresence\n(% of plots)","PSME" = "Douglas-fir\npresence\n(% of plots)","QUKE"="Black oak\npresence\n(% of plots)","PINUS.ALLSP" = "All pines\npresence\n(% of plots)","SHADE.ALLSP" = "Shade-tolerant conifers\npresence\n(% of plots)","HDWD.ALLSP" = "Broadleaved trees\npresence\n(% of plots)","COV.SHRUB" = "Shrubs\n(% cover)","COV.GRASS" = "Graminoids\n(% cover)","COV.FORB" = "Forbs\n(% cover)","HT.PIPJ"="Yellow pine\nheight dominance\n(% of plots)","HT.ABCO"="White fir\nheight dominance\n(% of plots)","HT.PINUS.ALLSP"="Pines\nheight dominance\n(% of plots)","HT.SHADE.ALLSP"="Shde-tolerant conifers\nheight dominance\n(% of plots)","HT.HDWD.ALLSP"="Broadleaved trees\nheight dominance\n(% of plots)","HT.CONIF.ALLSP"="Conifer\nheight dominance\n(% of plots)")
-pred.dat.plotting$sp <- gsubfn("\\S+",spsub,pred.dat.plotting$sp)
+pred.dat.plotting$sp <- gsubfn("\\S+",spsub,as.character(pred.dat.plotting$sp))
 pred.dat.plotting$sp <- factor(pred.dat.plotting$sp,levels=spsub)
 
 anomsub <- list("Pmin" = "Min precip","Pmean" = "Mean precip","Amin" = "Min AET","Amean" = "Mean AET","Dmax" = "Max CWD","Dmean" = "Mean CWD",     "Tmax" = "Max temp","Tmean" = "Mean temp")
-pred.dat.plotting$anom <- gsubfn("\\S+",anomsub,pred.dat.plotting$anom)
+pred.dat.plotting$anom <- gsubfn("\\S+",anomsub,as.character(pred.dat.plotting$anom))
 pred.dat.plotting$anom <- factor(pred.dat.plotting$anom,levels=anomsub)
 
 
@@ -2524,10 +2497,10 @@ dev.off()
 
 #### 11.5 individual prediction plots ####
 
-a <- "Min precip"
-s <- "All pines\npresence\n(% of plots)"
-s <- "Broadleaved trees\nheight dominance\n(% of plots)"
-s <- "Graminoids\n(%cover)"
+a <- "Mean precip"
+s <- "Shrubs\n(% cover)"
+#s <- "Broadleaved trees\nheight dominance\n(% of plots)"
+#s <- "Graminoids\n(%cover)"
 
 
 p.ind <- pred.dat.plotting[anom==a & sp ==s,]
@@ -2543,7 +2516,7 @@ p <- ggplot(p.ind,aes(x=diff.norm.ppt.z_c,y=pred.mid,color=norm.level,fill=norm.
   theme(panel.grid.minor = element_blank(),strip.background = element_blank(), panel.border = element_rect(colour = "black",size=0.6), strip.text = element_text(size = 9)) +
   theme(plot.margin = unit(c(1,0.5,0.5,1), "cm"),legend.key = element_rect(size = 0.5),legend.key.size = unit(1.2, 'lines')) +
   geom_vline(xintercept=0,linetype="longdash") +
-  scale_y_continuous(limits=c(0,60))
+  scale_y_continuous(limits=c(0,100))
 
 
 tiff(file=paste0("../Figures/FigX_indiv_prediction_plot_",Sys.Date(),".tiff"),width=1500,height=1000,res=200) 
@@ -3291,181 +3264,181 @@ dev.off()
 
 
 
-
-
-#### 6.8 Plot-level analaysis decision trees (PARTY)) ####
-
-
-
-library(party)
-
-### prep the data frame
-
-sp <- "PINUS.ALLSP"
-
-d.plot <- d.plot.ind
-
-d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV %in% c(4,5)),]
-
-## remove an outlier plot with 20 abco that is preventing model conversion
-d.plot <- d.plot[!(d.plot$Regen_Plot == "CHI1248"),]
-
-## remove another potential outlier plot: extremely high normal precip and high numbers of ABCO way above other plots with similar precip
-d.plot <- d.plot[!(d.plot$Regen_Plot == "BTU1300185"),]
-
-## remove a plot that has no grass cover data
-d.plot <- d.plot[!(d.plot$Regen_Plot == "AMR1300445"),]
-
-
-## remove an NA fire value
-d.plot <- d.plot[!is.na(d.plot$Fire),]
 # 
 # 
-# #Dry fires
-# dry.fires <- c("STRAYLOR","HARDING","ANTELOPE","MOONLIGHT")
-# d.plot <- d.plot[!(d.plot$Fire %in% dry.fires),]
+# #### 6.8 Plot-level analaysis decision trees (PARTY)) ####
+# 
+# 
+# 
+# library(party)
+# 
+# ### prep the data frame
+# 
+# sp <- "PINUS.ALLSP"
+# 
+# d.plot <- d.plot.ind
+# 
+# d.plot <- d.plot[(d.plot$survey.years.post %in% c(4,5)) & (d.plot$FIRE_SEV %in% c(4,5)),]
+# 
+# ## remove an outlier plot with 20 abco that is preventing model conversion
+# d.plot <- d.plot[!(d.plot$Regen_Plot == "CHI1248"),]
+# 
+# ## remove another potential outlier plot: extremely high normal precip and high numbers of ABCO way above other plots with similar precip
+# d.plot <- d.plot[!(d.plot$Regen_Plot == "BTU1300185"),]
+# 
+# ## remove a plot that has no grass cover data
+# d.plot <- d.plot[!(d.plot$Regen_Plot == "AMR1300445"),]
+# 
+# 
+# ## remove an NA fire value
+# d.plot <- d.plot[!is.na(d.plot$Fire),]
+# # 
+# # 
+# # #Dry fires
+# # dry.fires <- c("STRAYLOR","HARDING","ANTELOPE","MOONLIGHT")
+# # d.plot <- d.plot[!(d.plot$Fire %in% dry.fires),]
+# # 
+# 
+# 
+# 
+# if(sp %in% cover.opts) {
+#   d.sp.curr.agg <- d.sp.2[d.sp.2$species=="ABCO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
+#   d.sp.curr.plt <- d.sp[d.sp$species=="ABCO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
+# } else {
+#   d.sp.curr.agg <- d.sp.2[d.sp.2$species==sp,]
+#   d.sp.curr.plt <- d.sp[d.sp$species==sp,]
+# }
+# 
+# d <- merge(d.plot,d.plot.3,by=c("Fire","topoclim.cat")) # this effectively thins to plots that belong to a topoclimate category that has enough plots in it
+# 
+# d <- merge(d,d.sp.curr.plt,by=c("Regen_Plot"))
+# 
+# names(d.sp.curr.agg) <- paste0(names(d.sp.curr.agg),".agg")
+# d <- merge(d,d.sp.curr.agg,by.x=c("Fire","topoclim.cat"),by.y=c("Fire.agg","topoclim.cat.agg")) # add the aggregated species data (from this we just want adult BA from the control plot)
+# 
+# 
+# 
+# 
+# vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
+# vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z", "def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","def.post","aet.post","adult.ba.agg")
+# d <- d[complete.cases(d[,vars.focal]),]
+# d.c <- center.df(d,vars.leave)
+# 
+# d.c$ppt.normal_c.sq <- d.c$ppt.normal_c^2
+# d.c$tmean.normal_c.sq <- d.c$tmean.normal_c^2
+# d.c$snow.normal_c.sq <- d.c$snow.normal_c^2
+# 
+# d.c$def.normal_c.sq <- d.c$def.normal_c^2
+# d.c$aet.normal_c.sq <- d.c$aet.normal_c^2
+# 
+# # ####!!!! trick model: make diff.norm into diff.norm.min
+# # d.c$diff.norm.ppt.z_c <- d.c$diff.norm.ppt.min.z_c
+# # d.c$diff.norm.tmean.z_c <- d.c$diff.norm.tmean.max.z_c
+# # d.c$diff.norm.aet.z_c <- d.c$diff.norm.aet.min.z_c
+# # d.c$diff.norm.def.z_c <- d.c$diff.norm.def.max.z_c
+# # #### end trick model
+# 
+# 
+# d.c$diff.norm.ppt.z_c.sq <- d.c$diff.norm.ppt.z_c^2
+# d.c$diff.norm.tmean.z_c.sq <- d.c$diff.norm.tmean.z_c^2
+# d.c$diff.norm.snow.z_c.sq <- d.c$diff.norm.snow.z_c^2
+# 
+# d.c$diff.norm.def.z_c.sq <- d.c$diff.norm.def.z_c^2
+# d.c$diff.norm.aet.z_c.sq <- d.c$diff.norm.aet.z_c^2
+# 
+# 
+# 
+# d.c$diff.norm.ppt.min.z_c.sq <- d.c$diff.norm.ppt.min.z_c^2
+# d.c$diff.norm.tmean.max.z_c.sq <- d.c$diff.norm.tmean.max.z_c^2
+# d.c$diff.norm.snow.min.z_c.sq <- d.c$diff.norm.snow.min.z_c^2
+# 
+# 
+# d.c$diff.norm.def.max.z_c.sq <- d.c$diff.norm.def.max.z_c^2
+# d.c$diff.norm.aet.min.z_c.sq <- d.c$diff.norm.aet.min.z_c^2
+# 
+# 
+# 
+# 
+# d.c$ppt.post_c.sq <- d.c$ppt.post_c^2
+# d.c$tmean.post_c.sq <- d.c$tmean.post_c^2
+# 
+# d.c$def.post_c.sq <- d.c$def.post_c^2
+# d.c$aet.post_c.sq <- d.c$aet.post_c^2
+# 
+# d.c$regen.presab.all.01 <- ifelse(d.c$regen.presab.all == TRUE,1,0)
+# d.c$regen.presab.old.01 <- ifelse(d.c$regen.presab.old == TRUE,1,0)
+# 
+# 
+# vars.focal.c <- paste0(vars.focal[-6],"_c")
+# 
+# ## transform cover so it does not include 0 or 1 (for Beta distrib)
+# d.c$SHRUB.p <- d.c$SHRUB/100
+# d.c$SHRUB.pt <- (d.c$SHRUB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+# 
+# d.c$GRASS.p <- d.c$GRASS/100
+# d.c$GRASS.pt <- (d.c$GRASS.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+# 
+# d.c$HARDWOOD.p <- d.c$HARDWOOD/100
+# d.c$HARDWOOD.pt <- (d.c$HARDWOOD.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+# 
+# d.c$FORB.p <- d.c$FORB/100
+# d.c$FORB.pt <- (d.c$FORB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+# 
+# d.c$CONIFER.p <- d.c$CONIFER/100
+# d.c$CONIFER.pt <- (d.c$CONIFER.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
+# 
+# 
+# d.c$Fire <- as.factor(d.c$Fire)
+# 
+# #d.c <- d.c[!(d.c$Fire == "RICH"),]
+# 
+# d.c$regen.count.all.int <- ceiling(d.c$regen.count.all)
+# d.c$regen.count.old.int <- ceiling(d.c$regen.count.old)
+# 
+# 
+# if(sp %in% cover.opts) {
+#   
+#   sp.cov <- substr(sp,5,100)
+#   sp.cov <- paste0(sp.cov,".pt")
+#   
+#   d.c$response.var <- d.c[,sp.cov]
+#   
+# } else {
+#   
+#   d.c$response.var <- d.c$regen.presab.old.01
+#   
+# }
+# 
+# 
+# 
+# 
+# d.c$response.var <- ifelse(d.c$response.var==1,"present","absent")
+# d.c$response.var <- as.factor(d.c$response.var)
+# 
+# 
+# a <- ctree(response.var ~ ppt.normal_c + 
+#            diff.norm.ppt.min.z_c +
+#            seed_tree_distance_general_c + adult.ba.agg_c + rad.march_c, data=d.c)
+# 
+# 
+# 
+# #control=ctree_control(testtype=c("Univariate"),mincriterion=0.80)
+# 
+# plot(a)
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
 # 
 
 
 
-if(sp %in% cover.opts) {
-  d.sp.curr.agg <- d.sp.2[d.sp.2$species=="ABCO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
-  d.sp.curr.plt <- d.sp[d.sp$species=="ABCO",] #pick any species; for cover it doesn't matter; just need to thin to one row per plots
-} else {
-  d.sp.curr.agg <- d.sp.2[d.sp.2$species==sp,]
-  d.sp.curr.plt <- d.sp[d.sp$species==sp,]
-}
-
-d <- merge(d.plot,d.plot.3,by=c("Fire","topoclim.cat")) # this effectively thins to plots that belong to a topoclimate category that has enough plots in it
-
-d <- merge(d,d.sp.curr.plt,by=c("Regen_Plot"))
-
-names(d.sp.curr.agg) <- paste0(names(d.sp.curr.agg),".agg")
-d <- merge(d,d.sp.curr.agg,by.x=c("Fire","topoclim.cat"),by.y=c("Fire.agg","topoclim.cat.agg")) # add the aggregated species data (from this we just want adult BA from the control plot)
-
-
-
-
-vars.leave <- c("Year.of.Fire","FORB","SHRUB","GRASS","CONIFER","HARDWOOD","FIRE_SEV","Year","firesev","fire.year","survey.years.post","regen.count.young","regen.count.old","regen.count.all","regen.presab.young","regen.presab.old","regen.presab.all")
-vars.focal <- c("ppt.normal","diff.norm.ppt.z","ppt.normal.sq","rad.march","seed_tree_distance_general","SHRUB","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z", "def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","def.post","aet.post","adult.ba.agg")
-d <- d[complete.cases(d[,vars.focal]),]
-d.c <- center.df(d,vars.leave)
-
-d.c$ppt.normal_c.sq <- d.c$ppt.normal_c^2
-d.c$tmean.normal_c.sq <- d.c$tmean.normal_c^2
-d.c$snow.normal_c.sq <- d.c$snow.normal_c^2
-
-d.c$def.normal_c.sq <- d.c$def.normal_c^2
-d.c$aet.normal_c.sq <- d.c$aet.normal_c^2
-
-# ####!!!! trick model: make diff.norm into diff.norm.min
-# d.c$diff.norm.ppt.z_c <- d.c$diff.norm.ppt.min.z_c
-# d.c$diff.norm.tmean.z_c <- d.c$diff.norm.tmean.max.z_c
-# d.c$diff.norm.aet.z_c <- d.c$diff.norm.aet.min.z_c
-# d.c$diff.norm.def.z_c <- d.c$diff.norm.def.max.z_c
-# #### end trick model
-
-
-d.c$diff.norm.ppt.z_c.sq <- d.c$diff.norm.ppt.z_c^2
-d.c$diff.norm.tmean.z_c.sq <- d.c$diff.norm.tmean.z_c^2
-d.c$diff.norm.snow.z_c.sq <- d.c$diff.norm.snow.z_c^2
-
-d.c$diff.norm.def.z_c.sq <- d.c$diff.norm.def.z_c^2
-d.c$diff.norm.aet.z_c.sq <- d.c$diff.norm.aet.z_c^2
-
-
-
-d.c$diff.norm.ppt.min.z_c.sq <- d.c$diff.norm.ppt.min.z_c^2
-d.c$diff.norm.tmean.max.z_c.sq <- d.c$diff.norm.tmean.max.z_c^2
-d.c$diff.norm.snow.min.z_c.sq <- d.c$diff.norm.snow.min.z_c^2
-
-
-d.c$diff.norm.def.max.z_c.sq <- d.c$diff.norm.def.max.z_c^2
-d.c$diff.norm.aet.min.z_c.sq <- d.c$diff.norm.aet.min.z_c^2
-
-
-
-
-d.c$ppt.post_c.sq <- d.c$ppt.post_c^2
-d.c$tmean.post_c.sq <- d.c$tmean.post_c^2
-
-d.c$def.post_c.sq <- d.c$def.post_c^2
-d.c$aet.post_c.sq <- d.c$aet.post_c^2
-
-d.c$regen.presab.all.01 <- ifelse(d.c$regen.presab.all == TRUE,1,0)
-d.c$regen.presab.old.01 <- ifelse(d.c$regen.presab.old == TRUE,1,0)
-
-
-vars.focal.c <- paste0(vars.focal[-6],"_c")
-
-## transform cover so it does not include 0 or 1 (for Beta distrib)
-d.c$SHRUB.p <- d.c$SHRUB/100
-d.c$SHRUB.pt <- (d.c$SHRUB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-
-d.c$GRASS.p <- d.c$GRASS/100
-d.c$GRASS.pt <- (d.c$GRASS.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-
-d.c$HARDWOOD.p <- d.c$HARDWOOD/100
-d.c$HARDWOOD.pt <- (d.c$HARDWOOD.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-
-d.c$FORB.p <- d.c$FORB/100
-d.c$FORB.pt <- (d.c$FORB.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-
-d.c$CONIFER.p <- d.c$CONIFER/100
-d.c$CONIFER.pt <- (d.c$CONIFER.p*(nrow(d.c)-1) + 0.5) / nrow(d.c)
-
-
-d.c$Fire <- as.factor(d.c$Fire)
-
-#d.c <- d.c[!(d.c$Fire == "RICH"),]
-
-d.c$regen.count.all.int <- ceiling(d.c$regen.count.all)
-d.c$regen.count.old.int <- ceiling(d.c$regen.count.old)
-
-
-if(sp %in% cover.opts) {
-  
-  sp.cov <- substr(sp,5,100)
-  sp.cov <- paste0(sp.cov,".pt")
-  
-  d.c$response.var <- d.c[,sp.cov]
-  
-} else {
-  
-  d.c$response.var <- d.c$regen.presab.old.01
-  
-}
-
-
-
-
-d.c$response.var <- ifelse(d.c$response.var==1,"present","absent")
-d.c$response.var <- as.factor(d.c$response.var)
-
-
-a <- ctree(response.var ~ ppt.normal_c + 
-           diff.norm.ppt.min.z_c +
-           seed_tree_distance_general_c + adult.ba.agg_c + rad.march_c, data=d.c)
-
-
-
-#control=ctree_control(testtype=c("Univariate"),mincriterion=0.80)
-
-plot(a)
-
-
-
-
-
-
-
-
-
-
-
-
-
-#### 8. Cluster-level multivariate analysis ####
+#### 8. Topoclimate category-level multivariate analysis ####
 
 
 library(data.table)
@@ -3623,18 +3596,18 @@ cc0 <- cca(d.all.sp~1,d.all)
 
 
 a <-step(cc3,scope=formula(cc3),test="perm",perm.max=100)
-
-vars.focal.nmds <- c("NormalPrecip","NormalTemp","PrecipAnom","SolarRadiation","DF","YP","WF","SP")
-d.focal.nmds <- d.all[,vars.focal.nmds]
-
-
-a <- metaMDS(d.all.sp)
-b <- envfit(a,d.focal.nmds)
-
-
-plot(a,type="t")
-plot(b)
-
+# 
+# vars.focal.nmds <- c("NormalPrecip","NormalTemp","PrecipAnom","SolarRadiation","DF","YP","WF","SP")
+# d.focal.nmds <- d.all[,vars.focal.nmds]
+# 
+# 
+# a <- metaMDS(d.all.sp)
+# b <- envfit(a,d.focal.nmds)
+# 
+# 
+# plot(a,type="t")
+# plot(b)
+# 
 
 
 
@@ -3649,21 +3622,21 @@ ccsp <- ccadata[ccadata$Score %in% "species",]
 ccvects <- ccadata[ccadata$Score %in% "biplot",]
 
 
-ccvects[,1:2] <- 3.8 * ccvects[,1:2]
+ccvects[,3:4] <- 3.8 * ccvects[,3:4]
 
 ccvects.1 <- ccvects
-ccvects.1[,1:2] <- 1.2 * ccvects[,1:2]
+ccvects.1[,3:4] <- 1.2 * ccvects[,3:4]
 
-p <- ggplot(ccsites,aes(x=Dim1,y=Dim2)) +
+p <- ggplot(ccsites,aes(x=CCA1,y=CCA2)) +
   geom_point(color="darkorange1") +
   geom_hline(yintercept=0,color="grey") +
   geom_vline(xintercept=0,color="grey") +
   theme_bw(14) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-  geom_segment(data=ccvects,aes(x=0,xend=Dim1,y=0,yend=Dim2), arrow = arrow(length = unit(0.4, "cm")),size=0.7,colour="grey") +
+  geom_segment(data=ccvects,aes(x=0,xend=CCA1,y=0,yend=CCA2), arrow = arrow(length = unit(0.4, "cm")),size=0.7,colour="grey") +
   geom_text(data=ccsp,aes(label=Label),color="turquoise4",size=5.5,fontface=2) +
-  lims(x=c(-4,4),y=c(-4.1,4.1)) +
-  geom_text(data=ccvects.1,aes(x=Dim1,y=Dim2,label=Label),size=5) +
+  #lims(x=c(-4,4),y=c(-4.1,4.1)) +
+  geom_text(data=ccvects.1,aes(x=CCA1,y=CCA2,label=Label),size=5) +
   labs(x="Axis 1",y="Axis 2")
   
   
@@ -3672,133 +3645,129 @@ p
 dev.off()
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-##
-library(devtools)
-install_github('fawda123/ggord')
-library(ggord)
-
-png("plot1.png", 800, 300);
-
-
-ggord(cc1, ptslab=TRUE,size=2,addsize=5,txt=5,margins=0) +
-  theme(legend.position = 'top') +
-  theme(plot.margin=unit(c(0,0,0,0),"cm"))
-
-dev.off();
-
-
-
-### Redo CCA for wet plots only
-median.ppt <- median(d.all$ppt.norm)
-keep <- which(d.all$ppt.norm > median.ppt)
-d.all.wet <- d.all[keep,]
-d.all.sp.wet <- d.all.sp[keep,]
-
-cc3.wet <- cca(d.all.sp.wet ~ ppt.anom + temp.anom,data=d.all.wet)
-plot(cc3.wet)
-
-
-### Redo CCA for dry plots only
-median.ppt <- median(d.all$ppt.norm)
-keep <- which((d.all$ppt.norm < median.ppt) & !(d.all$Fire == "MOONLIGHT" & d.all$topoclim.cat == "P.2_R.1")) #second part is to remove an outlier category that had red fir even though these are supposed to be dry plots
-d.all.wet <- d.all[keep,]
-d.all.sp.wet <- d.all.sp[keep,]
-
-
-cc3.wet <- cca(d.all.sp.wet ~ ppt.anom + temp.anom + solar.rad,data=d.all.wet)
-plot(cc3.wet)
-
-
-
-
-
-# 
-# #### repeat, but by cover types
 # 
 # 
 # 
-# # all non-anomaly, excluding species
-# cc1 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + rad.march.highsev,data=d.all)
 # 
-# # all non-anomaly, including species
-# cc2 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + rad.march.highsev + a.ba_PINUS.ALLSP + a.ba_SHADE.ALLSP + a.ba_HDWD.ALLSP,data=d.all)
 # 
-# # non-anamoly and anomaly, excluding species
-# cc2b <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + diff.norm.ppt.z.highsev + diff.norm.tmean.z.highsev + rad.march.highsev,data=d.all)
 # 
-# # all including anomaly, including species
-# cc3 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + diff.norm.ppt.z.highsev + diff.norm.tmean.z.highsev + rad.march.highsev + a.ba_PINUS.ALLSP + a.ba_SHADE.ALLSP + a.ba_HDWD.ALLSP,data=d.all)
 # 
-# cc1
-# cc2
-# cc3
-
-
-
-Cairo(file=paste0("../Figures/Fig5_CCA1_",Sys.Date(),".png"),width=1300,height=1200,ppi=200,res=200,dpi=200)
-plot(cc1,choices=c(1,2))
-dev.off()
-
-Cairo(file=paste0("../Figures/Fig5_CCA2_",Sys.Date(),".png"),width=1300,height=1200,ppi=200,res=200,dpi=200)
-plot(cc2,choices=c(1,2))
-dev.off()
-
-Cairo(file=paste0("../Figures/Fig5_CCA3_",Sys.Date(),".png"),width=1300,height=1200,ppi=200,res=200,dpi=200)
-plot(cc3,choices=c(1,2))
-dev.off()
-
-Cairo(file=paste0("../Figures/Fig5_CCA4wet_",Sys.Date(),".png"),width=1200,height=1200,ppi=200,res=200,dpi=200)
-plot(cc3.wet,choices=c(1,2))
-dev.off()
-
-
-
-
-
-
-
-
-#### 9. Mantel test to explain regen species comp with control species comp ####
-
-regen.var <- "r.old"
-control.var <- "a.ba"
-d.all <- merge(d.plot.3,d.sp.cast,by=c("Fire","topoclim.cat"))
-sp.cols <- grep(regen.var,names(d.all)) #regen
-a.cols <- grep(control.var,names(d.all)) #adult (control)
-d.all.sp <- d.all[,sp.cols]
-d.all.a <- d.all[,a.cols]
-d.all.sp.tot <- rowSums(d.all.sp)
-d.all.a.tot <- rowSums(d.all.a)
-keep.rows <- ((d.all.sp.tot > 0) & (d.all.a.tot > 0))
-d.all.sp <- d.all.sp[keep.rows,]
-d.all.a <- d.all.a[keep.rows,]
-d.all <- d.all[keep.rows,]
-
-#d.all.sp, d.all.a
-
-regen.dist <- vegdist(d.all.sp,method="jaccard")
-adult.dist <- vegdist(d.all.a,method="jaccard")
-
-mantel(regen.dist,adult.dist)
-
-
-## significant relationship between the two, relatively high r
-
-
-
+# 
+# 
+# ##
+# library(devtools)
+# install_github('fawda123/ggord')
+# library(ggord)
+# 
+# png("plot1.png", 800, 300);
+# 
+# 
+# ggord(cc1, ptslab=TRUE,size=2,addsize=5,txt=5,margins=0) +
+#   theme(legend.position = 'top') +
+#   theme(plot.margin=unit(c(0,0,0,0),"cm"))
+# 
+# dev.off();
+# 
+# 
+# 
+# ### Redo CCA for wet plots only
+# median.ppt <- median(d.all$ppt.norm)
+# keep <- which(d.all$ppt.norm > median.ppt)
+# d.all.wet <- d.all[keep,]
+# d.all.sp.wet <- d.all.sp[keep,]
+# 
+# cc3.wet <- cca(d.all.sp.wet ~ ppt.anom + temp.anom,data=d.all.wet)
+# plot(cc3.wet)
+# 
+# 
+# ### Redo CCA for dry plots only
+# median.ppt <- median(d.all$ppt.norm)
+# keep <- which((d.all$ppt.norm < median.ppt) & !(d.all$Fire == "MOONLIGHT" & d.all$topoclim.cat == "P.2_R.1")) #second part is to remove an outlier category that had red fir even though these are supposed to be dry plots
+# d.all.wet <- d.all[keep,]
+# d.all.sp.wet <- d.all.sp[keep,]
+# 
+# 
+# cc3.wet <- cca(d.all.sp.wet ~ ppt.anom + temp.anom + solar.rad,data=d.all.wet)
+# plot(cc3.wet)
+# 
+# 
+# 
+# 
+# 
+# # 
+# # #### repeat, but by cover types
+# # 
+# # 
+# # 
+# # # all non-anomaly, excluding species
+# # cc1 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + rad.march.highsev,data=d.all)
+# # 
+# # # all non-anomaly, including species
+# # cc2 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + rad.march.highsev + a.ba_PINUS.ALLSP + a.ba_SHADE.ALLSP + a.ba_HDWD.ALLSP,data=d.all)
+# # 
+# # # non-anamoly and anomaly, excluding species
+# # cc2b <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + diff.norm.ppt.z.highsev + diff.norm.tmean.z.highsev + rad.march.highsev,data=d.all)
+# # 
+# # # all including anomaly, including species
+# # cc3 <- cca(d.all.sp ~ ppt.normal.highsev + tmean.normal.highsev + diff.norm.ppt.z.highsev + diff.norm.tmean.z.highsev + rad.march.highsev + a.ba_PINUS.ALLSP + a.ba_SHADE.ALLSP + a.ba_HDWD.ALLSP,data=d.all)
+# # 
+# # cc1
+# # cc2
+# # cc3
+# 
+# 
+# 
+# Cairo(file=paste0("../Figures/Fig5_CCA1_",Sys.Date(),".png"),width=1300,height=1200,ppi=200,res=200,dpi=200)
+# plot(cc1,choices=c(1,2))
+# dev.off()
+# 
+# Cairo(file=paste0("../Figures/Fig5_CCA2_",Sys.Date(),".png"),width=1300,height=1200,ppi=200,res=200,dpi=200)
+# plot(cc2,choices=c(1,2))
+# dev.off()
+# 
+# Cairo(file=paste0("../Figures/Fig5_CCA3_",Sys.Date(),".png"),width=1300,height=1200,ppi=200,res=200,dpi=200)
+# plot(cc3,choices=c(1,2))
+# dev.off()
+# 
+# Cairo(file=paste0("../Figures/Fig5_CCA4wet_",Sys.Date(),".png"),width=1200,height=1200,ppi=200,res=200,dpi=200)
+# plot(cc3.wet,choices=c(1,2))
+# dev.off()
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# #### 9. Mantel test to explain regen species comp with control species comp ####
+# 
+# regen.var <- "r.old"
+# control.var <- "a.ba"
+# d.all <- merge(d.plot.3,d.sp.cast,by=c("Fire","topoclim.cat"))
+# sp.cols <- grep(regen.var,names(d.all)) #regen
+# a.cols <- grep(control.var,names(d.all)) #adult (control)
+# d.all.sp <- d.all[,sp.cols]
+# d.all.a <- d.all[,a.cols]
+# d.all.sp.tot <- rowSums(d.all.sp)
+# d.all.a.tot <- rowSums(d.all.a)
+# keep.rows <- ((d.all.sp.tot > 0) & (d.all.a.tot > 0))
+# d.all.sp <- d.all.sp[keep.rows,]
+# d.all.a <- d.all.a[keep.rows,]
+# d.all <- d.all[keep.rows,]
+# 
+# #d.all.sp, d.all.a
+# 
+# regen.dist <- vegdist(d.all.sp,method="jaccard")
+# adult.dist <- vegdist(d.all.a,method="jaccard")
+# 
+# mantel(regen.dist,adult.dist)
+# 
+# 
+# ## significant relationship between the two, relatively high r
+# 
+# 
+# 
 
 
 
