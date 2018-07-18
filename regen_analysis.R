@@ -1014,12 +1014,14 @@ d.c.modfit <- d.c # because the model fitting uses its own d.c
 
 # species presence-absence
 sp.opts <- c("HDWD.ALLSP","PIPJ","ABCO")
+sp.opts <- c("PIPJ")
 
 # species cover
 cover.opts <- c("COV.SHRUB","COV.GRASS","COV.FORB")
 
 # species height relative to shrubs ("height dominance")
 ht.opts <- c("HT.PIPJ","HT.ABCO","HT.HDWD.ALLSP")
+ht.opts <- NULL
 
 # species height (absolute)
 htabs.opts <- c("HTABS.SHRUB")
@@ -2360,7 +2362,7 @@ sink(file=NULL)
 
 
 save.image("../model_workspace.Rwkspc")
-
+load("../model_workspace.Rwkspc")
 
 
 
@@ -3448,7 +3450,7 @@ library(data.table)
 focal.sp <- c("PIPJ","ABCO","PILA","PSME")
 # focal.sp <- c("PINUS.ALLSP","HDWD.ALLSP","SHADE.ALLSP")
 
-focal.cols <- c("Fire","topoclim.cat","species","regen.count.old","regen.count.all","adult.ba")
+focal.cols <- c("Fire","topoclim.cat","species","regen.presab.old","regen.presab.all","adult.ba")
 d.sp.simp <- d.sp.2[d.sp.2$species %in% focal.sp,focal.cols]
 names(d.sp.simp)[4:6] <- c("r.old","r.all","a.ba")
 d.sp.simp <- as.data.table(d.sp.simp)
