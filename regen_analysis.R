@@ -1075,7 +1075,7 @@ fit.mods <- list()
 
 
 
-sink("run_output.txt") # this file will store model fits etc
+sink("../run_output.txt") # this file will store model fits etc
 for(sp in resp.opts) {
   
   cat("\n\n#####")
