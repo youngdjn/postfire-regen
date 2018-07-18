@@ -3448,7 +3448,7 @@ library(data.table)
 focal.sp <- c("PIPJ","ABCO","PILA","PSME")
 # focal.sp <- c("PINUS.ALLSP","HDWD.ALLSP","SHADE.ALLSP")
 
-focal.cols <- c("Fire","topoclim.cat","species","regen.presab.old","regen.presab.all","adult.ba")
+focal.cols <- c("Fire","topoclim.cat","species","regen.count.old","regen.count.all","adult.ba")
 d.sp.simp <- d.sp.2[d.sp.2$species %in% focal.sp,focal.cols]
 names(d.sp.simp)[4:6] <- c("r.old","r.all","a.ba")
 d.sp.simp <- as.data.table(d.sp.simp)
