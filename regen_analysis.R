@@ -1,9 +1,9 @@
 setwd("~/UC Davis/Research Projects/Post-fire regen/Dev/postfire-regen")
 
-library(party)
+#library(party)
 library(ggplot2)
 library(brms)
-library(pROC)
+#library(pROC)
 library(betareg)
 library(car)
 library(plyr)
@@ -41,7 +41,6 @@ d.plot <- d.plot[d.plot$Fire %in% sierra.fires,]
 plots.exclude <- read.csv("data_intermediate/plots_exclude.csv",header=T,stringsAsFactors=FALSE)
 plot.ids.exclude <- plots.exclude[plots.exclude$Exclude != "",]$Regen_Plot
 d.plot <- d.plot[!(d.plot$Regen_Plot %in% plot.ids.exclude),]
-
 
 # Remove any plots > 75m from seed source
 d.plot <- d.plot[which(d.plot$seed_tree_distance_general < 75),]
@@ -230,10 +229,10 @@ d.plot.ind <- d.plot.ind[(d.plot.ind$survey.years.post %in% c(4,5)) & (d.plot.in
 
 
 
-
-
-
-
+#### Export plots as shapefile ####
+library(sf)
+plots_sf = st_as_sf(d.plot.ind,coords=c("Easting","Northing"),crs=26910)
+st_write(plots_sf,"../shapefiles/plots_535.gpkg")
 
 
 
@@ -383,6 +382,17 @@ d.plot.ind <- merge(d.plot.ind,d.domsp,all.x=TRUE,by=c("Fire"))
 
 
 
+# 
+# #### Make shrub vs. regen scatterplot ####
+# 
+# library(dplyr)
+# sp.foc = d.sp[d.sp$species == "ALL",]
+# 
+# plot.w.regen = left_join(d.plot.ind,sp.foc,by="Regen_Plot")
+# 
+# cor(log(plot.w.regen$regen.count.old) , plot.w.regen$SHRUB,use="complete.obs")
+# 
+# plot(log(regen.count.old) ~ SHRUB,data=plot.w.regen)
 
 
 
@@ -469,7 +479,7 @@ d.fire$Fire <- sapply(d.fire$Fire,FUN= function(x) simpleCap(tolower(x)))
 
 d.fire[d.fire$Fire == "Btu Lightening","Fire"] <- "BTU Lightning"
 
-write.csv(d.fire,"../tables/T1.csv")
+write.csv(d.fire,"../tables/T1_V2S.csv")
 
 
 
@@ -479,12 +489,12 @@ write.csv(d.fire,"../tables/T1.csv")
 d <- d.sp.2
 
 keep.sp <- c("ABCO","PIPJ","PILA","PSME","PINUS.ALLSP","SHADE.ALLSP","HDWD.ALLSP")
-keep.cols <- c("species","regen.presab.old","adult.ba","topoclim.cat","Fire")
+keep.cols <- c("species","regen.count.old","adult.ba","topoclim.cat","Fire")
 d <- d[d$species %in% keep.sp,]
 
 d <- as.data.table(d)
 
-d.sp.cast <- data.table::dcast(d,Fire + topoclim.cat~species,value.var=c("regen.presab.old","adult.ba"))
+d.sp.cast <- data.table::dcast(d,Fire + topoclim.cat~species,value.var=c("regen.count.old","adult.ba"))
 
 # add the other necessary columns
 keep.cols <- c("Fire","topoclim.cat","SHRUB.highsev","GRASS.highsev","FORB.highsev","count.highsev","count.control")
@@ -501,13 +511,13 @@ d.cat <- d.merge[,list(Fire=Fire,
                        n.highsev = count.highsev,
                        n.ref= count.control,
                        
-                       regen.ABCO = 100*round(regen.presab.old_ABCO,digits=2),
-                       regen.PILA = 100*round(regen.presab.old_PILA,digits=2),
-                       regen.PIPJ = 100*round(regen.presab.old_PIPJ,digits=2),
-                       regen.PSME = 100*round(regen.presab.old_PSME,digits=2),
-                       regen.Pinus = 100*round(regen.presab.old_PINUS.ALLSP,digits=2),
-                       regen.Shade = 100*round(regen.presab.old_SHADE.ALLSP,digits=2),
-                       regen.Hdwd = 100*round(regen.presab.old_HDWD.ALLSP,digits=2),
+                       regen.ABCO = round(regen.count.old_ABCO,digits=2),
+                       regen.PILA = round(regen.count.old_PILA,digits=2),
+                       regen.PIPJ = round(regen.count.old_PIPJ,digits=2),
+                       regen.PSME = round(regen.count.old_PSME,digits=2),
+                       regen.Pinus = round(regen.count.old_PINUS.ALLSP,digits=2),
+                       regen.Shade = round(regen.count.old_SHADE.ALLSP,digits=2),
+                       regen.Hdwd = round(regen.count.old_HDWD.ALLSP,digits=2),
                        
                        #convert from plot-level BA in cm to BA in sq m per hectare
                        ref.ABCO = round(adult.ba_ABCO * 0.0001 / 0.006,digits=0),
@@ -530,7 +540,7 @@ d.cat <- d.merge[,list(Fire=Fire,
 d.cat$topo.cat <- gsub(".","",d.cat$topo.cat,fixed=TRUE)
 
 
-write.csv(d.cat,"../tables/topotclim_cat_table.csv")
+write.csv(d.cat,"../tables/topotclim_cat_table_regenCounts_V2S.csv")
 
 
 
@@ -554,7 +564,7 @@ p <- ggplot(d.plot.keep,aes(x=ppt.normal,y=rad.march,col=topoclim.cat,shape=FIRE
   scale_shape_manual(values=c(1,3)) +
   labs(x="Normal annual precipitation (mm)",y="Solar exposure (Wh m-2 day-1)",shape="Plot type",color="Topoclimate category")
 
-Cairo(file=paste0("../Figures/FigS1_ref_vs_highsev",Sys.Date(),".png"),width=2800,height=2000,ppi=200,res=200,dpi=200)
+Cairo(file=paste0("../Figures/FigS1_ref_vs_highsev_v2S",Sys.Date(),".png"),width=2800,height=2000,ppi=200,res=200,dpi=200)
 p
 dev.off()
 
@@ -567,6 +577,8 @@ nrow(d.plot.keep[d.plot.keep$FIRE_SEV.cat=="Reference",])
 
 
 #### 8. Plot climate space with fire labels ####
+
+
 
 
 d.plot.ind$Fire <- as.factor(d.plot.ind$Fire)
@@ -618,7 +630,7 @@ p1 <-  ggplot(d.plot.ind,aes(y=diff.norm.ppt.min.z,x=ppt.normal,color=Fire)) +
   geom_text(data=fire.centers,aes(label=fire.year),nudge_y=.04,size=6,color="darkgray") + 
   guides(color=FALSE) + 
   theme_bw(17) + 
-  labs(x="Normal precipitation (mm)",y="Postfire minimum precipitation anomaly (SD)") + 
+  labs(x="Normal precipitation (mm)",y="Anomaly: post-fire minimum precipitation (SD)") + 
   scale_x_continuous(limits=c(180,2580))+
   geom_segment(aes(x=x,y=y,xend=xend,yend=yend),data=lines,color="darkgray",size=1.0) +
   scale_color_viridis(discrete=TRUE)
@@ -667,7 +679,7 @@ p2 <- ggplot(d.plot.ind,aes(x=ppt.normal,y=diff.norm.ppt.z,color=Fire)) +
   geom_text(data=fire.centers,aes(label=fire.year),nudge_y=.04,size=6,color="darkgray") + 
   guides(color=FALSE) + 
   theme_bw(17) + 
-  labs(x="Normal precipitation (mm)",y="Postfire mean precipitation anomaly (SD)") + 
+  labs(x="Normal precipitation (mm)",y="Anomaly: post-fire mean precipitation (SD)") + 
   scale_x_continuous(limits=c(180,2580)) +
   scale_color_viridis(discrete=TRUE)
   #geom_segment(aes(x=x,y=y,xend=xend,yend=yend),data=lines,color="darkgray",size=1.0)
@@ -740,7 +752,7 @@ p1 <-  ggplot(d.plot.ind,aes(x=aet.normal,y=diff.norm.aet.min.z,color=Fire)) +
   geom_text(data=fire.centers,aes(label=fire.year),nudge_y=.04,size=6,color="darkgray") + 
   guides(color=FALSE) + 
   theme_bw(17) + 
-  labs(x="Normal AET (mm)",y="Postfire minimum AET anomaly (SD)") + 
+  labs(x="Normal AET (mm)",y="Anomaly: post-fire minimum AET (SD)") + 
   #scale_x_continuous(limits=c(180,2580))+
   #geom_segment(aes(x=x,y=y,xend=xend,yend=yend),data=lines,color="darkgray",size=1.0) +
   scale_color_viridis(discrete=TRUE)
@@ -789,7 +801,7 @@ p2 <- ggplot(d.plot.ind,aes(x=aet.normal,y=diff.norm.aet.z,color=Fire)) +
   geom_text(data=fire.centers,aes(label=fire.year),nudge_y=.04,size=6,color="darkgray") + 
   guides(color=FALSE) + 
   theme_bw(17) + 
-  labs(x="Normal AET (mm)",y="Postfire mean AET anomaly (SD)") + 
+  labs(x="Normal AET (mm)",y="Anomaly: post-fire mean AET (SD)") + 
   #scale_x_continuous(limits=c(180,2580)) +
   scale_color_viridis(discrete=TRUE)
 #geom_segment(aes(x=x,y=y,xend=xend,yend=yend),data=lines,color="darkgray",size=1.0)
@@ -1075,7 +1087,7 @@ fit.mods <- list()
 
 
 
-sink("../run_output.txt") # this file will store model fits etc
+sink("../run_output_V2S.txt") # this file will store model fits etc
 for(sp in resp.opts) {
   
   cat("\n\n#####")
@@ -2438,7 +2450,10 @@ pred.dat.plotting <- as.data.table(pred.dat.plotting)
 
 
 
-pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$type == "anom",]
+#### UPDATED: if the anom model was better, plot the anom; otherwise, plot the baseline
+#previously: pred.dat.plotting <- pred.dat.plotting[pred.dat.plotting$type == "anom",]
+pred.dat.plotting <- pred.dat.plotting[(pred.dat.plotting$anom.better & pred.dat.plotting$type == "anom") |
+                                         (!pred.dat.plotting$anom.better & pred.dat.plotting$type == "norm"),]
 
 #pred.dat.plotting$anom.improvement <- round(pred.dat.plotting$anom.improvement,2)
 
@@ -2457,8 +2472,10 @@ pred.dat.plotting$anom <- gsubfn("\\S+",anomsub,as.character(pred.dat.plotting$a
 pred.dat.plotting$anom <- factor(pred.dat.plotting$anom,levels=anomsub)
 
 
-
-pred.dat.plotting[which(pred.dat.plotting$anom.improvement < 0),c("pred.mid","pred.low","pred.high")] <- NA
+## UPDATED: if the anom model was worse than the null model, make the lines dashed and remove the confidence bands
+pred.dat.plotting[which(pred.dat.plotting$anom.improvement < 0),c("pred.low","pred.high")] <- NA
+pred.dat.plotting$linestyle = 1 # solid, by default
+pred.dat.plotting[which(pred.dat.plotting$anom.improvement < 0),"linestyle"] <- 2 # dashed if the anomaly model was worse (i.e., the prediction plot does not include the anomaly)
 pred.dat.plotting <- pred.dat.plotting[!is.na(pred.dat.plotting$sp),]
 
 
@@ -2476,10 +2493,13 @@ pred.dat.plotting[,c("pred.mid","pred.low","pred.high")] <- 100 * pred.dat.plott
 levels(pred.dat.plotting$norm.level)
 levels(pred.dat.plotting$norm.level) <- c("High","Low","High and low")
 
+## do not plot CWD or temp predictors
+pred.dat.plotting = pred.dat.plotting[pred.dat.plotting$anom %in% c("Min precip","Mean precip","Min AET","Mean AET"),]
+
 
 
 p <- ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z_c,y=pred.mid,color=norm.level,fill=norm.level)) +
-  geom_line(size=1.5) +
+  geom_line(aes(linetype=as.character(linestyle),size=linestyle)) +
   geom_ribbon(aes(ymin=pred.low,ymax=pred.high),alpha=0.3,color=NA) +
   facet_grid(anom~sp) +
   #geom_text(aes(0,0.8,label=anom.improvement),size=4,color="black") +
@@ -2489,7 +2509,10 @@ p <- ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.z_c,y=pred.mid,color=norm.leve
   scale_fill_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray26")) +
   theme(panel.grid.minor = element_blank(),strip.background = element_blank(), panel.border = element_rect(colour = "black",size=0.6), strip.text = element_text(size = 9)) +
   theme(plot.margin = unit(c(-.1,0.5,0,0.5), "cm"),legend.key = element_rect(size = 0.5),legend.key.size = unit(1.2, 'lines')) +
-  geom_vline(xintercept=0,linetype="longdash")
+  geom_vline(xintercept=0,linetype="longdash") +
+  scale_linetype_manual(values=c(1,2),guide=FALSE) +
+  scale_size(range=c(1.5,1),guide=FALSE)
+  
 
 tiff(file=paste0("../Figures/FigX_full_prediction_plots_",Sys.Date(),".tiff"),width=3000,height=1200,res=200) 
 p
@@ -2538,6 +2561,12 @@ pred.dat.comb <- merge(pred.dat,d.maes.anoms.short,all.x=TRUE,by.x=c("sp","anom"
 
 pred.dat.comb <- as.data.frame(pred.dat.comb)
 
+pred.dat.comb <- pred.dat.comb[(pred.dat.comb$anom.better & pred.dat.comb$type == "anom") |
+                                         (!pred.dat.comb$anom.better & pred.dat.comb$type == "norm"),]
+
+
+
+
 #for every column in predictions, if it ends in _c, uncenter it
 
 for(col.name in names(pred.dat.comb)) {
@@ -2556,6 +2585,18 @@ for(col.name in names(pred.dat.comb)) {
 
 pred.dat.comb <- data.table(pred.dat.comb)
 pred.dat.comb <- pred.dat.comb[anom==anom.var]
+
+pred.dat.comb <- pred.dat.comb[(pred.dat.comb$anom.better & pred.dat.comb$type == "anom") |
+                                 (!pred.dat.comb$anom.better & pred.dat.comb$type == "norm"),]
+
+
+pred.dat.comb[which(pred.dat.comb$anom.improvement < 0),c("pred.low","pred.high")] <- NA
+pred.dat.comb$linestyle = 1 # solid, by default
+pred.dat.comb[which(pred.dat.comb$anom.improvement < 0),"linestyle"] <- 2 # dashed if the anomaly model was worse (i.e., the prediction plot does not include the anomaly)
+pred.dat.comb <- pred.dat.comb[!is.na(pred.dat.comb$sp),]
+
+
+
 
 if(anom.var == "Pmin") {
   anom.var.c <- "diff.norm.ppt.min.z_c"
@@ -2603,7 +2644,7 @@ levels(pred.dat.comb$norm.level) <- c("High","Low","High and low")
 plot.cats <- c("presab",
                #"ht",
                "cov")
-plot.sps <- list(c("ABCO"),
+plot.sps <- list(c("PIPJ","ABCO","HDWD.ALLSP"),
                  #c("HT.PINUS.ALLSP","HT.SHADE.ALLSP","HT.HDWD.ALLSP"),
                  c("COV.SHRUB","COV.GRASS"))
 
@@ -2613,13 +2654,14 @@ for(i in 1:length(plot.cats)) {
   
   plot.sp <- plot.sps[[i]]
 
-  pred.dat.plotting <- pred.dat.comb[type == "anom" & sp %in% plot.sp,]
+  # former pred.dat.plotting <- pred.dat.comb[type == "anom" & sp %in% plot.sp,]
+  pred.dat.plotting <- pred.dat.comb[sp %in% plot.sp,]
   
   pred.dat.plotting$sp <- factor(pred.dat.plotting$sp,plot.sp)
   
   if(plot.cats[[i]] == "presab") {
     ylab <- "Percentage of plots\nwith regeneration"
-    levels(pred.dat.plotting$sp) <- c("White fir","Broadleaved trees")
+    levels(pred.dat.plotting$sp) <- c("Yellow pine","White fir","Broadleaved trees")
   } else if(plot.cats[[i]] == "ht") {
     ylab <- "Percentage of plots where\ndominant in height"
   } else if(plot.cats[[i]] == "cov") {
@@ -2632,26 +2674,29 @@ for(i in 1:length(plot.cats)) {
   
 
   p[[i]] <- ggplot(pred.dat.plotting,aes(x=diff.norm.ppt.min.z,y=pred.mid,color=norm.level,fill=norm.level)) +
-    geom_line(size=1.5) +
+    geom_line(aes(linetype=as.character(linestyle),size=linestyle)) +
     geom_ribbon(aes(ymin=pred.low,ymax=pred.high),alpha=0.3,color=NA) +
     facet_wrap(~sp) +
     theme_bw(16) +
-    labs(x="Postfire minimum precipitation anomaly (SD)",y=ylab,color="Normal\nprecipitation",fill="Normal\nprecipitation") +
+    labs(x="Anomaly: post-fire minimum precipitation (SD)",y=ylab,color="Normal\nprecipitation",fill="Normal\nprecipitation") +
     scale_color_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray26"),drop=FALSE) +
     scale_fill_manual(values=c("High"="turquoise4","Low"="darkorange1","High and low" = "gray26"),drop=FALSE) +
     theme(panel.grid.minor = element_blank(),strip.background = element_blank(), panel.border = element_rect(colour = "black",size=0.6), strip.text = element_text(size = 16,vjust=0)) +
     theme(plot.margin = unit(c(-.1,0.5,0,0.5), "cm"),legend.key.size = unit(1.5, 'lines')) +
-    geom_vline(xintercept=anom.mid,linetype="longdash")
+    geom_vline(xintercept=anom.mid,linetype="longdash") +
+    scale_linetype_manual(values=c(1,2),guide=FALSE) +
+    scale_size(range=c(1.5,1.1), guide=FALSE)
   
   
-  if(i == 2) {
+  if(i == 1) {
     p[[i]] <- p[[i]] +
-      theme(plot.margin = unit(c(-.1,0.5,1,0.5), "cm")) +
+      #theme(plot.margin = unit(c(-.1,0.5,1,0.5), "cm")) +
       guides(fill=FALSE,color=FALSE)
   } else {
     p[[i]] <- p[[i]] +
-    theme(plot.margin = unit(c(0,9.5,1,0), "cm")) +
-    theme(legend.position=c(1.5,0.5))
+    theme(plot.margin = unit(c(0.5,4,1,0), "cm")) +
+    theme(legend.position=c(1.26,0.5)) +
+    guides(color = guide_legend(override.aes = list(size=1.5)))
   }
 
   
@@ -2668,8 +2713,12 @@ b <-  ggplot_gtable(ggplot_build(p[[2]]))
 # b$widths[2:3] <- maxWidth
 
 
-tiff(file=paste0("../Figures/FigX_prediction_plots_",Sys.Date(),".tiff"),width=1600,height=1600,res=200) 
-grid.arrange(a,b,ncol=1,heights=c(1,1))
+lay = rbind(c(1,1,1),
+            c(NA,2,NA))
+
+
+tiff(file=paste0("../Figures/FigX_prediction_plots_",Sys.Date(),".tiff"),width=2000,height=1600,res=200) 
+grid.arrange(a,b,ncol=3,layout_matrix = lay,heights=c(1,1.1),widths=c(0.055,1,0.205))
 dev.off()
 
 
@@ -3450,7 +3499,7 @@ library(data.table)
 focal.sp <- c("PIPJ","ABCO","PILA","PSME")
 # focal.sp <- c("PINUS.ALLSP","HDWD.ALLSP","SHADE.ALLSP")
 
-focal.cols <- c("Fire","topoclim.cat","species","regen.presab.old","regen.presab.all","adult.ba")
+focal.cols <- c("Fire","topoclim.cat","species","regen.count.old","regen.count.all","adult.ba")
 d.sp.simp <- d.sp.2[d.sp.2$species %in% focal.sp,focal.cols]
 names(d.sp.simp)[4:6] <- c("r.old","r.all","a.ba")
 d.sp.simp <- as.data.table(d.sp.simp)
@@ -3639,7 +3688,8 @@ p <- ggplot(ccsites,aes(x=CCA1,y=CCA2)) +
   geom_text(data=ccsp,aes(label=Label),color="turquoise4",size=5.5,fontface=2) +
   #lims(x=c(-4,4),y=c(-4.1,4.1)) +
   geom_text(data=ccvects.1,aes(x=CCA1,y=CCA2,label=Label),size=5) +
-  labs(x="Axis 1",y="Axis 2")
+  labs(x="Axis 1",y="Axis 2") +
+  scale_x_continuous(limits=c(-1.7,3.2))
   
   
 tiff(file=paste0("../Figures/FigX_CCA_",Sys.Date(),".tiff"),width=1500,height=1500,res=200) 
