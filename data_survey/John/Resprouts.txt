@@ -1,0 +1,1 @@
+"ID","Regen_Plot","COUNT TOTAL","Species","5yr","6yr","7yr","8yr","9yr","10yr","11yr","12yr","._sprouts","DBH (cm)","talst_age","tallest_ht_cm","tallest_lastyr_cm"

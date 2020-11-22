@@ -1,0 +1,1 @@
+Plot_ID,Sap_Species,Planted/Seeded,Sap_DBH,Sap_Age,TI_Species,TI_Height,TI_Age,TI_LYG

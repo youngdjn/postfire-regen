@@ -1,0 +1,1 @@
+"ID","Regen_Plot","DBH (cm)","type","Species","3 yr","4yr","5yr","6yr","7yr","8yr","9yr","10yr","11+yr","seed_veg_plant","tallest_ht_cm","age","tallest_lastyr_cm","number_sprouts","possibly_survived_fire"
