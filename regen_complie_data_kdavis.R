@@ -77,14 +77,22 @@ for(i in 1:length(db.dirs)) {
   } else {
     
     plot.comb <- rbind.fill(plot.comb,plot)
+    surviving.trees.comb <- rbind.fill(surviving.trees.comb,surviving.trees)
+    
+    if(i == 4) next()
+    
     resprout.comb <- rbind.fill(resprout.comb,resprout)
     sap.comb <- rbind.fill(sap.comb,sap)
     seedl.comb <- rbind.fill(seedl.comb,seedl)
-    surviving.trees.comb <- rbind.fill(surviving.trees.comb,surviving.trees)
 
   }
   
 }
+
+
+
+# 
+
 
 # 
 # ## Add Richter data
@@ -164,10 +172,10 @@ plot.comb[plot.comb$Regen_Plot %in% surveyed.2017,"Date"] <- "6/21/2017 0:00:00"
 ##!! NEW: set plot size
 
 
-# Find when only one quadrant was surveyed for seedlings, and multiply counts by 4 when true
-seedl.count.columns <- grep("yr$",names(seedl.comb))
-all.quadrants <- (seedl.comb$quadrants %in% c("ALL","4",""," ")) | is.na(seedl.comb$quadrants) # all quadrants were surveyed (T/F)
-seedl.comb[!all.quadrants,seedl.count.columns] <- 4*seedl.comb[!all.quadrants,seedl.count.columns]
+# # Find when only one quadrant was surveyed for seedlings, and multiply counts by 4 when true
+# seedl.count.columns <- grep("yr$",names(seedl.comb))
+# all.quadrants <- (seedl.comb$quadrants %in% c("ALL","4",""," ")) | is.na(seedl.comb$quadrants) # all quadrants were surveyed (T/F)
+# seedl.comb[!all.quadrants,seedl.count.columns] <- 4*seedl.comb[!all.quadrants,seedl.count.columns]
 
 
 # compute Fire column and Year.of.Fire based on first three plot letters
@@ -271,13 +279,13 @@ plot.comb[which(plot.comb$Regen_Plot == "CUB0404"),"dominant_shrub_1"] <- "ARNE"
 
 
 
-plot.welch <- read.csv("../data_survey/Welch/Plot_data.txt",stringsAsFactors=FALSE)
-sap.welch <- read.csv("../data_survey/Welch/sapling_regen.txt",stringsAsFactors=FALSE)
-seedl.welch <- read.csv("../data_survey/Welch/tree_regen.txt",stringsAsFactors=FALSE)
-resprout.welch <- read.csv("../data_survey/Welch/Resprouts.txt",stringsAsFactors=FALSE)
-surviving.trees.welch <- read.csv("../data_survey/Welch/surviving_trees.txt",stringsAsFactors=FALSE)
-seed.tree.welch <- read.csv("../data_survey/Welch/seed_tree.txt",stringsAsFactors=FALSE)
-shrub.welch <- read.csv("../data_survey/Welch/shrub_regen.txt",stringsAsFactors=FALSE)
+plot.welch <- read.csv("data_survey/Welch/Plot_data.txt",stringsAsFactors=FALSE)
+sap.welch <- read.csv("data_survey/Welch/sapling_regen.txt",stringsAsFactors=FALSE)
+seedl.welch <- read.csv("data_survey/Welch/tree_regen.txt",stringsAsFactors=FALSE)
+resprout.welch <- read.csv("data_survey/Welch/Resprouts.txt",stringsAsFactors=FALSE)
+surviving.trees.welch <- read.csv("data_survey/Welch/surviving_trees.txt",stringsAsFactors=FALSE)
+seed.tree.welch <- read.csv("data_survey/Welch/seed_tree.txt",stringsAsFactors=FALSE)
+shrub.welch <- read.csv("data_survey/Welch/shrub_regen.txt",stringsAsFactors=FALSE)
 
 ## From Welch plots, get modal height of the dominant shrub species and store it in the plot table
 
@@ -363,12 +371,12 @@ seedl[seedl$Species %in% not.ageable,seedl.count.columns.names] <- 0
 
 
 # save these data frames
-write.csv(plot,"../data_survey/Compiled/Plot_data.csv",row.names=FALSE)
-write.csv(sapling,"../data_survey/Compiled/sapling_regen.csv",row.names=FALSE)
-write.csv(seedl,"../data_survey/Compiled/tree_regen.csv",row.names=FALSE)
-write.csv(resprout,"../data_survey/Compiled/Resprouts.csv",row.names=FALSE)
-write.csv(surviving.trees,"../data_survey/Compiled/surviving_trees.csv",row.names=FALSE)
-write.csv(seed.tree,"../data_survey/Compiled/seed_tree.csv",row.names=FALSE)
+write.csv(plot,"data_survey/Compiled/Plot_data_Davis.csv",row.names=FALSE)
+write.csv(sapling,"data_survey/Compiled/sapling_regen_Davis.csv",row.names=FALSE)
+write.csv(seedl,"data_survey/Compiled/tree_regen_Davis.csv",row.names=FALSE)
+write.csv(resprout,"data_survey/Compiled/Resprouts_Davis.csv",row.names=FALSE)
+write.csv(surviving.trees,"data_survey/Compiled/surviving_trees_Davis.csv",row.names=FALSE)
+write.csv(seed.tree,"data_survey/Compiled/seed_tree_Davis.csv",row.names=FALSE)
 
 
 
@@ -378,7 +386,7 @@ write.csv(seed.tree,"../data_survey/Compiled/seed_tree.csv",row.names=FALSE)
 
 
 # Load plot locs
-plot <- read.csv("../data_survey/Compiled/Plot_data.csv",stringsAsFactors=FALSE)
+plot <- read.csv("data_survey/Compiled/Plot_data_Davis.csv",stringsAsFactors=FALSE)
 
 plot <- plot[plot$Fire != "ZACA",] # remove Zaca fire
 
@@ -396,382 +404,382 @@ plots <- SpatialPointsDataFrame(coords=data.frame(x=plot$Easting,y=plot$Northing
 #write plots to shapefile
 #writeOGR(plots, getwd(),"plots_shapefile",driver="ESRI Shapefile",overwrite=TRUE)
 
-
-#### 1. Extract monthly climate data for each plot ####
-
-CPUs <- 3
-years <- 1985:2015
-
-topowx.dir <- "~/UC Davis/GIS/CA abiotic layers/TopoWx/"
-tmin.dir <- "tmin_annual/"
-tmax.dir <- "tmax_annual/"
-tmax.normal.dir <- "tmax_normal/"
-tmin.normal.dir <- "tmin_normal/"
-
-
-prism.dir <- "~/UC Davis/GIS/CA abiotic layers/PRISM/"
-ppt.dir <- "ppt_annual/"
-ppt.normal.dir <- "ppt_normal/"
-
-
-mo.num <- 1:12
-mo.chr <- sprintf("%02d",mo.num)
-
-### Open climate layers and store each month as a list element ###
-
-### TopoWx tmin and tmax monthly-by-yearly ###
-
-tmax.yr.mo <- list()
-tmin.yr.mo <- list()
-for(year in years) {
-  
-  tmax.file <- paste(topowx.dir,tmax.dir,"tmax_",year,".nc",sep="")
-  tmax.year <- brick(tmax.file)
-  
-  tmin.file <- paste(topowx.dir,tmin.dir,"tmin_",year,".nc",sep="")
-  tmin.year <- brick(tmin.file)
-  
-  for(month in 1:12) {
-    
-    tmax.layer.index <- paste("tmax",year,mo.chr[month],sep=".")
-    tmin.layer.index <- paste("tmin",year,mo.chr[month],sep=".")
-    
-    tmax.yr.mo[tmax.layer.index] <- tmax.year[[month]]
-    tmin.yr.mo[tmin.layer.index] <- tmin.year[[month]]
-  }
-}
-
-
-### PRISM precip monthly-by-yearly ###
-
-ppt.yr.mo <- list()
-
-for(year in years) {
-  
-  ppt.yr.files <- paste(prism.dir,ppt.dir,"PRISM_ppt_stable_4kmM3_",as.character(year),mo.chr,"_bil.bil",sep="")
-  ppt.yr <- stack(ppt.yr.files)
-  
-  for(month in 1:12) {
-    
-    layer.index <- paste("ppt",year,mo.chr[month],sep=".")
-    ppt.yr.mo[layer.index] <- ppt.yr[[month]]
-  }
-}
-
-
-### MODIS snow cover monthly-by-yearly ###
-
-snow.yr.mo <- list()
-
-snow.brick <- brick("C:/Users/DYoung/Documents/UC Davis/GIS/Snowpack/n5eil01u.ecs.nsidc.org/MOST/snow_monthly_regen/snow_monthly_regen.grd")
-
-for(year in years) {
-  for(month in 1:12) {
-    layer.index <- paste("snow",year,mo.chr[month],sep=".")
-    snow.yr.mo[[layer.index]] <- snow.brick[[layer.index]]
-  }
-}
-
-## get monthly normal out of this
-
-snow.normal.mo <- list()
-for(month in mo.chr) {
-  
-  mo.search <- paste0(month,"$")
-  month.indices <- grep(mo.search,names(snow.yr.mo))
-  month.layers <- snow.yr.mo[month.indices]
-  layer.name <- paste0("snow.normal.",month)
-  snow.normal.mo[[layer.name]] <- mean(brick(month.layers),na.rm=TRUE)
-
-}
-
-
-
-
-
-### TopoWx tmin and tmax monthly normal ###
-
-tmax.normal.mo <- list()
-tmin.normal.mo <- list()
-
-tmax.file <- paste(topowx.dir,tmax.normal.dir,"normals_tmax.nc",sep="")
-tmax.normal <- brick(tmax.file,varname="tmax_normal")
-
-tmin.file <- paste(topowx.dir,tmin.normal.dir,"normals_tmin.nc",sep="")
-tmin.normal <- brick(tmin.file,varname="tmin_normal")
-
-for(month in 1:12) {
-  
-  tmax.layer.index <- paste("tmax.normal",mo.chr[month],sep=".")
-  tmin.layer.index <- paste("tmin.normal",mo.chr[month],sep=".")
-  
-  tmax.normal.mo[tmax.layer.index] <- tmax.normal[[month]]
-  tmin.normal.mo[tmin.layer.index] <- tmin.normal[[month]]
-}
-
-
-### PRISM precip monthly normals ###
-
-prism.dir <- "~/UC Davis/GIS/CA abiotic layers/PRISM/"
-
-ppt.normal.mo <- list()
-
-ppt.files <- paste(prism.dir,ppt.normal.dir,"PRISM_ppt_30yr_normal_800mM2_",mo.chr,"_bil.bil",sep="")
-ppt.normal <- stack(ppt.files)
-
-for(month in 1:12) {
-  layer.index <- paste("ppt.normal",mo.chr[month],sep=".")
-  ppt.normal.mo[layer.index] <- ppt.normal[[month]]
-}
-
-
-### stack everything of the same resolution and extent into one stack
-
-temp.800m.rast <- unlist(list(tmin.yr.mo,tmax.yr.mo,tmin.normal.mo,tmax.normal.mo))
-ppt.4km.rast <- unlist(list(ppt.yr.mo))
-ppt.800m.rast <- unlist(list(ppt.normal.mo))
-snow.5km.rast <- unlist(list(snow.yr.mo,snow.normal.mo))
-
-
-
-### Extract climate values for points ###
-ppt.4km <- sapply(X = ppt.4km.rast,FUN = extract.single, plots = plots) # takes ~1 min
-ppt.800m <- sapply(X = ppt.800m.rast,FUN = extract.single, plots = plots)
-temp.800m <- sapply(X = temp.800m.rast,FUN = extract.single, plots = plots) # takes ~10 min
-snow.5km <- sapply(X = snow.5km.rast,FUN = extract.single, plots = plots) # takes ~10 sec
-
-
-plots.clim <- data.frame(Regen_Plot=plots$Regen_Plot,temp.800m,ppt.4km,ppt.800m,snow.5km)
-#plots.clim <- plots.clim[complete.cases(plots.clim),]
-
-
-write.csv(plots.clim,"../data_intermediate_processing_local/plot_climate_monthly.csv",row.names=FALSE)
-
-
-
-#### 2. Summarize monthly climate by water year ####
-
-plots.clim <- read.csv("../data_intermediate_processing_local/plot_climate_monthly.csv",header=TRUE)
-
-first.year <- years[1]
-last.year <- years[length(years)]
-
-nyears <- last.year - first.year + 1
-if(nyears < 3) {stop("You must supply at least 3 years.")}
-n.water.years <- nyears - 1
-inter.years <- years[2:(nyears-1)]
-inter.years.rep <- rep(inter.years,each=12)
-
-first.year.mos <- c("10","11","12")
-last.year.mos <- c("01","02","03","04","05","06","07","08","09")
-inter.mos <- rep(mo.chr,nyears-2)
-
-first.year.mo.yr <- paste(first.year,first.year.mos,sep=".")
-last.year.mo.yr <- paste(last.year,last.year.mos,sep=".")
-inter.mos.mo.yr <- paste(inter.years.rep,inter.mos,sep=".")
-
-all.mo.yr <- c(first.year.mo.yr,inter.mos.mo.yr,last.year.mo.yr)
-all.mo.yr.tmin <- paste("tmin",all.mo.yr,sep=".")
-all.mo.yr.tmax <- paste("tmax",all.mo.yr,sep=".")
-all.mo.yr.ppt <- paste("ppt",all.mo.yr,sep=".")
-all.mo.yr.snow <- paste("snow",all.mo.yr,sep=".")
-
-tmin.col.nums <- sapply(all.mo.yr.tmin,function(x) {grep(x,names(plots.clim))})
-tmax.col.nums <- sapply(all.mo.yr.tmax,function(x) {grep(x,names(plots.clim))})
-ppt.col.nums <- sapply(all.mo.yr.ppt,function(x) {grep(x,names(plots.clim))})
-snow.col.nums <- sapply(all.mo.yr.snow,function(x) {grep(x,names(plots.clim))})
-
-tmin.col.nums.mat <- matrix(tmin.col.nums,ncol=12,byrow=TRUE)
-tmax.col.nums.mat <- matrix(tmax.col.nums,ncol=12,byrow=TRUE)
-ppt.col.nums.mat <- matrix(ppt.col.nums,ncol=12,byrow=TRUE)
-snow.col.nums.mat <- matrix(snow.col.nums,ncol=12,byrow=TRUE)
-
-
-water.year.summary.annual <- matrix(nrow=nrow(plots.clim),ncol=0)
-for (i in 1:n.water.years) {
-  
-  water.year.ending <- years[i]+1
-  
-  tmin.col.nums.year <- tmin.col.nums.mat[i,]
-  tmin.cols.year <- plots.clim[,tmin.col.nums.year]
-  
-  tmax.col.nums.year <- tmax.col.nums.mat[i,]
-  tmax.cols.year <- plots.clim[,tmax.col.nums.year]
-  
-  tmean.cols.year <- (tmin.cols.year + tmax.cols.year) / 2
-  
-  ppt.col.nums.year <- ppt.col.nums.mat[i,]
-  ppt.cols.year <- plots.clim[,ppt.col.nums.year]
-
-  snow.col.nums.year <- snow.col.nums.mat[i,]
-  snow.cols.year <- plots.clim[,snow.col.nums.year]  
-  snow <- snow.cols.year
-  
-  # ### snow: for each plot, sum ppt from sept (col 1) to may (col 9) for months when avg temp was <=0
-  # snow <- ppt.cols.year
-  # snow[tmean.cols.year > 0] <- 0 # no snow if temp is > 0
-  # 
-  # ### rain: for each plot, sum ppt from jan (col 5) to aug (col 12) for months when avg temp was >0
-  # rain <- ppt.cols.year
-  # rain[tmean.cols.year <= 0] <- 0
-
-  tmin.avg.year <- apply(tmin.cols.year,1,mean)
-  tmax.avg.year <- apply(tmax.cols.year,1,mean)
-  
-  ppt.tot.year <- apply(ppt.cols.year,1,sum)
-  
-  snow.tot.year <- apply(snow[c(4:11)],1,sum)
-  #rain.tot.year <- apply(rain[4:11],1,sum)
-  
-  tmean.avg.year <- (tmin.avg.year+tmax.avg.year)/2
-  
-  # calculate JJA average tmin, tmax, tmean
-  # calculate DJF averate tmin, tmax, tmean
-  tmean.avg.JJA <- apply(tmean.cols.year[,9:11],1,mean)
-  tmean.avg.DJF <- apply(tmean.cols.year[,3:5],1,mean)
-
-  ### merge into DF
-  colname.prefixes <- c("tmin","tmax","tmean","tmean.JJA","tmean.DJF","ppt","snow") #,"rain")
-  colnames <- paste(colname.prefixes,water.year.ending,sep=".")
-  
-  clim.year <- cbind(tmin.avg.year,tmax.avg.year,tmean.avg.year,tmean.avg.JJA,tmean.avg.DJF,ppt.tot.year,snow.tot.year) #,rain.tot.year)
-  colnames(clim.year) <- colnames
-  
-  water.year.summary.annual <- cbind(water.year.summary.annual,clim.year)
-}
-
-### summarize normal values annually (in the case of normals, calendar and water year are identical) ###
-
-tmin.col.nums <- grep("tmin.normal",names(plots.clim))
-tmax.col.nums <- grep("tmax.normal",names(plots.clim))
-ppt.col.nums <- grep("ppt.normal",names(plots.clim))
-snow.col.nums <- grep("snow.normal",names(plots.clim))
-
-tmin.cols <- plots.clim[,tmin.col.nums]
-tmax.cols <- plots.clim[,tmax.col.nums]
-ppt.cols <- plots.clim[,ppt.col.nums]
-snow.cols <- plots.clim[,snow.col.nums]
-
-tmean.cols <- (tmin.cols + tmax.cols)/2
-
-### snow: for each plot, sum snow from nov (col 3) to may (col 9)
-snow <- snow.cols
-
-
-# ### rain: for each plot, sum ppt from jan (col 5) to aug (col 12) for months when avg temp was >0
-# rain <- ppt.cols
-# rain[tmean.cols <= 0] <- 0
-
-tmin.avg.normal.annual <- apply(tmin.cols,1,mean)
-tmax.avg.normal.annual <- apply(tmax.cols,1,mean)
-tmean.avg.normal.annual <- (tmin.avg.normal.annual + tmax.avg.normal.annual) / 2
-
-## tmean JJA and DJF
-tmean.avg.normal.DJF <- apply(tmean.cols[,c(12,1,2)],1,mean)
-tmean.avg.normal.JJA <- apply(tmean.cols[,6:8],1,mean)
-
-ppt.tot.normal.annual <- apply(ppt.cols,1,sum)
-snow.tot.normal.annual <- apply(snow[,1:7],1,sum)
-# rain.tot.normal.annual <- apply(rain[,c(3,4,5,6,7,8,9)],1,sum)
-
-water.year.summary.normal <- cbind(tmin.avg.normal.annual,tmax.avg.normal.annual,tmean.avg.normal.annual,tmean.avg.normal.JJA,tmean.avg.normal.DJF,ppt.tot.normal.annual,snow.tot.normal.annual) #,rain.tot.normal.annual)
-colnames(water.year.summary.normal) <- c("tmin.normal.ann","tmax.normal.ann","tmean.normal.ann","tmean.normal.JJA","tmean.normal.DJF","ppt.normal.ann","snow.normal.ann") #,"rain.normal.ann")
-water.year.summary <- data.frame(Regen_Plot=plots.clim$Regen_Plot,water.year.summary.annual,water.year.summary.normal)
-
-
-
-
-### add water balance values ###
-
-library(reshape)
-
-plots.wb <- read.csv("../data_water_balance/plots_wb.csv",header=TRUE)
-water.years <- years[-1]
-
-plots.wb <- plots.wb[plots.wb$year.ending %in% water.years,]
-
-plots.wb.def <- cast(plots.wb,ID ~ year.ending,value="def")
-names(plots.wb.def)[-1] <- paste0("def.",names(plots.wb.def[-1]))
-
-plots.wb.aet <- cast(plots.wb,ID ~ year.ending,value="aet")
-names(plots.wb.aet)[-1] <- paste0("aet.",names(plots.wb.aet[-1]))
-
-
-water.year.summary <- merge(water.year.summary,plots.wb.def,by.x="Regen_Plot",by.y="ID",all.x=TRUE)
-water.year.summary <- merge(water.year.summary,plots.wb.aet,by.x="Regen_Plot",by.y="ID",all.x=TRUE)
-
-write.csv(water.year.summary,"../data_intermediate_processing_local/plot_climate_water_year.csv",row.names=FALSE)
-
-
-
-
-
-#### 3. Extract fire severity for each plot ####
-
-fire.severity.rasters.dir <- "C:/Users/dyoung/Documents/UC Davis/GIS/MTBS fire severity/"
-
-
-fires <- unique(plots$Fire)
-
-plot.firesev <- data.frame(Regen_Plot=NULL,fire.sev=NULL)
-counter <- 1
-for(fire in fires) {
-  
-  #disable this
-  if(counter > 2) {
-    cat("Fire severity analysis disabled.\n")
-    next()
-  }
-  
-  plots.fire <- plots[plots$Fire == fire,]
-  fire.raster.dir <- paste(fire.severity.rasters.dir,fire,"/",sep="")
-  
-  # get the name of the DNBR6 layer
-  file.list <- try(list.files(fire.raster.dir))
-  
-  
-  raster.file <- file.list[grep("dnbr6.?.tif$",file.list)]
-  
-  if(length(raster.file) != 1) {
-    cat("More than or less than one dnbr6 layer for Fire",fire,"\n")
-    counter <- counter + 1
-    next()
-  }
-  
-  sev.layer <- raster(paste(fire.raster.dir,raster.file,sep=""))
-  
-  firesev <- extract(sev.layer,plots.fire)
-  
-  sev.layer.lowsev.only <- sev.layer
-  sev.layer.lowsev.only[sev.layer.lowsev.only %in% c(4)] <- NA # exclude high only so we compute "distance to low or moderate"
-  sev.layer.lowsev.only[!is.na(sev.layer.lowsev.only)] <- 0
-  dist.to.low.rast <- distance(sev.layer.lowsev.only) #! make sure distance units are correct
-  
-  plots.fire <- spTransform(plots.fire,CRS(projection(sev.layer)))
-  
-  
-  dist.to.low <- extract(dist.to.low.rast,plots.fire,method="bilinear")
-  regen.plot <- plots.fire$Regen_Plot
-  
-  fire.vals <- data.frame(Regen_Plot=regen.plot,firesev=firesev,dist.to.low=dist.to.low) #! note that value of 5 here means increased greenness
-  plot.firesev <- rbind(plot.firesev,fire.vals)
-  
-  cat("Finished severity analysis of fire ",fire," (",counter," of ",length(fires),")\n",sep="")
-  counter <- counter + 1
-}
-
-write.csv(plot.firesev,"../data_intermediate_processing_local/plot_fire_data.csv",row.names=FALSE)
-
+# 
+# #### 1. Extract monthly climate data for each plot ####
+# 
+# CPUs <- 3
+# years <- 1985:2015
+# 
+# topowx.dir <- "~/UC Davis/GIS/CA abiotic layers/TopoWx/"
+# tmin.dir <- "tmin_annual/"
+# tmax.dir <- "tmax_annual/"
+# tmax.normal.dir <- "tmax_normal/"
+# tmin.normal.dir <- "tmin_normal/"
+# 
+# 
+# prism.dir <- "~/UC Davis/GIS/CA abiotic layers/PRISM/"
+# ppt.dir <- "ppt_annual/"
+# ppt.normal.dir <- "ppt_normal/"
+# 
+# 
+# mo.num <- 1:12
+# mo.chr <- sprintf("%02d",mo.num)
+# 
+# ### Open climate layers and store each month as a list element ###
+# 
+# ### TopoWx tmin and tmax monthly-by-yearly ###
+# 
+# tmax.yr.mo <- list()
+# tmin.yr.mo <- list()
+# for(year in years) {
+#   
+#   tmax.file <- paste(topowx.dir,tmax.dir,"tmax_",year,".nc",sep="")
+#   tmax.year <- brick(tmax.file)
+#   
+#   tmin.file <- paste(topowx.dir,tmin.dir,"tmin_",year,".nc",sep="")
+#   tmin.year <- brick(tmin.file)
+#   
+#   for(month in 1:12) {
+#     
+#     tmax.layer.index <- paste("tmax",year,mo.chr[month],sep=".")
+#     tmin.layer.index <- paste("tmin",year,mo.chr[month],sep=".")
+#     
+#     tmax.yr.mo[tmax.layer.index] <- tmax.year[[month]]
+#     tmin.yr.mo[tmin.layer.index] <- tmin.year[[month]]
+#   }
+# }
+# 
+# 
+# ### PRISM precip monthly-by-yearly ###
+# 
+# ppt.yr.mo <- list()
+# 
+# for(year in years) {
+#   
+#   ppt.yr.files <- paste(prism.dir,ppt.dir,"PRISM_ppt_stable_4kmM3_",as.character(year),mo.chr,"_bil.bil",sep="")
+#   ppt.yr <- stack(ppt.yr.files)
+#   
+#   for(month in 1:12) {
+#     
+#     layer.index <- paste("ppt",year,mo.chr[month],sep=".")
+#     ppt.yr.mo[layer.index] <- ppt.yr[[month]]
+#   }
+# }
+# 
+# 
+# ### MODIS snow cover monthly-by-yearly ###
+# 
+# snow.yr.mo <- list()
+# 
+# snow.brick <- brick("C:/Users/DYoung/Documents/UC Davis/GIS/Snowpack/n5eil01u.ecs.nsidc.org/MOST/snow_monthly_regen/snow_monthly_regen.grd")
+# 
+# for(year in years) {
+#   for(month in 1:12) {
+#     layer.index <- paste("snow",year,mo.chr[month],sep=".")
+#     snow.yr.mo[[layer.index]] <- snow.brick[[layer.index]]
+#   }
+# }
+# 
+# ## get monthly normal out of this
+# 
+# snow.normal.mo <- list()
+# for(month in mo.chr) {
+#   
+#   mo.search <- paste0(month,"$")
+#   month.indices <- grep(mo.search,names(snow.yr.mo))
+#   month.layers <- snow.yr.mo[month.indices]
+#   layer.name <- paste0("snow.normal.",month)
+#   snow.normal.mo[[layer.name]] <- mean(brick(month.layers),na.rm=TRUE)
+# 
+# }
+# 
+# 
+# 
+# 
+# 
+# ### TopoWx tmin and tmax monthly normal ###
+# 
+# tmax.normal.mo <- list()
+# tmin.normal.mo <- list()
+# 
+# tmax.file <- paste(topowx.dir,tmax.normal.dir,"normals_tmax.nc",sep="")
+# tmax.normal <- brick(tmax.file,varname="tmax_normal")
+# 
+# tmin.file <- paste(topowx.dir,tmin.normal.dir,"normals_tmin.nc",sep="")
+# tmin.normal <- brick(tmin.file,varname="tmin_normal")
+# 
+# for(month in 1:12) {
+#   
+#   tmax.layer.index <- paste("tmax.normal",mo.chr[month],sep=".")
+#   tmin.layer.index <- paste("tmin.normal",mo.chr[month],sep=".")
+#   
+#   tmax.normal.mo[tmax.layer.index] <- tmax.normal[[month]]
+#   tmin.normal.mo[tmin.layer.index] <- tmin.normal[[month]]
+# }
+# 
+# 
+# ### PRISM precip monthly normals ###
+# 
+# prism.dir <- "~/UC Davis/GIS/CA abiotic layers/PRISM/"
+# 
+# ppt.normal.mo <- list()
+# 
+# ppt.files <- paste(prism.dir,ppt.normal.dir,"PRISM_ppt_30yr_normal_800mM2_",mo.chr,"_bil.bil",sep="")
+# ppt.normal <- stack(ppt.files)
+# 
+# for(month in 1:12) {
+#   layer.index <- paste("ppt.normal",mo.chr[month],sep=".")
+#   ppt.normal.mo[layer.index] <- ppt.normal[[month]]
+# }
+# 
+# 
+# ### stack everything of the same resolution and extent into one stack
+# 
+# temp.800m.rast <- unlist(list(tmin.yr.mo,tmax.yr.mo,tmin.normal.mo,tmax.normal.mo))
+# ppt.4km.rast <- unlist(list(ppt.yr.mo))
+# ppt.800m.rast <- unlist(list(ppt.normal.mo))
+# snow.5km.rast <- unlist(list(snow.yr.mo,snow.normal.mo))
+# 
+# 
+# 
+# ### Extract climate values for points ###
+# ppt.4km <- sapply(X = ppt.4km.rast,FUN = extract.single, plots = plots) # takes ~1 min
+# ppt.800m <- sapply(X = ppt.800m.rast,FUN = extract.single, plots = plots)
+# temp.800m <- sapply(X = temp.800m.rast,FUN = extract.single, plots = plots) # takes ~10 min
+# snow.5km <- sapply(X = snow.5km.rast,FUN = extract.single, plots = plots) # takes ~10 sec
+# 
+# 
+# plots.clim <- data.frame(Regen_Plot=plots$Regen_Plot,temp.800m,ppt.4km,ppt.800m,snow.5km)
+# #plots.clim <- plots.clim[complete.cases(plots.clim),]
+# 
+# 
+# write.csv(plots.clim,"../data_intermediate_processing_local/plot_climate_monthly.csv",row.names=FALSE)
+# 
+# 
+# 
+# #### 2. Summarize monthly climate by water year ####
+# 
+# plots.clim <- read.csv("../data_intermediate_processing_local/plot_climate_monthly.csv",header=TRUE)
+# 
+# first.year <- years[1]
+# last.year <- years[length(years)]
+# 
+# nyears <- last.year - first.year + 1
+# if(nyears < 3) {stop("You must supply at least 3 years.")}
+# n.water.years <- nyears - 1
+# inter.years <- years[2:(nyears-1)]
+# inter.years.rep <- rep(inter.years,each=12)
+# 
+# first.year.mos <- c("10","11","12")
+# last.year.mos <- c("01","02","03","04","05","06","07","08","09")
+# inter.mos <- rep(mo.chr,nyears-2)
+# 
+# first.year.mo.yr <- paste(first.year,first.year.mos,sep=".")
+# last.year.mo.yr <- paste(last.year,last.year.mos,sep=".")
+# inter.mos.mo.yr <- paste(inter.years.rep,inter.mos,sep=".")
+# 
+# all.mo.yr <- c(first.year.mo.yr,inter.mos.mo.yr,last.year.mo.yr)
+# all.mo.yr.tmin <- paste("tmin",all.mo.yr,sep=".")
+# all.mo.yr.tmax <- paste("tmax",all.mo.yr,sep=".")
+# all.mo.yr.ppt <- paste("ppt",all.mo.yr,sep=".")
+# all.mo.yr.snow <- paste("snow",all.mo.yr,sep=".")
+# 
+# tmin.col.nums <- sapply(all.mo.yr.tmin,function(x) {grep(x,names(plots.clim))})
+# tmax.col.nums <- sapply(all.mo.yr.tmax,function(x) {grep(x,names(plots.clim))})
+# ppt.col.nums <- sapply(all.mo.yr.ppt,function(x) {grep(x,names(plots.clim))})
+# snow.col.nums <- sapply(all.mo.yr.snow,function(x) {grep(x,names(plots.clim))})
+# 
+# tmin.col.nums.mat <- matrix(tmin.col.nums,ncol=12,byrow=TRUE)
+# tmax.col.nums.mat <- matrix(tmax.col.nums,ncol=12,byrow=TRUE)
+# ppt.col.nums.mat <- matrix(ppt.col.nums,ncol=12,byrow=TRUE)
+# snow.col.nums.mat <- matrix(snow.col.nums,ncol=12,byrow=TRUE)
+# 
+# 
+# water.year.summary.annual <- matrix(nrow=nrow(plots.clim),ncol=0)
+# for (i in 1:n.water.years) {
+#   
+#   water.year.ending <- years[i]+1
+#   
+#   tmin.col.nums.year <- tmin.col.nums.mat[i,]
+#   tmin.cols.year <- plots.clim[,tmin.col.nums.year]
+#   
+#   tmax.col.nums.year <- tmax.col.nums.mat[i,]
+#   tmax.cols.year <- plots.clim[,tmax.col.nums.year]
+#   
+#   tmean.cols.year <- (tmin.cols.year + tmax.cols.year) / 2
+#   
+#   ppt.col.nums.year <- ppt.col.nums.mat[i,]
+#   ppt.cols.year <- plots.clim[,ppt.col.nums.year]
+# 
+#   snow.col.nums.year <- snow.col.nums.mat[i,]
+#   snow.cols.year <- plots.clim[,snow.col.nums.year]  
+#   snow <- snow.cols.year
+#   
+#   # ### snow: for each plot, sum ppt from sept (col 1) to may (col 9) for months when avg temp was <=0
+#   # snow <- ppt.cols.year
+#   # snow[tmean.cols.year > 0] <- 0 # no snow if temp is > 0
+#   # 
+#   # ### rain: for each plot, sum ppt from jan (col 5) to aug (col 12) for months when avg temp was >0
+#   # rain <- ppt.cols.year
+#   # rain[tmean.cols.year <= 0] <- 0
+# 
+#   tmin.avg.year <- apply(tmin.cols.year,1,mean)
+#   tmax.avg.year <- apply(tmax.cols.year,1,mean)
+#   
+#   ppt.tot.year <- apply(ppt.cols.year,1,sum)
+#   
+#   snow.tot.year <- apply(snow[c(4:11)],1,sum)
+#   #rain.tot.year <- apply(rain[4:11],1,sum)
+#   
+#   tmean.avg.year <- (tmin.avg.year+tmax.avg.year)/2
+#   
+#   # calculate JJA average tmin, tmax, tmean
+#   # calculate DJF averate tmin, tmax, tmean
+#   tmean.avg.JJA <- apply(tmean.cols.year[,9:11],1,mean)
+#   tmean.avg.DJF <- apply(tmean.cols.year[,3:5],1,mean)
+# 
+#   ### merge into DF
+#   colname.prefixes <- c("tmin","tmax","tmean","tmean.JJA","tmean.DJF","ppt","snow") #,"rain")
+#   colnames <- paste(colname.prefixes,water.year.ending,sep=".")
+#   
+#   clim.year <- cbind(tmin.avg.year,tmax.avg.year,tmean.avg.year,tmean.avg.JJA,tmean.avg.DJF,ppt.tot.year,snow.tot.year) #,rain.tot.year)
+#   colnames(clim.year) <- colnames
+#   
+#   water.year.summary.annual <- cbind(water.year.summary.annual,clim.year)
+# }
+# 
+# ### summarize normal values annually (in the case of normals, calendar and water year are identical) ###
+# 
+# tmin.col.nums <- grep("tmin.normal",names(plots.clim))
+# tmax.col.nums <- grep("tmax.normal",names(plots.clim))
+# ppt.col.nums <- grep("ppt.normal",names(plots.clim))
+# snow.col.nums <- grep("snow.normal",names(plots.clim))
+# 
+# tmin.cols <- plots.clim[,tmin.col.nums]
+# tmax.cols <- plots.clim[,tmax.col.nums]
+# ppt.cols <- plots.clim[,ppt.col.nums]
+# snow.cols <- plots.clim[,snow.col.nums]
+# 
+# tmean.cols <- (tmin.cols + tmax.cols)/2
+# 
+# ### snow: for each plot, sum snow from nov (col 3) to may (col 9)
+# snow <- snow.cols
+# 
+# 
+# # ### rain: for each plot, sum ppt from jan (col 5) to aug (col 12) for months when avg temp was >0
+# # rain <- ppt.cols
+# # rain[tmean.cols <= 0] <- 0
+# 
+# tmin.avg.normal.annual <- apply(tmin.cols,1,mean)
+# tmax.avg.normal.annual <- apply(tmax.cols,1,mean)
+# tmean.avg.normal.annual <- (tmin.avg.normal.annual + tmax.avg.normal.annual) / 2
+# 
+# ## tmean JJA and DJF
+# tmean.avg.normal.DJF <- apply(tmean.cols[,c(12,1,2)],1,mean)
+# tmean.avg.normal.JJA <- apply(tmean.cols[,6:8],1,mean)
+# 
+# ppt.tot.normal.annual <- apply(ppt.cols,1,sum)
+# snow.tot.normal.annual <- apply(snow[,1:7],1,sum)
+# # rain.tot.normal.annual <- apply(rain[,c(3,4,5,6,7,8,9)],1,sum)
+# 
+# water.year.summary.normal <- cbind(tmin.avg.normal.annual,tmax.avg.normal.annual,tmean.avg.normal.annual,tmean.avg.normal.JJA,tmean.avg.normal.DJF,ppt.tot.normal.annual,snow.tot.normal.annual) #,rain.tot.normal.annual)
+# colnames(water.year.summary.normal) <- c("tmin.normal.ann","tmax.normal.ann","tmean.normal.ann","tmean.normal.JJA","tmean.normal.DJF","ppt.normal.ann","snow.normal.ann") #,"rain.normal.ann")
+# water.year.summary <- data.frame(Regen_Plot=plots.clim$Regen_Plot,water.year.summary.annual,water.year.summary.normal)
+# 
+# 
+# 
+# 
+# ### add water balance values ###
+# 
+# library(reshape)
+# 
+# plots.wb <- read.csv("../data_water_balance/plots_wb.csv",header=TRUE)
+# water.years <- years[-1]
+# 
+# plots.wb <- plots.wb[plots.wb$year.ending %in% water.years,]
+# 
+# plots.wb.def <- cast(plots.wb,ID ~ year.ending,value="def")
+# names(plots.wb.def)[-1] <- paste0("def.",names(plots.wb.def[-1]))
+# 
+# plots.wb.aet <- cast(plots.wb,ID ~ year.ending,value="aet")
+# names(plots.wb.aet)[-1] <- paste0("aet.",names(plots.wb.aet[-1]))
+# 
+# 
+# water.year.summary <- merge(water.year.summary,plots.wb.def,by.x="Regen_Plot",by.y="ID",all.x=TRUE)
+# water.year.summary <- merge(water.year.summary,plots.wb.aet,by.x="Regen_Plot",by.y="ID",all.x=TRUE)
+# 
+# write.csv(water.year.summary,"../data_intermediate_processing_local/plot_climate_water_year.csv",row.names=FALSE)
+# 
+# 
+# 
+
+# 
+# #### 3. Extract fire severity for each plot ####
+# 
+# fire.severity.rasters.dir <- "C:/Users/dyoung/Documents/UC Davis/GIS/MTBS fire severity/"
+# 
+# 
+# fires <- unique(plots$Fire)
+# 
+# plot.firesev <- data.frame(Regen_Plot=NULL,fire.sev=NULL)
+# counter <- 1
+# for(fire in fires) {
+#   
+#   #disable this
+#   if(counter > 2) {
+#     cat("Fire severity analysis disabled.\n")
+#     next()
+#   }
+#   
+#   plots.fire <- plots[plots$Fire == fire,]
+#   fire.raster.dir <- paste(fire.severity.rasters.dir,fire,"/",sep="")
+#   
+#   # get the name of the DNBR6 layer
+#   file.list <- try(list.files(fire.raster.dir))
+#   
+#   
+#   raster.file <- file.list[grep("dnbr6.?.tif$",file.list)]
+#   
+#   if(length(raster.file) != 1) {
+#     cat("More than or less than one dnbr6 layer for Fire",fire,"\n")
+#     counter <- counter + 1
+#     next()
+#   }
+#   
+#   sev.layer <- raster(paste(fire.raster.dir,raster.file,sep=""))
+#   
+#   firesev <- extract(sev.layer,plots.fire)
+#   
+#   sev.layer.lowsev.only <- sev.layer
+#   sev.layer.lowsev.only[sev.layer.lowsev.only %in% c(4)] <- NA # exclude high only so we compute "distance to low or moderate"
+#   sev.layer.lowsev.only[!is.na(sev.layer.lowsev.only)] <- 0
+#   dist.to.low.rast <- distance(sev.layer.lowsev.only) #! make sure distance units are correct
+#   
+#   plots.fire <- spTransform(plots.fire,CRS(projection(sev.layer)))
+#   
+#   
+#   dist.to.low <- extract(dist.to.low.rast,plots.fire,method="bilinear")
+#   regen.plot <- plots.fire$Regen_Plot
+#   
+#   fire.vals <- data.frame(Regen_Plot=regen.plot,firesev=firesev,dist.to.low=dist.to.low) #! note that value of 5 here means increased greenness
+#   plot.firesev <- rbind(plot.firesev,fire.vals)
+#   
+#   cat("Finished severity analysis of fire ",fire," (",counter," of ",length(fires),")\n",sep="")
+#   counter <- counter + 1
+# }
+# 
+# write.csv(plot.firesev,"../data_intermediate_processing_local/plot_fire_data.csv",row.names=FALSE)
+# 
 
 
 
 #### 4. Summarize regen and surviving trees by species (and age for regen) for each plot ####
 
-sap <- read.csv("../data_survey/Compiled/sapling_regen.csv")
+sap <- read.csv("data_survey/Compiled/sapling_regen_Davis.csv")
 #shrub <- read.csv("../data_survey/shrub_regen.csv")
-seedl <- read.csv("../data_survey/Compiled/tree_regen.csv")
-resprout <- read.csv("../data_survey/Compiled/Resprouts.csv")
-surviving.trees <- read.csv("../data_survey/Compiled/surviving_trees.csv",header=TRUE,stringsAsFactors=FALSE)
+seedl <- read.csv("data_survey/Compiled/tree_regen_Davis.csv")
+resprout <- read.csv("data_survey/Compiled/Resprouts_Davis.csv")
+surviving.trees <- read.csv("data_survey/Compiled/surviving_trees_Davis.csv",header=TRUE,stringsAsFactors=FALSE)
 
 sap.plt <- merge(sap,plot[,c("Regen_Plot","FIRE_SEV")],by="Regen_Plot")
 
@@ -793,6 +801,10 @@ if(nrow(sap.rep.rows)>0) {warning("Multiple sapling entries for some species-plo
 #! Can do that by making it a separate column that is only counted when computing TOTAL seedlings
 #! Also, make all counts for CADE and all hardwoods fall in the unknown column.
 
+
+## make a column for subsampled
+seedl$subsampled = ifelse(toupper(seedl$quadrants) %in% c("ALL","4","") | is.na(seedl$quadrants), FALSE, TRUE)
+
 #get rid of the extra 11yr column
 seedl$X11.yr <- seedl$X11.yr + seedl$X11yr
 seedl <- seedl[,!(names(seedl) %in% "X11yr")]
@@ -806,6 +818,10 @@ seedl.count.columns <- grep("yr$",names(seedl))
 seedl.ag <- aggregate(seedl[,seedl.count.columns],by=list(species=seedl$Species,Regen_Plot=seedl$Regen_Plot),FUN=sum,na.rm=TRUE)
 count.yrs <- c(paste("count.",0:(length(seedl.count.columns)-2),"yr",sep=""),"unk_yr")
 names(seedl.ag) <- c("species","Regen_Plot",count.yrs)
+
+
+
+
 
 ### aggregate sapling table by plot and species
 sap$tot <- rowSums(sap[,6:14],na.rm=TRUE)
@@ -863,6 +879,11 @@ regen <- rbind.fill(regen,resprout.ag) # add in resprout table (comment out here
 regen.ag <- aggregate(regen[,3:ncol(regen)],by=list(species=regen$species,Regen_Plot=regen$Regen_Plot),FUN=sum,na.rm=TRUE)
 # for hardwoods, F is for seedlings/saplings and 5yr is for resprouts
 
+## Pull in subsample status
+library(dplyr)
+regen.ag = left_join(regen.ag,seedl %>% select(Regen_Plot, species = Species,subsampled))
+
+
 ### aggregate surviving tree table by plot and species
 surviving.trees <- surviving.trees[surviving.trees$DBH > 7.5,] # exclude small trees (it seems sometimes crews put smaller trees as saplings instead of surviving trees)
 surviving.trees$ba <- (surviving.trees$DBH/2)^2*3.14
@@ -877,20 +898,20 @@ regen.ag <- merge(regen.ag,surviving.trees.ag,by=c("Regen_Plot","species"),all=T
 regen.ag$surviving.trees.count[is.na(regen.ag$surviving.trees.count)] <- 0
 regen.ag$surviving.trees.ba[is.na(regen.ag$surviving.trees.ba)] <- 0
 
-write.csv(regen.ag,"../data_intermediate_processing_local/tree_summarized_sp.csv",row.names=FALSE)
+write.csv(regen.ag,"data_intermediate_processing_local/tree_summarized_sp_Davis.csv",row.names=FALSE)
 
 
 
 #### 5. Integrate all plot and species data ####
 
 ### Read in raw data files (direct from DB export)
-fire.years <- read.csv("../data_fire/fire_years.csv",header=TRUE,stringsAsFactors=FALSE)
-seed.tree <- read.csv("../data_survey/Compiled/seed_tree.csv",header=TRUE,stringsAsFactors=FALSE)
+fire.years <- read.csv("data_fire/fire_years.csv",header=TRUE,stringsAsFactors=FALSE)
+seed.tree <- read.csv("data_survey/Compiled/seed_tree_Davis.csv",header=TRUE,stringsAsFactors=FALSE)
 
 ### Read in the summarized data files
-plot.climate <- read.csv("../data_intermediate_processing_local/plot_climate_water_year.csv",stringsAsFactors=FALSE)
-plot.fire.data <- read.csv("../data_intermediate_processing_local/plot_fire_data.csv",stringsAsFactors=FALSE)
-plot.tree.sp <- read.csv("../data_intermediate_processing_local/tree_summarized_sp.csv",stringsAsFactors=FALSE)
+#plot.climate <- read.csv("../data_intermediate_processing_local/plot_climate_water_year.csv",stringsAsFactors=FALSE)
+#plot.fire.data <- read.csv("data_intermediate_processing_local/plot_fire_data.csv",stringsAsFactors=FALSE)
+plot.tree.sp <- read.csv("data_intermediate_processing_local/tree_summarized_sp_Davis.csv",stringsAsFactors=FALSE)
 
 # if there is no 12yr column, add it to prevent bugs in summing tree ages
 if(!("count.12yr" %in% names(plot.tree.sp))) {
@@ -913,36 +934,36 @@ yearplus <- sapply(date.split, '[[', 3)
 year.split <- strsplit(yearplus," ")
 plot$Year <- as.numeric(sapply(year.split,'[[',1))
 
-
-## extract elevation for each plot
-dem <- raster("C:/Users/DYoung/Documents/UC Davis/GIS/CA abiotic layers/DEM/CA/new ncal/CAmerged12_albers2_firesmask_ncal.tif")
-plots$elev.m <- extract(dem,plots,method="bilinear")
-
-## extract march solar rad for each plot
-rad.march <- raster("C:/Users/DYoung/Documents/UC Davis/GIS/CA abiotic layers/solar rad/regen_srad_clear_sky/srad_clear_mar_regen_ncal.tif")
-plots$rad.march <- extract(rad.march,plots,method="bilinear")
-
-#compile DF of geospatial data that was extracted for each plot
-plots.extracted <- plots[,c("Regen_Plot","elev.m","rad.march")]
-
+# 
+# ## extract elevation for each plot
+# dem <- raster("C:/Users/DYoung/Documents/UC Davis/GIS/CA abiotic layers/DEM/CA/new ncal/CAmerged12_albers2_firesmask_ncal.tif")
+# plots$elev.m <- extract(dem,plots,method="bilinear")
+# 
+# ## extract march solar rad for each plot
+# rad.march <- raster("C:/Users/DYoung/Documents/UC Davis/GIS/CA abiotic layers/solar rad/regen_srad_clear_sky/srad_clear_mar_regen_ncal.tif")
+# plots$rad.march <- extract(rad.march,plots,method="bilinear")
+# 
+# #compile DF of geospatial data that was extracted for each plot
+# plots.extracted <- plots[,c("Regen_Plot","elev.m","rad.march")]
+# 
 
 ## merge the plot-level data into a single DF
-plot.1 <- merge(plot,plot.fire.data,by="Regen_Plot",all.x=TRUE)
+plot.1 <- plot #merge(plot,plot.fire.data,by="Regen_Plot",all.x=TRUE)
 plot.2 <- merge(plot.1,fire.years,by="Fire",all.x=TRUE)
 plot.2$survey.years.post <- plot.2$Year - plot.2$fire.year
 
-plot.3 <- merge(plot.2,plots.extracted,all.x=TRUE)
+plot.3 <- plot.2 #merge(plot.2,plots.extracted,all.x=TRUE)
 
-### get summarized climate data for each plot
-##!! If want to look at weather beyond 4 years post-fire (for those fires that had more than 4 years), will need to make this relative to number of years post-fire
-plot.3.clim <- summarize.clim(plot.3,plot.climate,years.clim=1:3) #first three years after fire
-plot.3.clim2 <- summarize.clim(plot.3,plot.climate,years.clim=1:2) # for more than 3 years out, will need 2016 weather data
-names(plot.3.clim2) <- c(names(plot.3.clim2[1]),paste(names(plot.3.clim2)[2:ncol(plot.3.clim2)],".early",sep=""))
-plot.3.clim.both <- merge(plot.3.clim,plot.3.clim2)
+# ### get summarized climate data for each plot
+# ##!! If want to look at weather beyond 4 years post-fire (for those fires that had more than 4 years), will need to make this relative to number of years post-fire
+# plot.3.clim <- summarize.clim(plot.3,plot.climate,years.clim=1:3) #first three years after fire
+# plot.3.clim2 <- summarize.clim(plot.3,plot.climate,years.clim=1:2) # for more than 3 years out, will need 2016 weather data
+# names(plot.3.clim2) <- c(names(plot.3.clim2[1]),paste(names(plot.3.clim2)[2:ncol(plot.3.clim2)],".early",sep=""))
+# plot.3.clim.both <- merge(plot.3.clim,plot.3.clim2)
 
 
 ### Find plots with planted trees and exclude them
-seedl <- read.csv("../data_survey/Compiled/tree_regen.csv")
+seedl <- read.csv("data_survey/Compiled/tree_regen_Davis.csv")
 seedl.p <- seedl[seedl$seed_veg_plant == "P",]
 plots.planted <- unique(seedl.p$Regen_Plot)
 plot.3 <- plot.3[!(plot.3$Regen_Plot %in% plots.planted),]
@@ -950,16 +971,20 @@ plot.3 <- plot.3[!(plot.3$Regen_Plot %in% plots.planted),]
 
 ### get summarized regen data for each plot (also summarizes adults)
 ##!! NOTE that as written here, the code includes un-ageable species when tallying regen for ALL ages, but not for specific age classes
-plot.3.regen.old <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="old",all.sp=TRUE,peryear=TRUE,incl.unk.age=TRUE)
-plot.3.regen.young <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="young",all.sp=TRUE,peryear=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call, the previous line)
-plot.3.regen.all <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="all",all.sp=TRUE,incl.unk.age=TRUE,peryear=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call)
-names(plot.3.regen.old)[3] <- "regen.count.old"
-names(plot.3.regen.young)[3] <- "regen.count.young"
-names(plot.3.regen.all)[3] <- "regen.count.all"
+#plot.3.regen.old <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="old",all.sp=TRUE,peryear=TRUE,incl.unk.age=TRUE)
+#plot.3.regen.young <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="young",all.sp=TRUE,peryear=TRUE)[,1:3] #only take the regen data (because funct also outupts adults data but we get that from the first call, the previous line)
+plot.3.regen.all <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","PIPO"),regen.ages="all",all.sp=TRUE,incl.unk.age=TRUE,peryear=FALSE)
+# names(plot.3.regen.old)[3] <- "regen.count.old"
+# names(plot.3.regen.young)[3] <- "regen.count.young"
+# names(plot.3.regen.all)[3] <- "regen.count.all"
+
+seedl$subsampled = ifelse(toupper(seedl$quadrants) %in% c("ALL","4","") | is.na(seedl$quadrants), FALSE, TRUE)
+plot.3.regen.all = left_join(plot.3.regen.all,seedl %>% select(Regen_Plot, species = Species,subsampled))
+
+plot.3.regen.all$subsampled = ifelse(is.na(plot.3.regen.all$subsampled),FALSE,TRUE)
 
 
-plot.3.regen.pre <- merge(plot.3.regen.young,plot.3.regen.old)
-plot.3.regen <- merge(plot.3.regen.pre,plot.3.regen.all)
+plot.3.regen <- plot.3.regen.all
 
 
 ### species-level seed tree distance
@@ -970,51 +995,51 @@ plot.3.regen <- merge(plot.3.regen,seed.tree.sp,all.x=TRUE)
 
 
 ### add the tallest seedling of each species
-
-## append seedling and resprout heights
-seedl.ht <- seedl[,c("Regen_Plot","Species","tallest_ht_cm")]
-respr.ht <- resprout[,c("Regen_Plot","Species","tallest_ht_cm")]
-regen.ht <- rbind(seedl.ht,respr.ht)
-
-# in case there are multiple seedling entries per species-plot combination, aggregate
-regen.ht.agg <- aggregate(regen.ht$tallest_ht_cm,by=list(regen.ht$Regen_Plot,regen.ht$Species),FUN=max)
-names(regen.ht.agg) <- c("Regen_Plot","species","tallest_ht_cm")
-
-## Now do it for species groups
-pinus <- c("PIPO","PIJE","PILA","PIAT","PICO","PINUS","PISA2","PIMO3")
-regen.ht.pinus <- regen.ht[regen.ht$Species %in% pinus,]
-regen.ht.pinus.agg <- aggregate(regen.ht.pinus$tallest_ht_cm,by=list(regen.ht.pinus$Regen_Plot),FUN=max)
-names(regen.ht.pinus.agg) <- c("Regen_Plot","tallest_ht_cm")
-regen.ht.pinus.agg$species <- "PINUS.ALLSP"
-
-shade <- c("ABCO","CADE27","ABIES","ABMA")
-shade <- c("ABCO","CADE27")
-regen.ht.shade <- regen.ht[regen.ht$Species %in% shade,]
-regen.ht.shade.agg <- aggregate(regen.ht.shade$tallest_ht_cm,by=list(regen.ht.shade$Regen_Plot),FUN=max)
-names(regen.ht.shade.agg) <- c("Regen_Plot","tallest_ht_cm")
-regen.ht.shade.agg$species <- "SHADE.ALLSP"
-
-yellow <- c("PIPO","PIJE")
-regen.ht.yellow <- regen.ht[regen.ht$Species %in% yellow,]
-regen.ht.yellow.agg <- aggregate(regen.ht.yellow$tallest_ht_cm,by=list(regen.ht.yellow$Regen_Plot),FUN=max)
-names(regen.ht.yellow.agg) <- c("Regen_Plot","tallest_ht_cm")
-regen.ht.yellow.agg$species <- "PIPJ"
-
-hdwd <- c("ALNUS","QUKE","QUCH2","ARME","LIDE3","CHCH","QUGA4","ACMA","ACME","CEMO2","CONU4","POTR5","QUBE5","QUJO3","QUWI","UMCA","ALRH")
-regen.ht.hdwd <- regen.ht[regen.ht$Species %in% hdwd,]
-regen.ht.hdwd.agg <- aggregate(regen.ht.hdwd$tallest_ht_cm,by=list(regen.ht.hdwd$Regen_Plot),FUN=max)
-names(regen.ht.hdwd.agg) <- c("Regen_Plot","tallest_ht_cm")
-regen.ht.hdwd.agg$species <- "HDWD.ALLSP"
-
-
-## Append
-regen.ht.agg <- rbind.fill(regen.ht.agg,regen.ht.pinus.agg,regen.ht.shade.agg,regen.ht.yellow.agg,regen.ht.hdwd.agg)
-
-
-
-# merge it in
-plot.3.regen <- merge(plot.3.regen,regen.ht.agg,all.x=TRUE)
-# species table ready for export
+# 
+# ## append seedling and resprout heights
+# seedl.ht <- seedl[,c("Regen_Plot","Species","tallest_ht_cm")]
+# respr.ht <- resprout[,c("Regen_Plot","Species","tallest_ht_cm")]
+# regen.ht <- rbind(seedl.ht,respr.ht)
+# 
+# # in case there are multiple seedling entries per species-plot combination, aggregate
+# regen.ht.agg <- aggregate(regen.ht$tallest_ht_cm,by=list(regen.ht$Regen_Plot,regen.ht$Species),FUN=max)
+# names(regen.ht.agg) <- c("Regen_Plot","species","tallest_ht_cm")
+# 
+# ## Now do it for species groups
+# pinus <- c("PIPO","PIJE","PILA","PIAT","PICO","PINUS","PISA2","PIMO3")
+# regen.ht.pinus <- regen.ht[regen.ht$Species %in% pinus,]
+# regen.ht.pinus.agg <- aggregate(regen.ht.pinus$tallest_ht_cm,by=list(regen.ht.pinus$Regen_Plot),FUN=max)
+# names(regen.ht.pinus.agg) <- c("Regen_Plot","tallest_ht_cm")
+# regen.ht.pinus.agg$species <- "PINUS.ALLSP"
+# 
+# shade <- c("ABCO","CADE27","ABIES","ABMA")
+# shade <- c("ABCO","CADE27")
+# regen.ht.shade <- regen.ht[regen.ht$Species %in% shade,]
+# regen.ht.shade.agg <- aggregate(regen.ht.shade$tallest_ht_cm,by=list(regen.ht.shade$Regen_Plot),FUN=max)
+# names(regen.ht.shade.agg) <- c("Regen_Plot","tallest_ht_cm")
+# regen.ht.shade.agg$species <- "SHADE.ALLSP"
+# 
+# yellow <- c("PIPO","PIJE")
+# regen.ht.yellow <- regen.ht[regen.ht$Species %in% yellow,]
+# regen.ht.yellow.agg <- aggregate(regen.ht.yellow$tallest_ht_cm,by=list(regen.ht.yellow$Regen_Plot),FUN=max)
+# names(regen.ht.yellow.agg) <- c("Regen_Plot","tallest_ht_cm")
+# regen.ht.yellow.agg$species <- "PIPJ"
+# 
+# hdwd <- c("ALNUS","QUKE","QUCH2","ARME","LIDE3","CHCH","QUGA4","ACMA","ACME","CEMO2","CONU4","POTR5","QUBE5","QUJO3","QUWI","UMCA","ALRH")
+# regen.ht.hdwd <- regen.ht[regen.ht$Species %in% hdwd,]
+# regen.ht.hdwd.agg <- aggregate(regen.ht.hdwd$tallest_ht_cm,by=list(regen.ht.hdwd$Regen_Plot),FUN=max)
+# names(regen.ht.hdwd.agg) <- c("Regen_Plot","tallest_ht_cm")
+# regen.ht.hdwd.agg$species <- "HDWD.ALLSP"
+# 
+# 
+# ## Append
+# regen.ht.agg <- rbind.fill(regen.ht.agg,regen.ht.pinus.agg,regen.ht.shade.agg,regen.ht.yellow.agg,regen.ht.hdwd.agg)
+# 
+# 
+# 
+# # merge it in
+# plot.3.regen <- merge(plot.3.regen,regen.ht.agg,all.x=TRUE)
+# # species table ready for export
 
 
 ### add plot-level seed tree distance (shortest distance among all seed trees recorded for the plot)
@@ -1022,7 +1047,7 @@ seed.tree.any <- aggregate(seed.tree$Dist_m,by=list(seed.tree$Regen_Plot),FUN=mi
 names(seed.tree.any) <- c("Regen_Plot","seed.tree.any")
 
 ### merge the plot, climate, and plot-level seed tree data
-plot.clim <- merge(plot.3,plot.3.clim.both,by="Regen_Plot",all.x=TRUE)
+plot.clim <- plot.3
 plot.clim.seedtree <- merge(plot.clim,seed.tree.any,all.x=TRUE)
 
 ## Correct misspelled FORBE
@@ -1031,7 +1056,7 @@ plot.clim.seedtree <- remove.vars(plot.clim.seedtree,"FORBE")
 
 
 ### Bring in dominant vegetation for Welch
-dom.veg.welch <- read.csv("../data_survey/Welch/DominantVegetation.txt",stringsAsFactors=FALSE)
+dom.veg.welch <- read.csv("data_survey/Welch/DominantVegetation.txt",stringsAsFactors=FALSE)
 
 dom.veg.df <- data.frame()
 
@@ -1058,8 +1083,8 @@ plot.clim.seedtree.2$dom.veg.all <- paste(plot.clim.seedtree.2$dom.veg.2016,plot
 
 
 ### write plot-level and species-level output files
-write.csv(plot.clim.seedtree.2,"data_intermediate/plot_level.csv",row.names=FALSE)
-write.csv(plot.3.regen,"data_intermediate/speciesXplot_level.csv",row.names=FALSE)
+write.csv(plot.clim.seedtree.2,"data_intermediate/plot_level_Davis.csv",row.names=FALSE)
+write.csv(plot.3.regen,"data_intermediate/speciesXplot_level_Davis.csv",row.names=FALSE)
 
 
 
