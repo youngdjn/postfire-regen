@@ -27,7 +27,10 @@ plot = read_csv("data_intermediate/plot_level_full.csv") %>%
   select(Regen_Plot,Year,everything()) %>%
   filter(!(Regen_Plot %in% excl)) %>%
   #filter(Year > 2015) %>%
-  filter(FIRE_SEV %in% c(4,5))
+  filter(FIRE_SEV %in% c(4,5)) %>%
+  # Pull in fire name and make unique
+  mutate(fire = str_sub(Regen_Plot,1,3)) %>%
+  mutate(fire = ifelse(fire == "CUB" & str_length(Regen_Plot) < 8, "CB2",fire))
 
 
 ### Read and summarize seedling data
@@ -37,6 +40,14 @@ seedl <- read.csv("data_survey/Compiled/tree_regen_full.csv")
 seedl = seedl %>%
   filter((Regen_Plot %in% plot$Regen_Plot))
 
+## Make a fire-level summary of year of fire
+fire_summ = plot %>%
+  select(fire, Year, Year.of.Fire) %>%
+  unique()
+
+
+####!!!! Need a long table with seedling age counts by plot, so we can calc the year it germinated
+####!!!! Also need to assign new 3-letter fire names for fires not sampled an adjacent years
 
 seedl_genus = seedl %>%
   mutate(sp_coarse = recode(Species, "PIPO" = "Pine", "PSME" = "Dougfir", "ABCO" = "FirCedar", "CADE27" = "FirCedar", "PILA" = "Pine", "ABMA" = "FirCedar", "PIJE" = "Pine", "PINUS" = "Pine", "ABIES" = "FirCedar", "PICO" = "Pine", "PSMA" = "Dougfir", "PIMO3" = "Pine")) %>%
@@ -58,13 +69,20 @@ seedl_genus = seedl %>%
   ungroup() %>%
   mutate(age_all = rowSums(select(.,age_00:age_09), na.rm=TRUE)) %>%
   
-  ### thin to plot with n seedl > 5 by species
-  filter(age_all > 4) %>%
+  # ### thin to plot with n seedl > 5 by species
+  # filter(age_all > 4) %>%
   
   ## sum across fires
   mutate(fire = str_sub(Regen_Plot,1,3)) %>%
   mutate(fire = ifelse(fire == "CUB" & str_length(Regen_Plot) < 8, "CB2",fire)) %>%
-  select(-Regen_Plot) %>%
+  
+  ### Bring in shrub cover
+  left_join(plot %>% select(Regen_Plot,SHRUB)) %>%
+  select(-Regen_Plot)
+  
+
+
+seedl_genus_plotsumm = seedl_genus %>%
   group_by(fire, sp_coarse) %>%
   summarize(across(age_00:age_09, sum, na.rm=TRUE),
             n_plots = n()) %>%
@@ -75,10 +93,19 @@ seedl_genus = seedl %>%
 
 
 ### Make long for plotting
-seedl_long = seedl_genus %>%
+seedl_long = seedl_genus_plotsumm %>%
   pivot_longer(c(-fire,-sp_coarse,-n_plots), names_to = "age", values_to = "count") %>%
   mutate(age = str_sub(age,5,7) %>% as.numeric) %>%
-  mutate(fire = as.character(fire))
+  mutate(fire = as.character(fire)) %>%
+  
+  ## add missing combos so the bar plots are the same width
+  complete(fire, sp_coarse, age, fill = list(n_plots = 0, count = 0)) %>%
+  
+  ## bring in year of fire, year of sample
+  left_join(plot %>% select(fire, Year, Year.of.Fire))
+
+
+
 
 
 ### Plot
