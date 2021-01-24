@@ -172,10 +172,10 @@ plot.comb[plot.comb$Regen_Plot %in% surveyed.2017,"Date"] <- "6/21/2017 0:00:00"
 ##!! NEW: set plot size
 
 
-# # Find when only one quadrant was surveyed for seedlings, and multiply counts by 4 when true
-# seedl.count.columns <- grep("yr$",names(seedl.comb))
-# all.quadrants <- (seedl.comb$quadrants %in% c("ALL","4",""," ")) | is.na(seedl.comb$quadrants) # all quadrants were surveyed (T/F)
-# seedl.comb[!all.quadrants,seedl.count.columns] <- 4*seedl.comb[!all.quadrants,seedl.count.columns]
+# Find when only one quadrant was surveyed for seedlings, and multiply counts by 4 when true
+seedl.count.columns <- grep("yr$",names(seedl.comb))
+all.quadrants <- (seedl.comb$quadrants %in% c("ALL","4",""," ")) | is.na(seedl.comb$quadrants) # all quadrants were surveyed (T/F)
+seedl.comb[!all.quadrants,seedl.count.columns] <- 4*seedl.comb[!all.quadrants,seedl.count.columns]
 
 
 # compute Fire column and Year.of.Fire based on first three plot letters
@@ -882,6 +882,8 @@ regen.ag <- aggregate(regen[,3:ncol(regen)],by=list(species=regen$species,Regen_
 ## Pull in subsample status
 library(dplyr)
 regen.ag = left_join(regen.ag,seedl %>% select(Regen_Plot, species = Species,subsampled))
+
+write.csv(regen.ag,"data_intermediate_processing_local/regen_summarized_sp_full.csv",row.names=FALSE)
 
 
 ### aggregate surviving tree table by plot and species
