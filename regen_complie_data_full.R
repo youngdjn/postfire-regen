@@ -388,7 +388,7 @@ write.csv(seed.tree,"data_survey/Compiled/seed_tree_full.csv",row.names=FALSE)
 # Load plot locs
 plot <- read.csv("data_survey/Compiled/Plot_data_full.csv",stringsAsFactors=FALSE)
 
-plot <- plot[plot$Fire != "ZACA",] # remove Zaca fire
+#plot <- plot[plot$Fire != "ZACA",] # remove Zaca fire
 
 plot <- plot[!is.na(plot$Northing),]
 plot <- plot[(plot$Easting < 1105000) & (plot$Easting > 150000) & (plot$Northing > 2500000) & (plot$Northing < 6000000),] #Easting 110 used to be 83
@@ -396,7 +396,7 @@ plot.coords <- data.frame(x=plot$Easting,y=plot$Northing)
 utm10 <- CRS("+proj=utm +zone=10 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs")
 plots <- SpatialPointsDataFrame(coords=data.frame(x=plot$Easting,y=plot$Northing),data=plot,proj4string=utm10)
 
-
+sf::st_write( as(plots,"sf"), "plots_spatial.gpkg")
 
 ##!! exclude this plot because the location is wrong: SHR0900015
 
