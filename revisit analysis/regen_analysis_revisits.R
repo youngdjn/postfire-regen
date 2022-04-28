@@ -1,4 +1,5 @@
 setwd("~/UC Davis/Research Projects/Post-fire regen/Dev/postfire-regen")
+setwd("~/repos/postfire-regen")
 
 library(party)
 library(ggplot2)
@@ -33,7 +34,7 @@ plots.exceptions <- grepl("#.*(INCOMPLETE|INCORRECT)",d.plot$NOTES)
 d.plot <- d.plot[!plots.exceptions,]
 
 # only keep the necessary columns
-d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general","seed_tree_distance_conifer","seed_tree_distance_hardwood","diff.norm.ppt.z","diff.norm.ppt.min.z","tmean.post","ppt.post","ppt.post.min","perc.norm.ppt","perc.norm.ppt.min","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z","def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","diff.norm.def.max.z","diff.norm.aet.min.z","def.post","aet.post","def.post.max","aet.post.min","snow.post.min","snow.normal","snow.post","diff.norm.snow.z","diff.norm.snow.min.z","dominant_shrub_ht_cm","dom.veg.all")]
+d.plot <- d.plot[,c("Regen_Plot","Fire","Year.of.Fire","Easting","Northing","aspect","slope","SHRUB","FORB","GRASS","HARDWOOD","CONIFER","FIRE_SEV","BA.Live1","Year","firesev","dist.to.low","fire.abbr","X5yr","fire.year","survey.years.post","elev.m","rad.march","tmean.post","ppt.post","ppt.post.min","tmean.normal","ppt.normal","seed.tree.any","diff.norm.ppt.z","diff.norm.ppt.min.z","seed_tree_distance_general","seed_tree_distance_conifer","seed_tree_distance_hardwood","diff.norm.ppt.z","diff.norm.ppt.min.z","tmean.post","ppt.post","ppt.post.min","perc.norm.ppt","perc.norm.ppt.min","tmean.post","tmean.normal","diff.norm.tmean.z","diff.norm.tmean.max.z","def.normal","aet.normal","diff.norm.def.z","diff.norm.aet.z","diff.norm.def.max.z","diff.norm.aet.min.z","def.post","aet.post","def.post.max","aet.post.min","snow.post.min","snow.normal","snow.post","diff.norm.snow.z","diff.norm.snow.min.z","dominant_shrub_ht_cm","dom.veg.all","new_or_revisit","revisit_relocated_precisely")]
 
 ## Remove managed plots, plots in nonforested locations (e.g. exposed bedrock), etc.
 plots.exclude <- read.csv("data_intermediate/plots_exclude.csv",header=T,stringsAsFactors=FALSE)
@@ -122,7 +123,7 @@ for (i in 1:length(unique(d.plot$Fire))) {
     
     d.plot.foc <- d.plot.fire.orig[d.plot.fire.orig$Regen_Plot == plotname,]
     
-    # get the closest revisit plot on the same vire
+    # get the closest revisit plot on the same fire
     dists <- st_distance(d.plot.foc,d.plot.fire.revisit)
     
     mindist <- min(dists)
@@ -147,6 +148,13 @@ d.plot.orig <- d.plot[!is.na(d.plot$revisit.distance),]
 d.plot.orig <- d.plot.orig[d.plot.orig$revisit.distance < 50,]
 
 
+## pull in whether it was relocated precisely
+library(dplyr)
+d <- read.csv("data_intermediate/plot_level.csv",header=T,stringsAsFactors=FALSE)
+d_revisit_list = left_join(d.plot.orig %>% select(Regen_Plot, revisit.plotname, orig_survey_year = Year,revisit.distance, FIRE_SEV),
+                           d %>% select(Regen_Plot,revisit_relocated_precisely),
+                           by = c(revisit.plotname = "Regen_Plot"))
+write.csv(d_revisit_list, "regen_previous_revisit.csv")
 
 
 
