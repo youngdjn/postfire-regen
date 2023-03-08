@@ -49,7 +49,6 @@ p = p_sf %>%
   mutate(time_since_fire = Year - Year.of.Fire,
          fire_severity_category = "high") %>%
   select(plot_id = Regen_Plot,
-         contributor,
          longitude,
          latitude,
          fire_year = Year.of.Fire,
