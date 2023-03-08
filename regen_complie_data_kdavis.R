@@ -981,7 +981,7 @@ plot.3.regen.all <- summarize.regen.ind(plot.3,plot.tree.sp,sp=c("ABCO","PSME","
 seedl$subsampled = ifelse(toupper(seedl$quadrants) %in% c("ALL","4","") | is.na(seedl$quadrants), FALSE, TRUE)
 plot.3.regen.all = left_join(plot.3.regen.all,seedl %>% select(Regen_Plot, species = Species,subsampled))
 
-plot.3.regen.all$subsampled = ifelse(is.na(plot.3.regen.all$subsampled),FALSE,TRUE)
+plot.3.regen.all$subsampled = ifelse(is.na(plot.3.regen.all$subsampled) | plot.3.regen.all$subsampled == FALSE,FALSE,TRUE)
 
 
 plot.3.regen <- plot.3.regen.all
@@ -1078,16 +1078,17 @@ plot.clim.seedtree.2$dom.veg.2016 <- paste(plot.clim.seedtree.2$dominant_tree_1,
 plot.clim.seedtree.2$dom.veg.all <- paste(plot.clim.seedtree.2$dom.veg.2016,plot.clim.seedtree.2$dom.veg,sep=" ")
 
 
-
-
+## There were two plots where PIPO was subsampled, so transfer those subsample flags to PIPJ column so we can use the PIPJ column instead of PIPO, beause sometimes seedlings were recorded under PIPJ instead of PIPO or PIJE, so we should use that aggregate column
+plot.3.regen[plot.3.regen$Regen_Plot %in% c("CHI1902", "PIT0247") & plot.3.regen$species == "PIPJ", "subsampled"] = TRUE
 
 
 ### write plot-level and species-level output files
-write.csv(plot.clim.seedtree.2,"data_intermediate/plot_level_Davis.csv",row.names=FALSE)
-write.csv(plot.3.regen,"data_intermediate/speciesXplot_level_Davis.csv",row.names=FALSE)
+write.csv(plot.clim.seedtree.2,"data_intermediate/plot_level_Science.csv",row.names=FALSE)
+write.csv(plot.3.regen,"data_intermediate/speciesXplot_level_Science.csv",row.names=FALSE)
 
 
-
+inspect = plot.3.regen |>
+  filter(species %in% c("PIPO", "PIPJ"))
 
 #### Outlier check ####
 
